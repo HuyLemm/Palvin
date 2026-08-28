@@ -264,29 +264,31 @@ export default function AuthScreen() {
   if (flow === 'register') {
     return (
       <AuthBg>
-        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 20px 40px' }}>
+        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 20px 40px' }}>
           <BackBtn onClick={() => { setFlow('welcome'); setError(''); }} />
 
-          <div style={{ marginBottom: 28 }}>
-            <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: '#332A2D', marginBottom: 6 }}>
-              Tạo tài khoản
-            </p>
-            <p style={{ fontSize: 13, color: '#8C7A80' }}>Điền thông tin để bắt đầu hành trình cùng nhau.</p>
-          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ marginBottom: 28 }}>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: '#332A2D', marginBottom: 6 }}>
+                Tạo tài khoản
+              </p>
+              <p style={{ fontSize: 13, color: '#8C7A80' }}>Điền thông tin để bắt đầu hành trình cùng nhau.</p>
+            </div>
 
-          <Card>
-            <Field label="Email" placeholder="ban@email.com" value={email} onChange={v => { setEmail(v); setError(''); }} type="email" delay="0.03s" />
-            <Field label="Tên đăng nhập" placeholder="Alvin hoặc Paoi..." value={name} onChange={v => { setName(v); setError(''); }} delay="0.06s" />
-            <Field label="Mật khẩu" placeholder="Tối thiểu 6 ký tự" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
-            <Field label="Nhập lại mật khẩu" placeholder="Xác nhận mật khẩu" value={confirmPass} onChange={v => { setConfirmPass(v); setError(''); }} type="password" delay="0.15s" />
+            <Card>
+              <Field label="Email" placeholder="ban@email.com" value={email} onChange={v => { setEmail(v); setError(''); }} type="email" delay="0.03s" />
+              <Field label="Tên đăng nhập" placeholder="Alvin hoặc Paoi..." value={name} onChange={v => { setName(v); setError(''); }} delay="0.06s" />
+              <Field label="Mật khẩu" placeholder="Tối thiểu 6 ký tự" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
+              <Field label="Nhập lại mật khẩu" placeholder="Xác nhận mật khẩu" value={confirmPass} onChange={v => { setConfirmPass(v); setError(''); }} type="password" delay="0.15s" />
 
-            {error && <ErrorBox message={error} />}
-          </Card>
+              {error && <ErrorBox message={error} />}
+            </Card>
 
-          <div style={{ marginTop: 20 }}>
-            <button className="btn-sakura" onClick={handleRegister} disabled={loading}>
-              {loading ? 'Đang xử lý...' : 'Đăng ký'}
-            </button>
+            <div style={{ marginTop: 20 }}>
+              <button className="btn-sakura" onClick={handleRegister} disabled={loading}>
+                {loading ? 'Đang xử lý...' : 'Đăng ký'}
+              </button>
+            </div>
           </div>
         </div>
       </AuthBg>
@@ -297,30 +299,32 @@ export default function AuthScreen() {
   if (flow === 'login') {
     return (
       <AuthBg>
-        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 20px 40px' }}>
+        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 20px 40px' }}>
           <BackBtn onClick={() => { setFlow('welcome'); setError(''); }} />
 
-          <div style={{ marginBottom: 28 }}>
-            <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: '#332A2D', marginBottom: 6 }}>
-              Chào mừng trở lại
-            </p>
-            <p style={{ fontSize: 13, color: '#8C7A80' }}>Chúng mình nhớ bạn. 🌸</p>
-          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ marginBottom: 28 }}>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: '#332A2D', marginBottom: 6 }}>
+                Chào mừng trở lại
+              </p>
+              <p style={{ fontSize: 13, color: '#8C7A80' }}>Chúng mình nhớ bạn. 🌸</p>
+            </div>
 
-          <Card>
-            <Field label="Tên đăng nhập" placeholder="Alvin hoặc Paoi..." value={loginUsername} onChange={v => { setLoginUsername(v); setError(''); }} delay="0.05s" />
-            <Field label="Mật khẩu" placeholder="Mật khẩu" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
+            <Card>
+              <Field label="Tên đăng nhập" placeholder="Alvin hoặc Paoi..." value={loginUsername} onChange={v => { setLoginUsername(v); setError(''); }} delay="0.05s" />
+              <Field label="Mật khẩu" placeholder="Mật khẩu" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
 
-            {error && <ErrorBox message={error} />}
-          </Card>
+              {error && <ErrorBox message={error} />}
+            </Card>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
-            <button className="btn-sakura" onClick={handleLogin} disabled={loading}>
-              {loading ? 'Đang xử lý...' : 'Đăng nhập'}
-            </button>
-            <button className="btn-ghost" onClick={() => { setFlow('register'); setError(''); }}>
-              Chưa có tài khoản? Đăng ký
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
+              <button className="btn-sakura" onClick={handleLogin} disabled={loading}>
+                {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+              </button>
+              <button className="btn-ghost" onClick={() => { setFlow('register'); setError(''); }}>
+                Chưa có tài khoản? Đăng ký
+              </button>
+            </div>
           </div>
         </div>
       </AuthBg>
@@ -330,10 +334,10 @@ export default function AuthScreen() {
   /* ── WELCOME SCREEN ── */
   return (
     <AuthBg>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '52px 24px 44px', position: 'relative', zIndex: 1 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 40, padding: '24px 24px', position: 'relative', zIndex: 1 }}>
 
         {/* Logo area */}
-        <div className="auth-fade-up" style={{ textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="auth-fade-up" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
           {/* Outer glow ring */}
           <div style={{
             width: 100, height: 100, borderRadius: 30,
