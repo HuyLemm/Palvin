@@ -780,7 +780,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthed(!!session);
-      if (session) refreshProfiles();
+      if (session) { setProfileLoaded(false); refreshProfiles(); }
       else { setMyProfile(null); setPartnerProfile(null); setProfilePhotos({}); setIsLinked(false); setProfileLoaded(true); }
     });
     return () => sub.subscription.unsubscribe();
