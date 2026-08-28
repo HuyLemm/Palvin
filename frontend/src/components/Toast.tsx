@@ -20,7 +20,7 @@ export default function ToastContainer() {
             alignItems: 'center',
             gap: 8,
             whiteSpace: 'nowrap',
-            animation: 'toastIn 0.3s cubic-bezier(0.32,0.72,0,1)',
+            animation: t.leaving ? 'toastOut 0.2s ease forwards' : 'toastIn 0.3s cubic-bezier(0.32,0.72,0,1)',
             boxShadow: '0 4px 20px rgba(51,42,45,0.25)',
           }}
         >

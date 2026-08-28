@@ -43,7 +43,7 @@ function Petals() {
           60% { transform: scale(1); }
         }
         .auth-fade-up { animation: fadeUp 0.5s ease both; }
-        .auth-slide { animation: slideIn 0.45s ease both; }
+        .auth-slide { animation: slideIn 0.45s ease; }
         .logo-pulse { animation: logoBreath 3s ease-in-out infinite; }
         .heart-beat { animation: heartBeat 2.4s ease-in-out infinite; }
         .auth-input {

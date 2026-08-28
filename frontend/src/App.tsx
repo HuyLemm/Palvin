@@ -18,6 +18,7 @@ import Search from './screens/Search';
 import Notifications from './screens/Notifications';
 import Settings from './screens/Settings';
 import PostDetail from './screens/PostDetail';
+import SavedPosts from './screens/SavedPosts';
 import MemoryDetail from './screens/MemoryDetail';
 
 type Tab = 'home' | 'feed' | 'stats' | 'us' | 'settings';
@@ -107,7 +108,7 @@ const SCREEN_TITLES: Record<string, string> = {
   memories: 'Memories 🌸', 'love-notes': 'For You 💌', calendar: 'Our Calendar',
   'future-us': 'Future Us', search: 'Search', notifications: 'Notifications',
   settings: 'Settings', stats: 'Chi tiêu 📊',
-  'post-detail': 'Post', 'memory-detail': 'Memory',
+  'post-detail': 'Post', 'memory-detail': 'Memory', 'saved-posts': 'Đã lưu',
 };
 
 // Stay open even before the couple is linked: Settings hosts the invite/accept
@@ -133,6 +134,7 @@ function ScreenRouter() {
     case 'settings':      return <Settings />;
     case 'stats':         return <Money />;
     case 'post-detail':   return <PostDetail />;
+    case 'saved-posts':   return <SavedPosts />;
     case 'memory-detail': return <MemoryDetail />;
     default:              return <Home />;
   }
@@ -325,7 +327,11 @@ export default function App() {
 
             {/* Scroll area */}
             <main style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 80px' }}>
-              <ScreenRouter />
+              {/* key={screen} remounts this on every navigation so the
+                  fade/slide-in animation replays each time. */}
+              <div key={screen} className="screen-transition">
+                <ScreenRouter />
+              </div>
             </main>
 
             {/* Bottom Nav */}

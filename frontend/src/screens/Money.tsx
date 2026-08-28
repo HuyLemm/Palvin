@@ -66,10 +66,12 @@ export default function Money() {
         ))}
       </div>
 
-      {tab === 'expenses' && <ExpensesTab expenses={state.expenses} onAdd={() => setShowAddExpense(true)} onDelete={deleteExpense} />}
-      {tab === 'goals' && <GoalsTab goals={state.savingsGoals} addToGoal={addToGoal} />}
-      {tab === 'stats' && <StatsTab expenses={state.expenses} />}
-      {tab === 'bills' && <BillsTab bills={state.bills} onAdd={addBill} onTogglePaid={toggleBillPaid} onDelete={deleteBill} onToggleReminder={toggleBillReminder} />}
+      <div key={tab} className="screen-transition">
+        {tab === 'expenses' && <ExpensesTab expenses={state.expenses} onAdd={() => setShowAddExpense(true)} onDelete={deleteExpense} />}
+        {tab === 'goals' && <GoalsTab goals={state.savingsGoals} addToGoal={addToGoal} />}
+        {tab === 'stats' && <StatsTab expenses={state.expenses} />}
+        {tab === 'bills' && <BillsTab bills={state.bills} onAdd={addBill} onTogglePaid={toggleBillPaid} onDelete={deleteBill} onToggleReminder={toggleBillReminder} />}
+      </div>
 
       {showAddExpense && <AddExpenseForm onClose={() => setShowAddExpense(false)} />}
     </div>
@@ -579,8 +581,8 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-      <div style={{ background: 'var(--white)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 430 }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out' }}>
+      <div style={{ background: 'var(--white)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 430, animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)' }}>Thêm hóa đơn</p>
           <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>

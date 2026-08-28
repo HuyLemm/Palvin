@@ -11,7 +11,7 @@ export interface Post {
   id: string;
   author: User;
   date: string;
-  image: string;
+  images: string[];
   caption: string;
   likes: number;
   liked: boolean;

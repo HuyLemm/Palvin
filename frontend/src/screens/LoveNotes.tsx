@@ -49,6 +49,7 @@ export default function LoveNotes() {
         ))}
       </div>
 
+      <div key={tab} className="screen-transition">
       {/* Notes tab */}
       {tab === 'notes' && (
         <div>
@@ -192,6 +193,7 @@ export default function LoveNotes() {
           )}
         </div>
       )}
+      </div>
 
       {/* FAB */}
       {tab === 'notes' && (
@@ -255,8 +257,8 @@ function LetterReader({ letter, onClose, onDelete }: { letter: LoveLetter; onClo
       </div>
 
       {confirmDelete && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
             <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa thư này?</p>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Không thể khôi phục sau khi xóa.</p>
             <div style={{ display: 'flex', gap: 10 }}>

@@ -6,7 +6,7 @@ type ProfileNames = Record<string, User>;
 interface PostRow {
   id: string;
   author_id: string;
-  image_url: string;
+  image_urls: string[];
   caption: string;
   location: string | null;
   created_at: string;
@@ -18,7 +18,7 @@ interface PostRow {
 
 export type ReactionMap = Record<string, Record<string, { count: number; reacted: boolean }>>;
 
-const POST_SELECT = 'id, author_id, image_url, caption, location, created_at,' +
+const POST_SELECT = 'id, author_id, image_urls, caption, location, created_at,' +
   'post_comments(id, author_id, text, created_at),' +
   'post_likes(user_id), post_saves(user_id), post_reactions(user_id, emoji)';
 
@@ -34,7 +34,7 @@ function rowToPost(row: PostRow, myId: string, names: ProfileNames): Post {
     id: row.id,
     author: names[row.author_id] ?? 'Alvin',
     date: formatDate(row.created_at),
-    image: row.image_url,
+    images: row.image_urls,
     caption: row.caption,
     location: row.location ?? undefined,
     likes: row.post_likes.length,
@@ -68,10 +68,30 @@ export async function fetchPosts(myId: string, names: ProfileNames): Promise<{ p
   return { posts, reactions };
 }
 
-export async function createPost(authorId: string, data: { image: string; caption: string; location?: string }) {
+export async function createPost(authorId: string, data: { images: string[]; caption: string; location?: string }) {
   return supabase.from('posts').insert({
-    author_id: authorId, image_url: data.image, caption: data.caption, location: data.location ?? null,
+    author_id: authorId, image_urls: data.images, caption: data.caption, location: data.location ?? null,
   });
+}
+
+export async function updatePostRow(id: string, data: { caption: string; location?: string }) {
+  return supabase.from('posts').update({ caption: data.caption, location: data.location ?? null }).eq('id', id);
+}
+
+export async function deletePostRow(id: string) {
+  return supabase.from('posts').delete().eq('id', id);
+}
+
+export async function uploadPostImage(coupleId: string, file: File): Promise<string | null> {
+  const ext = file.name.split('.').pop() || 'jpg';
+  // Path is prefixed with the couple's own id — the storage RLS policy
+  // (0024 migration) only allows a couple to read/write under their own
+  // prefix, so anyone who signs up for the app can't touch another couple's photos.
+  const path = `${coupleId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  if (error) return null;
+  const { data } = supabase.storage.from('post-images').getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export async function addPostComment(postId: string, authorId: string, text: string) {

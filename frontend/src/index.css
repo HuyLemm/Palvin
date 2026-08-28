@@ -127,9 +127,30 @@ html, body {
 ::-webkit-scrollbar { display: none; }
 * { scrollbar-width: none; }
 
+/* Momentum ("inertia") scrolling on iOS — without this, every scrollable
+   area (feed, lists, bottom sheets...) feels stiff/laggy instead of the
+   native fling-and-decelerate feel. Harmless on elements that don't scroll. */
+* { -webkit-overflow-scrolling: touch; }
+
 @keyframes slideUp {
   from { transform: translateY(40px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+@keyframes screenTransitionIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* No "both"/"forwards" fill-mode: keeping the animation's final transform
+   (even a no-op translateY(0)) applied after it ends would make this
+   permanently a new containing block for every position:fixed modal
+   anywhere inside it (per spec, any non-"none" transform value does this)
+   — every screen's modals would render clipped to this element's own box
+   instead of the real viewport. Letting the animation clear naturally keeps
+   transform at "none" once it's done. */
+.screen-transition { animation: screenTransitionIn 0.22s ease; }
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
 }
 @keyframes fadeIn {
   from { opacity: 0; }

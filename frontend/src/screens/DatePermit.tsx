@@ -152,6 +152,7 @@ export default function DatePermit({ onBack }: Props) {
         ))}
       </div>
 
+      <div key={tab} className="screen-transition">
       {/* ── SUBMIT TAB ── */}
       {tab === 'submit' && (
         <div>
@@ -294,6 +295,7 @@ export default function DatePermit({ onBack }: Props) {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }

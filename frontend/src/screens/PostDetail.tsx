@@ -2,10 +2,19 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 
+function BookmarkIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinejoin="round">
+      <path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4.5L5 21V4.5a1 1 0 0 1 1-1z" />
+    </svg>
+  );
+}
+
 export default function PostDetail() {
   const { state, selectedId, goBack, toggleLike, toggleSave, addComment, currentUser } = useApp();
   const post = state.posts.find(p => p.id === selectedId);
   const [text, setText] = useState('');
+  const [imgIndex, setImgIndex] = useState(0);
 
   if (!post) return null;
 
@@ -27,16 +36,28 @@ export default function PostDetail() {
             <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{post.date}{post.location ? ` · 📍 ${post.location}` : ''}</p>
           </div>
         </div>
-        <div style={{ background: 'var(--sakura-light)' }}>
-          <img src={post.image} alt={post.caption} style={{ width: '100%', display: 'block', maxHeight: 400, objectFit: 'cover' }} />
+        <div style={{ position: 'relative', background: 'var(--sakura-light)' }}>
+          <div
+            onScroll={post.images.length > 1 ? (e => { const el = e.currentTarget; setImgIndex(Math.round(el.scrollLeft / el.clientWidth)); }) : undefined}
+            style={{ display: 'flex', overflowX: post.images.length > 1 ? 'auto' : 'hidden', scrollSnapType: 'x mandatory' }}
+          >
+            {post.images.map((img, i) => (
+              <img key={i} src={img} alt={post.caption} style={{ flex: '0 0 100%', scrollSnapAlign: 'start', width: '100%', display: 'block', maxHeight: 400, objectFit: 'cover' }} />
+            ))}
+          </div>
+          {post.images.length > 1 && (
+            <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(51,42,45,0.6)', color: 'white', fontSize: 11, fontWeight: 700, borderRadius: 99, padding: '2px 8px' }}>
+              {imgIndex + 1}/{post.images.length}
+            </div>
+          )}
         </div>
         <div style={{ padding: '14px 16px' }}>
           <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
             <button onClick={() => toggleLike(post.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 600, color: post.liked ? 'var(--sakura-accent)' : 'var(--ink-2)', padding: 0 }}>
               <span style={{ fontSize: 22 }}>{post.liked ? '❤️' : '🤍'}</span> {post.likes}
             </button>
-            <button onClick={() => toggleSave(post.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: post.saved ? 'var(--sakura-accent)' : 'var(--ink-2)', padding: 0, marginLeft: 'auto' }}>
-              {post.saved ? '🔖' : '🏷️'}
+            <button onClick={() => toggleSave(post.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: post.saved ? 'var(--sakura-accent)' : 'var(--ink-2)', padding: 0, marginLeft: 'auto', display: 'flex' }}>
+              <BookmarkIcon filled={post.saved} />
             </button>
           </div>
           <p style={{ fontSize: 15, color: 'var(--ink)', lineHeight: 1.6, marginBottom: 16 }}>

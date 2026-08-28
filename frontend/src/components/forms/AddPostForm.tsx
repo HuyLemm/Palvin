@@ -1,32 +1,54 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useApp } from '../../context';
+import { uploadPostImage } from '../../feed';
 import BottomSheet from '../BottomSheet';
 import Avatar from '../Avatar';
 
-const MOODS = ['😊', '🥰', '😍', '🌸', '✨', '🎉', '😌', '🥺'];
-const IMAGES = [
-  'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600&h=600&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1522383225753-aa61820f8dc6?w=600&h=600&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&h=600&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=600&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1447933863590-8f90f5893571?w=600&h=600&fit=crop&auto=format',
-];
+interface PendingImage {
+  id: string;
+  previewUrl: string;
+  remoteUrl?: string;
+  uploading: boolean;
+  failed: boolean;
+}
 
 export default function AddPostForm({ onClose }: { onClose: () => void }) {
-  const { addPost, currentUser } = useApp();
+  const { addPost, currentUser, myProfile } = useApp();
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
-  const [selectedImage, setSelectedImage] = useState('');
+  const [images, setImages] = useState<PendingImage[]>([]);
   const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isUploading = images.some(im => im.uploading);
+  const readyUrls = images.filter(im => im.remoteUrl).map(im => im.remoteUrl!);
+
+  const handleFiles = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0 || !myProfile?.coupleId) return;
+    const coupleId = myProfile.coupleId;
+    setError('');
+    const files = Array.from(fileList);
+    const pending: PendingImage[] = files.map(f => ({ id: crypto.randomUUID(), previewUrl: URL.createObjectURL(f), uploading: true, failed: false }));
+    setImages(prev => [...prev, ...pending]);
+    files.forEach(async (file, i) => {
+      const item = pending[i];
+      const url = await uploadPostImage(coupleId, file);
+      setImages(prev => prev.map(im => im.id === item.id ? { ...im, remoteUrl: url ?? undefined, uploading: false, failed: !url } : im));
+    });
+  };
+
+  const removeImage = (id: string) => {
+    setImages(prev => prev.filter(im => im.id !== id));
+  };
 
   const handleSubmit = () => {
     if (!caption.trim()) { setError('Please write a caption.'); return; }
-    if (!selectedImage)  { setError('Please select a photo.'); return; }
+    if (readyUrls.length === 0) { setError('Please add at least one photo.'); return; }
     const now = new Date();
     addPost({
       author: currentUser,
       date: now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      image: selectedImage,
+      images: readyUrls,
       caption,
       location: location || undefined,
       likes: 0,
@@ -43,25 +65,36 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
         </div>
 
         <div>
-          <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Choose a photo</p>
+          <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photos</p>
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-            {IMAGES.map(img => (
-              <div
-                key={img}
-                onClick={() => setSelectedImage(img)}
-                style={{
-                  width: 80, height: 80, flexShrink: 0,
-                  borderRadius: 12,
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  border: selectedImage === img ? '2.5px solid var(--sakura-deep)' : '2.5px solid transparent',
-                  transition: 'border 0.15s',
-                }}
-              >
-                <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            {images.map(im => (
+              <div key={im.id} style={{ position: 'relative', width: 80, height: 80, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2.5px solid var(--sakura-deep)' }}>
+                <img src={im.previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: im.uploading ? 0.5 : 1 }} />
+                {im.uploading && (
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-spin 0.7s linear infinite' }} />
+                  </div>
+                )}
+                {im.failed && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'white', textAlign: 'center', padding: 4 }}>Lỗi tải ảnh</div>
+                )}
+                <button onClick={() => removeImage(im.id)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
               </div>
             ))}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              style={{ width: 80, height: 80, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >+</button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={e => { handleFiles(e.target.files); e.target.value = ''; }}
+              style={{ display: 'none' }}
+            />
           </div>
+          <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
         </div>
 
         <textarea
@@ -83,7 +116,7 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2 }}>Post</button>
+          <button className="btn-primary" onClick={handleSubmit} disabled={isUploading} style={{ flex: 2, opacity: isUploading ? 0.6 : 1 }}>{isUploading ? 'Uploading...' : 'Post'}</button>
         </div>
       </div>
     </BottomSheet>

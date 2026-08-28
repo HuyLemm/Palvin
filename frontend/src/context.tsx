@@ -13,7 +13,7 @@ import {
   type PendingInvite, type AuthProfile, type NotifyPrefs,
 } from './auth';
 import {
-  fetchPosts, createPost, addPostComment, setLiked, setSaved, toggleReaction,
+  fetchPosts, createPost, addPostComment, setLiked, setSaved, toggleReaction, updatePostRow, deletePostRow,
 } from './feed';
 import {
   fetchNotifications, markNotificationRead, markAllNotificationsRead,
@@ -74,7 +74,7 @@ import {
 import { createHug } from './hugs';
 import { bumpStreak } from './streak';
 
-interface ToastItem { id: string; message: string; emoji: string; }
+interface ToastItem { id: string; message: string; emoji: string; leaving?: boolean; }
 
 interface AppContextType {
   state: AppState;
@@ -120,6 +120,8 @@ interface AppContextType {
   toggleSave: (id: string) => void;
   addComment: (postId: string, text: string) => void;
   addPost: (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments'>) => void;
+  editPost: (id: string, data: { caption: string; location?: string }) => void;
+  deletePost: (id: string) => void;
 
   // Memories
   addMemory: (m: Omit<Memory, 'id' | 'favorite'>) => void;
@@ -252,6 +254,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [createStep, setCreateStep] = useState<string | null>(null);
   const [celebration, setCelebration] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const toastExitTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const current = stack[stack.length - 1];
   const screen = current.screen;
@@ -267,10 +270,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toast = useCallback((msg: string, emoji = '🌸') => {
     const id = uid();
-    setToasts(prev => [...prev, { id, message: msg, emoji }]);
     if (toastTimer.current) clearTimeout(toastTimer.current);
+    if (toastExitTimer.current) clearTimeout(toastExitTimer.current);
+    // Only one toast on screen at a time — a new one replaces whatever is
+    // currently showing instead of stacking on top of it.
+    setToasts([{ id, message: msg, emoji }]);
     toastTimer.current = setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts(prev => prev.map(t => t.id === id ? { ...t, leaving: true } : t));
+      toastExitTimer.current = setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 200);
     }, 3000);
   }, []);
 
@@ -310,11 +317,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addPost = async (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments'>) => {
     if (!myProfile) return;
-    const { error } = await createPost(myProfile.id, { image: p.image, caption: p.caption, location: p.location });
+    const { error } = await createPost(myProfile.id, { images: p.images, caption: p.caption, location: p.location });
     if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
     await refreshPosts();
     // No manual success toast here — the realtime `notifications` subscription
     // above pops one for both accounts (including the poster) a moment later.
+  };
+
+  const editPost = async (id: string, data: { caption: string; location?: string }) => {
+    setState(s => ({ ...s, posts: s.posts.map(p => p.id === id ? { ...p, caption: data.caption, location: data.location } : p) }));
+    const { error } = await updatePostRow(id, data);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); return; }
+    toast('Đã cập nhật bài viết ✏️');
+  };
+
+  const deletePost = async (id: string) => {
+    setState(s => ({ ...s, posts: s.posts.filter(p => p.id !== id) }));
+    const { error } = await deletePostRow(id);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); return; }
+    toast('Đã xóa bài viết 🗑️');
   };
 
   // Memories — backed by Supabase
@@ -1107,7 +1128,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       screen, selectedId, navigate, goBack,
       toasts, toast,
       createModal, createStep, openCreate, closeCreate, celebration,
-      toggleLike, toggleSave, addComment, addPost,
+      toggleLike, toggleSave, addComment, addPost, editPost, deletePost,
       addMemory, toggleFavorite,
       addExpense, deleteExpense,
       addSavingsGoal, addToGoal,
