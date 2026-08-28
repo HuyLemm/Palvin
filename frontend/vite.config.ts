@@ -34,6 +34,9 @@ export default defineConfig(({ mode }) => {
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,
       watch: { ignored: ['**/.figma/**'] },
+      // Allow access via a Cloudflare quick-tunnel URL for testing on a real
+      // phone when the LAN is unreachable (e.g. router AP/client isolation).
+      allowedHosts: ['.trycloudflare.com'],
     },
     preview: {
       host: '0.0.0.0',

@@ -1,4 +1,4 @@
-import type { JSX } from 'react';
+import { useEffect, type JSX } from 'react';
 import { useApp } from './context';
 import Toast from './components/Toast';
 import CreateModal from './components/CreateModal';
@@ -143,6 +143,71 @@ const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 export default function App() {
   const { screen, navigate, goBack, state, createModal, openCreate, currentUser, profilePhotos, authed, authLoading, profileLoaded, isLinked, pendingInvite, toast } = useApp();
   const stillResolvingSession = authLoading || (authed && !profileLoaded);
+  // iOS Safari doesn't support the interactive-widget viewport meta property
+  // (Chrome/Firefox only), so it always shrinks the visual viewport when the
+  // keyboard opens — which our height:100%/dvh chain then follows, making
+  // the whole app visibly reflow. Snapshot the real height once (before any
+  // keyboard can open) into a CSS variable, and never update it in response
+  // to a resize — only true device rotation should ever change it — so the
+  // layout stays put and the keyboard simply overlaps the bottom instead.
+  useEffect(() => {
+    const setAppHeight = () => {
+      document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`);
+    };
+    setAppHeight();
+    window.addEventListener('orientationchange', setAppHeight);
+    return () => window.removeEventListener('orientationchange', setAppHeight);
+  }, []);
+
+  // iOS Safari only auto-scrolls a focused input into view if it's visible
+  // at the moment it receives focus — hiding it for a single tick makes
+  // Safari skip that scroll decision entirely, avoiding the jerk from
+  // reactively correcting a scroll that already happened (below).
+  useEffect(() => {
+    const onFocusIn = (e: FocusEvent) => {
+      const el = e.target;
+      if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) return;
+      const prevOpacity = el.style.opacity;
+      el.style.opacity = '0';
+      // Two frames (not setTimeout(…, 0)) — gives Safari's own layout/paint
+      // pass, where it decides whether to scroll, more room to land inside
+      // the hidden window instead of racing a macrotask against it.
+      requestAnimationFrame(() => requestAnimationFrame(() => { el.style.opacity = prevOpacity; }));
+    };
+    document.addEventListener('focusin', onFocusIn);
+    return () => document.removeEventListener('focusin', onFocusIn);
+  }, []);
+
+  // Backup safety net in case the opacity trick above doesn't fully suppress
+  // the scroll on some iOS version — nothing here is meant to scroll (the
+  // only real scroll area is <main>'s own inner overflow), so snap any
+  // window-level scroll straight back to 0 whenever it happens. iOS animates
+  // its scroll-into-view over several frames as the keyboard slides up, so a
+  // one-off correction lets that animation become briefly visible (a jerk up,
+  // then a jerk back) — instead, correct on every animation frame for as
+  // long as the keyboard's show animation could still be running.
+  useEffect(() => {
+    const resetScroll = () => {
+      if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo({ left: 0, top: 0, behavior: 'instant' as ScrollBehavior });
+    };
+    let rafId = 0;
+    const onFocusIn = () => {
+      cancelAnimationFrame(rafId);
+      const start = performance.now();
+      const loop = () => {
+        resetScroll();
+        if (performance.now() - start < 500) rafId = requestAnimationFrame(loop);
+      };
+      loop();
+    };
+    document.addEventListener('focusin', onFocusIn);
+    window.addEventListener('scroll', resetScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(rafId);
+      document.removeEventListener('focusin', onFocusIn);
+      window.removeEventListener('scroll', resetScroll);
+    };
+  }, []);
 
   const activeTab = MAIN_TABS.includes(screen as Tab) ? screen as Tab : null;
   const unreadNotifs = state.notifications.filter(n => !n.read).length + (pendingInvite ? 1 : 0);

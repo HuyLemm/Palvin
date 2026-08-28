@@ -122,7 +122,11 @@ function AuthBg({ children }: { children: React.ReactNode }) {
       flexDirection: 'column',
       background: 'linear-gradient(160deg, #FFF0F5 0%, #FCE4EF 35%, #EDD5F0 70%, #F5E8F8 100%)',
       position: 'relative',
-      overflowY: 'auto',
+      // Not scrollable: with html/body locked (overflow:hidden), this was
+      // the only scrollable ancestor left, so Safari auto-scrolled it to
+      // reveal the focused input above the keyboard, visibly shifting the
+      // whole form. Content already fits without scrolling.
+      overflowY: 'hidden',
       overflowX: 'hidden',
     }}>
       <Petals />
@@ -334,7 +338,7 @@ export default function AuthScreen() {
   /* ── WELCOME SCREEN ── */
   return (
     <AuthBg>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 40, padding: '24px 24px', position: 'relative', zIndex: 1 }}>
+      <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 40, padding: '24px 24px', position: 'relative', zIndex: 1 }}>
 
         {/* Logo area */}
         <div className="auth-fade-up" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
