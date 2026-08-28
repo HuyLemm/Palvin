@@ -1,0 +1,68 @@
+import type { User } from '../types';
+
+interface Props {
+  user: User | string;
+  size?: number;
+  ring?: boolean;
+  story?: boolean;
+  photoUrl?: string;
+  onClick?: () => void;
+}
+
+const ALVIN_GRAD = 'linear-gradient(135deg, #C95F7C, #E67F9A)';
+const PAOI_GRAD  = 'linear-gradient(135deg, #F3A6B9, #FADCE4)';
+const PAOI_TEXT  = '#C95F7C';
+
+export default function Avatar({ user, size = 40, ring = false, story = false, photoUrl, onClick }: Props) {
+  const isAlvin = user === 'Alvin';
+  const grad = isAlvin ? ALVIN_GRAD : PAOI_GRAD;
+  const textColor = isAlvin ? '#fff' : PAOI_TEXT;
+  const initial = String(user)[0]?.toUpperCase() ?? '?';
+
+  const ringStyle = ring
+    ? { outline: '2.5px solid #F3A6B9', outlineOffset: '2px' }
+    : {};
+  const storyStyle = story
+    ? { outline: '2.5px solid transparent', backgroundImage: 'linear-gradient(white,white), linear-gradient(135deg, #F3A6B9, #E67F9A)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }
+    : {};
+
+  if (photoUrl) {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          width: size, height: size,
+          borderRadius: '50%',
+          overflow: 'hidden',
+          flexShrink: 0,
+          cursor: onClick ? 'pointer' : 'default',
+          ...ringStyle,
+        }}
+      >
+        <img src={photoUrl} alt={String(user)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        width: size, height: size,
+        borderRadius: '50%',
+        background: grad,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'Outfit', sans-serif",
+        fontWeight: 700,
+        fontSize: size * 0.38,
+        color: textColor,
+        flexShrink: 0,
+        cursor: onClick ? 'pointer' : 'default',
+        ...ringStyle,
+        ...storyStyle,
+      }}
+    >
+      {initial}
+    </div>
+  );
+}

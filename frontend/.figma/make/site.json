@@ -1,0 +1,10 @@
+{
+  "description": "Streamline task management with an intuitive app designed to boost productivity and simplify daily workflows for professionals and teams.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
