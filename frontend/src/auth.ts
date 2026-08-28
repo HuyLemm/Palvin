@@ -1,10 +1,20 @@
 import { supabase } from './lib/supabaseClient';
 
+export interface NotifyPrefs {
+  love: boolean;
+  memories: boolean;
+  expenses: boolean;
+  events: boolean;
+}
+
+const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true };
+
 export interface AuthProfile {
   id: string;
   displayName: string;
   photoUrl?: string;
   coupleId: string | null;
+  notifyPrefs: NotifyPrefs;
 }
 
 export interface PendingInvite {
@@ -53,21 +63,24 @@ export async function logout(): Promise<void> {
   await supabase.auth.signOut();
 }
 
-function rowToProfile(row: { id: string; display_name: string; couple_id: string | null; avatar_url: string | null }): AuthProfile {
+function rowToProfile(row: { id: string; display_name: string; couple_id: string | null; avatar_url: string | null; notify_prefs?: Partial<NotifyPrefs> | null }): AuthProfile {
   return {
     id: row.id,
     displayName: row.display_name,
     coupleId: row.couple_id,
     photoUrl: row.avatar_url ?? undefined,
+    notifyPrefs: { ...DEFAULT_NOTIFY_PREFS, ...(row.notify_prefs ?? {}) },
   };
 }
+
+const PROFILE_SELECT = 'id, display_name, couple_id, avatar_url, notify_prefs';
 
 export async function getCurrentProfile(): Promise<AuthProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
   const { data } = await supabase
     .from('profiles')
-    .select('id, display_name, couple_id, avatar_url')
+    .select(PROFILE_SELECT)
     .eq('id', user.id)
     .maybeSingle();
   return data ? rowToProfile(data) : null;
@@ -78,7 +91,7 @@ export async function getPartnerProfile(): Promise<AuthProfile | null> {
   if (!me?.coupleId) return null;
   const { data } = await supabase
     .from('profiles')
-    .select('id, display_name, couple_id, avatar_url')
+    .select(PROFILE_SELECT)
     .eq('couple_id', me.coupleId)
     .neq('id', me.id)
     .maybeSingle();
@@ -89,6 +102,14 @@ export async function updatePhoto(photoUrl: string): Promise<Result> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: 'Chưa đăng nhập.' };
   const { error } = await supabase.from('profiles').update({ avatar_url: photoUrl }).eq('id', user.id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+export async function updateNotifyPrefs(prefs: NotifyPrefs): Promise<Result> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: 'Chưa đăng nhập.' };
+  const { error } = await supabase.from('profiles').update({ notify_prefs: prefs }).eq('id', user.id);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }

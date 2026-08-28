@@ -2,14 +2,18 @@ import { useState, useRef } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import type { User } from '../types';
+import type { NotifyPrefs } from '../auth';
+
+const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true };
 
 export default function Settings() {
   const {
     currentUser, toast, profilePhotos, updateProfilePhoto, state, toggleDarkMode, logout,
     isLinked, myProfile, partnerProfile, sentInvite, invitePartner, cancelSentInvite, pendingInvite, acceptInvite, rejectInvite,
+    updateNotifyPrefs,
   } = useApp();
   const [responding, setResponding] = useState(false);
-  const [notifications, setNotifications] = useState({ love: true, memories: true, expenses: true, events: true });
+  const notifyPrefs = myProfile?.notifyPrefs ?? DEFAULT_NOTIFY_PREFS;
   const darkMode = state.darkMode;
   const [showLogout, setShowLogout] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -36,9 +40,8 @@ export default function Settings() {
     setResponding(false);
   }
 
-  const toggleNotif = (key: keyof typeof notifications) => {
-    setNotifications(n => ({ ...n, [key]: !n[key] }));
-    toast('Đã cập nhật', '✓');
+  const toggleNotif = (key: keyof NotifyPrefs) => {
+    updateNotifyPrefs({ ...notifyPrefs, [key]: !notifyPrefs[key] });
   };
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -150,10 +153,10 @@ export default function Settings() {
 
       {/* Notifications */}
       <Section title="Notifications">
-        <ToggleRow emoji="💌" label="Love notes" value={notifications.love} onToggle={() => toggleNotif('love')} />
-        <ToggleRow emoji="🌸" label="New memories" value={notifications.memories} onToggle={() => toggleNotif('memories')} />
-        <ToggleRow emoji="💰" label="Expenses" value={notifications.expenses} onToggle={() => toggleNotif('expenses')} />
-        <ToggleRow emoji="📅" label="Events & reminders" value={notifications.events} onToggle={() => toggleNotif('events')} />
+        <ToggleRow emoji="💌" label="Love notes" value={notifyPrefs.love} onToggle={() => toggleNotif('love')} />
+        <ToggleRow emoji="🌸" label="New memories" value={notifyPrefs.memories} onToggle={() => toggleNotif('memories')} />
+        <ToggleRow emoji="💰" label="Expenses" value={notifyPrefs.expenses} onToggle={() => toggleNotif('expenses')} />
+        <ToggleRow emoji="📅" label="Events & reminders" value={notifyPrefs.events} onToggle={() => toggleNotif('events')} />
       </Section>
 
       {/* Appearance */}

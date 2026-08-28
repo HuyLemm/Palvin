@@ -13,19 +13,6 @@ import type { FavCategory, FavPlace } from '../types';
 
 type SubScreen = 'main' | 'story' | 'favorites' | 'places' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit';
 
-const TIMELINE_EVENTS = [
-  { date: 'Aug 21, 2023', emoji: '❤️', label: 'The day we became us' },
-  { date: 'Sep 3, 2023',  emoji: '☕', label: 'First date' },
-  { date: 'Oct 12, 2023', emoji: '✈️', label: 'First trip together' },
-  { date: 'Jan 1, 2024',  emoji: '🎆', label: 'New Year, new adventures' },
-  { date: 'Aug 21, 2024', emoji: '💕', label: 'First anniversary' },
-  { date: 'Jan 1, 2025',  emoji: '🎇', label: 'New Year 2025' },
-  { date: 'Mar 18, 2025', emoji: '🇯🇵', label: 'Japan trip' },
-  { date: 'Aug 21, 2025', emoji: '💑', label: 'Second anniversary' },
-  { date: 'Aug 21, 2026', emoji: '🥂', label: 'Third anniversary!' },
-  { date: 'Today',        emoji: '🌸', label: 'Still going strong' },
-];
-
 const FAV_CATEGORY_CONFIG: { key: FavCategory; emoji: string; label: string; color: string; placeholder: string }[] = [
   { key: 'food',   emoji: '🍜', label: 'Ăn uống',  color: '#E8844A', placeholder: 'Tên quán ăn...' },
   { key: 'cafe',   emoji: '☕', label: 'Cafe',     color: '#C48A52', placeholder: 'Tên quán cafe...' },
@@ -48,24 +35,38 @@ export default function Us() {
   if (sub === 'gratitude') return <GratitudeJournal onBack={() => setSub('main')} />;
   if (sub === 'permit')   return <DatePermit onBack={() => setSub('main')} />;
 
-  if (sub === 'story') return (
-    <div style={{ paddingBottom: 32 }}>
-      <Back />
-      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 24 }}>Our Story</p>
-      <div style={{ position: 'relative' }}>
-        <div style={{ position: 'absolute', left: 20, top: 0, bottom: 0, width: 2, background: 'var(--sakura-light)' }} />
-        {TIMELINE_EVENTS.map((ev, i) => (
-          <div key={i} style={{ display: 'flex', gap: 16, marginBottom: 24, position: 'relative' }}>
-            <div style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--sakura-light)', border: '2px solid var(--sakura)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, zIndex: 1 }}>{ev.emoji}</div>
-            <div style={{ paddingTop: 8 }}>
-              <p style={{ fontSize: 12, color: 'var(--sakura-accent)', fontWeight: 600, marginBottom: 2 }}>{ev.date}</p>
-              <p style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 600 }}>{ev.label}</p>
-            </div>
+  if (sub === 'story') {
+    const timeline = [...state.memories].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return (
+      <div style={{ paddingBottom: 32 }}>
+        <Back />
+        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 24 }}>Our Story</p>
+        {timeline.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '48px 24px' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🌸</div>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>Chưa có kỷ niệm nào</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Thêm kỷ niệm để bắt đầu câu chuyện của hai người.</p>
           </div>
-        ))}
+        ) : (
+          <div style={{ position: 'relative' }}>
+            <div style={{ position: 'absolute', left: 20, top: 0, bottom: 0, width: 2, background: 'var(--sakura-light)' }} />
+            {timeline.map(m => (
+              <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ display: 'flex', gap: 16, marginBottom: 24, position: 'relative', cursor: 'pointer' }}>
+                <div style={{ width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--sakura)', flexShrink: 0, zIndex: 1, background: 'var(--sakura-light)' }}>
+                  <img src={m.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div style={{ paddingTop: 8 }}>
+                  <p style={{ fontSize: 12, color: 'var(--sakura-accent)', fontWeight: 600, marginBottom: 2 }}>{m.date}</p>
+                  <p style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 600 }}>{m.title}</p>
+                  {m.location && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>📍 {m.location}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  }
 
   if (sub === 'favorites') return <OurFavouritesScreen onBack={() => setSub('main')} />;
 

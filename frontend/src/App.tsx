@@ -141,7 +141,8 @@ function ScreenRouter() {
 const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 
 export default function App() {
-  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, profilePhotos, authed, authLoading, isLinked, pendingInvite, toast } = useApp();
+  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, profilePhotos, authed, authLoading, profileLoaded, isLinked, pendingInvite, toast } = useApp();
+  const stillResolvingSession = authLoading || (authed && !profileLoaded);
 
   const activeTab = MAIN_TABS.includes(screen as Tab) ? screen as Tab : null;
   const unreadNotifs = state.notifications.filter(n => !n.read).length + (pendingInvite ? 1 : 0);
@@ -214,8 +215,22 @@ export default function App() {
           {/* App Content */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
 
+            {/* Loading — covers the brief gap while we check the session + fetch the
+                profile/link state, so the UI never flashes the wrong screen (e.g.
+                "locked" before we actually know isLinked) while that resolves. */}
+            {stillResolvingSession && (
+              <div style={{ position: 'absolute', inset: 0, zIndex: 200, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{
+                  width: 40, height: 40, borderRadius: '50%',
+                  border: '3px solid var(--sakura-light)', borderTopColor: 'var(--sakura-accent)',
+                  animation: 'palvin-spin 0.8s linear infinite',
+                }} />
+                <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            )}
+
             {/* Auth guard */}
-            {!authLoading && !authed && (
+            {!stillResolvingSession && !authed && (
               <div style={{ position: 'absolute', inset: 0, zIndex: 100, background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
                 <AuthScreen />
               </div>

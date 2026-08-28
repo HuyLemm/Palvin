@@ -8,10 +8,22 @@ import { initialState } from './data';
 import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, CalendarEvent, Goal, Mood, Bill, Trip, Capsule, Countdown, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory } from './types';
 import { supabase } from './lib/supabaseClient';
 import {
-  updatePhoto as authUpdatePhoto, getCurrentProfile, getPartnerProfile, logout as authLogout,
+  updatePhoto as authUpdatePhoto, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
   sendInvite as apiSendInvite, respondInvite as apiRespondInvite, cancelInvite as apiCancelInvite, getMyInvites,
-  type PendingInvite, type AuthProfile,
+  type PendingInvite, type AuthProfile, type NotifyPrefs,
 } from './auth';
+import {
+  fetchPosts, createPost, addPostComment, setLiked, setSaved, toggleReaction,
+} from './feed';
+import {
+  fetchNotifications, markNotificationRead, markAllNotificationsRead,
+} from './notifications';
+import {
+  fetchMemories, createMemory, setMemoryFavorite,
+} from './memories';
+import {
+  fetchEvents, createEvent, deleteEventRow,
+} from './calendar';
 
 interface ToastItem { id: string; message: string; emoji: string; }
 
@@ -22,6 +34,7 @@ interface AppContextType {
   // Auth session
   authed: boolean;
   authLoading: boolean;
+  profileLoaded: boolean;   // true once refreshAuthProfile() has resolved at least once — gates isLinked from flashing false
   isLinked: boolean;
   myProfile: AuthProfile | null;
   partnerProfile: AuthProfile | null;
@@ -48,7 +61,8 @@ interface AppContextType {
 
   // Create modal
   createModal: boolean;
-  openCreate: () => void;
+  createStep: string | null;
+  openCreate: (step?: string) => void;
   closeCreate: () => void;
   celebration: boolean;
 
@@ -92,6 +106,7 @@ interface AppContextType {
   // Notifications
   markNotifRead: (id: string) => void;
   markAllRead: () => void;
+  updateNotifyPrefs: (prefs: NotifyPrefs) => void;
 
   // Bills
   addBill: (b: Omit<Bill, 'id'>) => void;
@@ -162,6 +177,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User>('Alvin');
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const [isLinked, setIsLinked] = useState(false);
   const [myProfile, setMyProfile] = useState<AuthProfile | null>(null);
   const [partnerProfile, setPartnerProfile] = useState<AuthProfile | null>(null);
@@ -171,6 +187,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [stack, setStack] = useState<{ screen: string; id?: string }[]>([{ screen: 'home' }]);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [createModal, setCreateModal] = useState(false);
+  const [createStep, setCreateStep] = useState<string | null>(null);
   const [celebration, setCelebration] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -195,63 +212,68 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }, 3000);
   }, []);
 
-  const openCreate = () => setCreateModal(true);
-  const closeCreate = () => setCreateModal(false);
+  const openCreate = (step?: string) => { setCreateModal(true); setCreateStep(step ?? null); };
+  const closeCreate = () => { setCreateModal(false); setCreateStep(null); };
 
-  // Posts
-  const toggleLike = (id: string) => {
+  // Posts — backed by Supabase (posts/post_comments/post_likes/post_saves/post_reactions)
+  const toggleLike = async (id: string) => {
+    if (!myProfile) return;
+    const post = state.posts.find(p => p.id === id);
+    if (!post) return;
+    const nextLiked = !post.liked;
     setState(s => ({
       ...s,
-      posts: s.posts.map(p =>
-        p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p
-      )
+      posts: s.posts.map(p => p.id === id ? { ...p, liked: nextLiked, likes: nextLiked ? p.likes + 1 : p.likes - 1 } : p),
     }));
+    const { error } = await setLiked(id, myProfile.id, nextLiked);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); }
   };
 
-  const toggleSave = (id: string) => {
-    setState(s => ({ ...s, posts: s.posts.map(p => p.id === id ? { ...p, saved: !p.saved } : p) }));
+  const toggleSave = async (id: string) => {
+    if (!myProfile) return;
+    const post = state.posts.find(p => p.id === id);
+    if (!post) return;
+    const nextSaved = !post.saved;
+    setState(s => ({ ...s, posts: s.posts.map(p => p.id === id ? { ...p, saved: nextSaved } : p) }));
+    const { error } = await setSaved(id, myProfile.id, nextSaved);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); }
   };
 
-  const addComment = (postId: string, text: string) => {
-    setState(s => ({
-      ...s,
-      posts: s.posts.map(p =>
-        p.id === postId
-          ? { ...p, comments: [...p.comments, { id: uid(), author: currentUser, text, date: 'Just now' }] }
-          : p
-      )
-    }));
+  const addComment = async (postId: string, text: string) => {
+    if (!myProfile) return;
+    const { error } = await addPostComment(postId, myProfile.id, text);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    refreshPosts();
   };
 
-  const addPost = (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments'>) => {
-    const newPost: Post = { ...p, id: uid(), liked: false, saved: false, comments: [] };
-    setState(s => ({ ...s, posts: [newPost, ...s.posts] }));
-    setState(s => ({
-      ...s,
-      notifications: [
-        { id: uid(), emoji: '📸', message: `${p.author} published a new post.`, date: 'Just now', read: false },
-        ...s.notifications
-      ]
-    }));
-    toast('Post published.', '📸');
+  const addPost = async (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments'>) => {
+    if (!myProfile) return;
+    const { error } = await createPost(myProfile.id, { image: p.image, caption: p.caption, location: p.location });
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshPosts();
+    // No manual success toast here — the realtime `notifications` subscription
+    // above pops one for both accounts (including the poster) a moment later.
   };
 
-  // Memories
-  const addMemory = (m: Omit<Memory, 'id' | 'favorite'>) => {
-    const mem: Memory = { ...m, id: uid(), favorite: false };
-    setState(s => ({
-      ...s,
-      memories: [mem, ...s.memories],
-      notifications: [
-        { id: uid(), emoji: '🌸', message: `${currentUser} added a new memory: ${m.title}`, date: 'Just now', read: false },
-        ...s.notifications
-      ]
-    }));
-    toast('Memory added 🌸');
+  // Memories — backed by Supabase
+  const addMemory = async (m: Omit<Memory, 'id' | 'favorite'>) => {
+    if (!myProfile || !partnerProfile) return;
+    const occurredOn = new Date(m.date).toISOString().slice(0, 10);
+    const { error } = await createMemory(myProfile.id, [myProfile.id, partnerProfile.id], {
+      title: m.title, occurredOn, location: m.location, description: m.description, image: m.image,
+    });
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshMemories();
+    // No manual toast — the realtime `notifications` subscription pops one for both accounts.
   };
 
-  const toggleFavorite = (id: string) => {
-    setState(s => ({ ...s, memories: s.memories.map(m => m.id === id ? { ...m, favorite: !m.favorite } : m) }));
+  const toggleFavorite = async (id: string) => {
+    const mem = state.memories.find(m => m.id === id);
+    if (!mem) return;
+    const nextFav = !mem.favorite;
+    setState(s => ({ ...s, memories: s.memories.map(x => x.id === id ? { ...x, favorite: nextFav } : x) }));
+    const { error } = await setMemoryFavorite(id, nextFav);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMemories(); }
   };
 
   // Expenses
@@ -299,14 +321,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, loveNotes: s.loveNotes.map(n => n.id === id ? { ...n, read: true } : n) }));
   };
 
-  // Events
-  const addEvent = (e: Omit<CalendarEvent, 'id'>) => {
-    setState(s => ({ ...s, events: [...s.events, { ...e, id: uid() }] }));
+  // Events — backed by Supabase
+  const addEvent = async (e: Omit<CalendarEvent, 'id'>) => {
+    const { error } = await createEvent(e);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshEvents();
     toast('Event added to calendar 📅');
   };
 
-  const deleteEvent = (id: string) => {
+  const deleteEvent = async (id: string) => {
     setState(s => ({ ...s, events: s.events.filter(e => e.id !== id) }));
+    const { error } = await deleteEventRow(id);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshEvents(); }
   };
 
   // Goals
@@ -355,13 +381,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toast('Updated!', '✨');
   };
 
-  // Notifications
-  const markNotifRead = (id: string) => {
+  // Notifications — backed by Supabase (shared couple activity feed)
+  const markNotifRead = async (id: string) => {
     setState(s => ({ ...s, notifications: s.notifications.map(n => n.id === id ? { ...n, read: true } : n) }));
+    const { error } = await markNotificationRead(id);
+    if (error) refreshNotifications();
   };
 
-  const markAllRead = () => {
+  const markAllRead = async () => {
     setState(s => ({ ...s, notifications: s.notifications.map(n => ({ ...n, read: true })) }));
+    const { error } = await markAllNotificationsRead();
+    if (error) refreshNotifications();
   };
 
   // Bills
@@ -522,21 +552,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Reactions
-  const addReaction = (postId: string, emoji: string) => {
-    setState(s => {
-      const existing = s.postReactions[postId]?.[emoji];
-      const reacted = existing?.reacted ?? false;
-      return {
-        ...s,
-        postReactions: {
-          ...s.postReactions,
-          [postId]: {
-            ...s.postReactions[postId],
-            [emoji]: { count: reacted ? (existing.count - 1) : ((existing?.count ?? 0) + 1), reacted: !reacted },
-          },
+  const addReaction = async (postId: string, emoji: string) => {
+    if (!myProfile) return;
+    const existing = state.postReactions[postId]?.[emoji];
+    const reacted = existing?.reacted ?? false;
+    setState(s => ({
+      ...s,
+      postReactions: {
+        ...s.postReactions,
+        [postId]: {
+          ...s.postReactions[postId],
+          [emoji]: { count: reacted ? (existing!.count - 1) : ((existing?.count ?? 0) + 1), reacted: !reacted },
         },
-      };
-    });
+      },
+    }));
+    const { error } = await toggleReaction(postId, myProfile.id, emoji, reacted);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); }
   };
 
   // Fav places
@@ -567,6 +598,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const me = await getCurrentProfile();
     if (!me) {
       setMyProfile(null); setPartnerProfile(null); setProfilePhotos({}); setIsLinked(false);
+      setProfileLoaded(true);
       return;
     }
     const partner = await getPartnerProfile();
@@ -578,18 +610,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (partner?.photoUrl) photos[partner.displayName] = partner.photoUrl;
     setProfilePhotos(photos);
     if (me.displayName === 'Alvin' || me.displayName === 'Paoi') setCurrentUser(me.displayName);
+    setProfileLoaded(true);
   }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAuthed(!!session);
       setAuthLoading(false);
-      if (session) refreshProfiles();
+      if (session) refreshProfiles(); else setProfileLoaded(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthed(!!session);
       if (session) refreshProfiles();
-      else { setMyProfile(null); setPartnerProfile(null); setProfilePhotos({}); setIsLinked(false); }
+      else { setMyProfile(null); setPartnerProfile(null); setProfilePhotos({}); setIsLinked(false); setProfileLoaded(true); }
     });
     return () => sub.subscription.unsubscribe();
   }, [refreshProfiles]);
@@ -606,6 +639,77 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const t = setInterval(refreshInvites, 8000);
     return () => clearInterval(t);
   }, [authed, isLinked, refreshInvites]);
+
+  const refreshPosts = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const { posts, reactions } = await fetchPosts(myProfile.id, names);
+    setState(s => ({ ...s, posts, postReactions: reactions }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshPosts();
+  }, [isLinked, myProfile, partnerProfile, refreshPosts]);
+
+  const refreshMemories = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const memories = await fetchMemories(names);
+    setState(s => ({ ...s, memories }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshMemories();
+  }, [isLinked, myProfile, partnerProfile, refreshMemories]);
+
+  const refreshEvents = useCallback(async () => {
+    const events = await fetchEvents();
+    setState(s => ({ ...s, events }));
+  }, []);
+
+  useEffect(() => {
+    if (isLinked) refreshEvents();
+  }, [isLinked, refreshEvents]);
+
+  const refreshNotifications = useCallback(async () => {
+    const notifications = await fetchNotifications();
+    setState(s => ({ ...s, notifications }));
+  }, []);
+
+  // Realtime: pop a toast + prepend the item the instant a notification row is
+  // inserted for this couple, instead of waiting on a poll interval.
+  useEffect(() => {
+    if (!isLinked || !myProfile?.coupleId) return;
+    refreshNotifications();
+    const coupleId = myProfile.coupleId;
+    const channel = supabase
+      .channel(`notifications-${coupleId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `couple_id=eq.${coupleId}` },
+        (payload) => {
+          const row = payload.new as { id: string; emoji: string | null; message: string; read: boolean };
+          setState(s => {
+            if (s.notifications.some(n => n.id === row.id)) return s;
+            return { ...s, notifications: [{ id: row.id, emoji: row.emoji ?? '🔔', message: row.message, read: row.read, date: 'Just now' }, ...s.notifications] };
+          });
+          toast(row.message, row.emoji ?? '🔔');
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isLinked, myProfile?.coupleId, refreshNotifications]);
+
+  const updateNotifyPrefs = async (prefs: NotifyPrefs) => {
+    const res = await authUpdateNotifyPrefs(prefs);
+    if (!res.ok) { toast(res.error || 'Có lỗi xảy ra', '⚠️'); return; }
+    await refreshProfiles();
+    toast('Đã cập nhật', '✓');
+  };
 
   const invitePartner = useCallback(async (username: string) => {
     const res = await apiSendInvite(username);
@@ -647,11 +751,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{
       state, currentUser,
-      authed, authLoading, isLinked, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
+      authed, authLoading, profileLoaded, isLinked, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
       pendingInvite, sentInvite, invitePartner, acceptInvite, rejectInvite, cancelSentInvite,
       screen, selectedId, navigate, goBack,
       toasts, toast,
-      createModal, openCreate, closeCreate, celebration,
+      createModal, createStep, openCreate, closeCreate, celebration,
       toggleLike, toggleSave, addComment, addPost,
       addMemory, toggleFavorite,
       addExpense, deleteExpense,
@@ -661,7 +765,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addGoal, toggleGoal, deleteGoal,
       setMood,
       updateFavorite,
-      markNotifRead, markAllRead,
+      markNotifRead, markAllRead, updateNotifyPrefs,
       addBill, toggleBillPaid, deleteBill, toggleBillReminder,
       addTrip, updateTrip, deleteTrip, toggleTripCheck,
       addCapsule, openCapsule,

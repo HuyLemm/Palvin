@@ -18,8 +18,8 @@ const OPTIONS = [
 ];
 
 export default function CreateModal() {
-  const { closeCreate } = useApp();
-  const [step, setStep] = useState<string | null>(null);
+  const { closeCreate, createStep } = useApp();
+  const [step, setStep] = useState<string | null>(createStep);
 
   const handleClose = () => { setStep(null); closeCreate(); };
 

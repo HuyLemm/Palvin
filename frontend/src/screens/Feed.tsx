@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
-import AddPostForm from '../components/forms/AddPostForm';
 
 const REACTION_EMOJIS = ['❤️', '🔥', '😍', '🥺', '😂', '💕'];
 
 export default function Feed() {
-  const { state, toggleLike, toggleSave, addComment, addReaction, navigate, currentUser } = useApp();
+  const { state, toggleLike, toggleSave, addComment, addReaction, navigate, currentUser, openCreate } = useApp();
   const [commentingId, setCommentingId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [likedAnim, setLikedAnim] = useState<string | null>(null);
-  const [showAddPost, setShowAddPost] = useState(false);
   const [reactionPickerId, setReactionPickerId] = useState<string | null>(null);
 
   const handleLike = (id: string, wasLiked: boolean) => {
@@ -48,7 +46,11 @@ export default function Feed() {
       {/* Stories */}
       <div style={{ display: 'flex', gap: 16, padding: '4px 0 16px', overflowX: 'auto' }}>
         {(['Alvin', 'Paoi'] as const).map(u => (
-          <div key={u} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0, cursor: 'pointer' }}>
+          <div
+            key={u}
+            onClick={() => openCreate('post')}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0, cursor: 'pointer' }}
+          >
             <div style={{ position: 'relative' }}>
               <Avatar user={u} size={56} story />
               <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--sakura-accent)', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'white', border: '2px solid white', fontWeight: 700 }}>+</div>
@@ -184,8 +186,6 @@ export default function Feed() {
           );
         })}
       </div>
-
-      {showAddPost && <AddPostForm onClose={() => setShowAddPost(false)} />}
     </div>
   );
 }

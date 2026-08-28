@@ -24,84 +24,11 @@ export function getDuration(): { years: number; months: number; days: number } {
 }
 
 export const initialState: AppState = {
-  posts: [
-    {
-      id: 'p1', author: 'Alvin', date: 'August 25, 2026',
-      image: 'https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600&h=600&fit=crop&auto=format',
-      caption: 'Random Tuesday with my favorite person ❤️',
-      likes: 24, liked: false, saved: false, location: 'District 1, Saigon',
-      comments: [{ id: 'c1', author: 'Paoi', text: 'I love you so much 🥰', date: 'Aug 25' }]
-    },
-    {
-      id: 'p2', author: 'Paoi', date: 'August 23, 2026',
-      image: 'https://images.unsplash.com/photo-1522383225753-aa61820f8dc6?w=600&h=600&fit=crop&auto=format',
-      caption: "Some days are better simply because you're there. ✨",
-      likes: 18, liked: true, saved: true, location: 'The Workshop Coffee',
-      comments: [
-        { id: 'c2', author: 'Alvin', text: 'You always make my day 💕', date: 'Aug 23' },
-        { id: 'c3', author: 'Paoi', text: '🥰🌸', date: 'Aug 23' }
-      ]
-    },
-    {
-      id: 'p3', author: 'Alvin', date: 'August 20, 2026',
-      image: 'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=600&h=600&fit=crop&auto=format',
-      caption: 'Dinner for two 🍝 Our favorite spot, always.',
-      likes: 31, liked: false, saved: false, location: 'Bún chả Hương Liên',
-      comments: []
-    },
-    {
-      id: 'p4', author: 'Paoi', date: 'August 18, 2026',
-      image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=600&fit=crop&auto=format',
-      caption: 'Counting down to Japan 🇯🇵 So close.',
-      likes: 42, liked: true, saved: true, location: 'Dreaming of Tokyo',
-      comments: [{ id: 'c4', author: 'Alvin', text: "We're so ready!! 🇯🇵", date: 'Aug 18' }]
-    }
-  ],
+  // Loaded from Supabase (see context.tsx's refreshPosts) once the couple is linked.
+  posts: [],
 
-  memories: [
-    {
-      id: 'm1', title: 'The Day We Became Us ❤️', date: 'August 21, 2023', year: 2023,
-      location: 'District 3, Saigon',
-      description: 'The most important day. The day everything changed. We sat at that little café and somehow, everything just clicked.',
-      image: 'https://images.unsplash.com/photo-1488161628813-04466f872be2?w=600&h=800&fit=crop&auto=format',
-      favorite: true, people: ['Alvin', 'Paoi']
-    },
-    {
-      id: 'm2', title: 'First Date ❤️', date: 'September 3, 2023', year: 2023,
-      location: 'Felice Café, Saigon',
-      description: 'Nervous, excited, and completely in love from the first minute. We talked for hours and forgot the time.',
-      image: 'https://images.unsplash.com/photo-1447933863590-8f90f5893571?w=600&h=500&fit=crop&auto=format',
-      favorite: true, people: ['Alvin', 'Paoi']
-    },
-    {
-      id: 'm3', title: 'First Anniversary 💕', date: 'August 21, 2024', year: 2024,
-      location: 'Nha Trang, Vietnam',
-      description: 'One beautiful year together. We celebrated with the ocean and all the love in our hearts.',
-      image: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=600&h=700&fit=crop&auto=format',
-      favorite: true, people: ['Alvin', 'Paoi']
-    },
-    {
-      id: 'm4', title: 'New Year Together 🎆', date: 'January 1, 2025', year: 2025,
-      location: 'Rooftop Bar, Saigon',
-      description: 'First New Year as us. Watching the fireworks while making quiet promises to each other.',
-      image: 'https://images.unsplash.com/photo-1469371670807-013ccf25f16a?w=600&h=600&fit=crop&auto=format',
-      favorite: false, people: ['Alvin', 'Paoi']
-    },
-    {
-      id: 'm5', title: 'Japan Trip 🇯🇵', date: 'March 18, 2025', year: 2025,
-      location: 'Tokyo, Japan',
-      description: 'Our first international adventure! Tokyo in spring — cherry blossoms, ramen, and us. Absolutely magical.',
-      image: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=800&fit=crop&auto=format',
-      favorite: true, people: ['Alvin', 'Paoi']
-    },
-    {
-      id: 'm6', title: 'Summer Together 🌸', date: 'August 10, 2026', year: 2026,
-      location: 'Da Lat, Vietnam',
-      description: 'Summer in the highlands. Cool weather, warm coffee, and the best company in the world.',
-      image: 'https://images.unsplash.com/photo-1522383225753-aa61820f8dc6?w=600&h=600&fit=crop&auto=format',
-      favorite: false, people: ['Alvin', 'Paoi']
-    }
-  ],
+  // Loaded from Supabase (see context.tsx's refreshMemories) once the couple is linked.
+  memories: [],
 
   expenses: [
     { id: 'e1', title: 'Dinner at Restaurant', category: 'Food', categoryEmoji: '🍜', amount: 25.50, paidBy: 'Alvin', date: '2026-08-27', note: 'Our favorite pasta place' },
@@ -141,13 +68,8 @@ export const initialState: AppState = {
     { id: 'sn2', from: 'Paoi', message: "Happy 3rd Anniversary, my love! ❤️\nHere's to forever. I choose you every day.", unlockDate: '2026-08-21' }
   ],
 
-  events: [
-    { id: 'ev1', title: 'Date Night ❤️', date: '2026-08-27', time: '7:00 PM', category: 'date', location: 'Italian Kitchen', notes: 'Monthly date night!' },
-    { id: 'ev2', title: "Paoi's Birthday 🎂", date: '2026-09-03', time: '12:00 PM', category: 'birthday', location: 'Surprise!', notes: 'Plan something special' },
-    { id: 'ev3', title: 'Japan Trip ✈️', date: '2026-12-15', time: '9:00 AM', category: 'trip', location: 'Tokyo, Japan', notes: 'Finally! Our dream trip.' },
-    { id: 'ev4', title: 'Movie Night 🎬', date: '2026-09-10', time: '8:00 PM', category: 'date', location: 'CGV Cinema', notes: '' },
-    { id: 'ev5', title: '3rd Anniversary 💕', date: '2026-08-21', time: '12:00 PM', category: 'anniversary', location: 'Nha Trang', notes: 'Already celebrated!' }
-  ],
+  // Loaded from Supabase (see context.tsx's refreshEvents) once the couple is linked.
+  events: [],
 
   goals: [
     { id: 'g1', title: 'Visit Japan 🇯🇵', emoji: '🇯🇵', completed: false },
@@ -159,13 +81,8 @@ export const initialState: AppState = {
     { id: 'g7', title: 'Adopt a plant together 🌱', emoji: '🌱', completed: true, completedDate: 'January 2025' }
   ],
 
-  notifications: [
-    { id: 'notif1', emoji: '💌', message: 'Paoi sent you a love note.', date: '2 min ago', read: false },
-    { id: 'notif2', emoji: '🌸', message: 'Paoi added a new memory: Summer Together.', date: '1 hour ago', read: false },
-    { id: 'notif3', emoji: '🎂', message: "7 days until Paoi's birthday!", date: 'Today', read: false },
-    { id: 'notif4', emoji: '💰', message: 'Japan Trip savings reached 41%! Keep going.', date: 'Yesterday', read: true },
-    { id: 'notif5', emoji: '❤️', message: 'Alvin liked your post.', date: 'Yesterday', read: true }
-  ],
+  // Loaded from Supabase (see context.tsx's refreshNotifications) once the couple is linked.
+  notifications: [],
 
   moods: {
     Alvin: { emoji: '🥰', label: 'Feeling loved' },
