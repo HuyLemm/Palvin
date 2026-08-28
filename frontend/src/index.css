@@ -68,12 +68,25 @@ html, body {
   overflow: hidden;
   background: var(--bg);
 }
+.status-bar-mock {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
 
 /* Real device: collapse the mockup into an actual edge-to-edge layout and
    let the app fill the real viewport instead of showing a tiny fake phone
    frame (with its own fake status bar) inside the real browser chrome. */
 @media (max-width: 480px) {
-  html, body { height: 100dvh; }
+  html, body {
+    height: 100dvh;
+    /* Lock the page itself so it can't be dragged/bounced (iOS Safari's
+       rubber-band overscroll) — only .app-viewport's inner <main> scrolls. */
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
   .app-viewport { height: 100dvh; }
   .phone-shell {
     width: 100%;
@@ -83,7 +96,7 @@ html, body {
     box-shadow: none;
   }
   .phone-screen { border-radius: 0; }
-  .phone-bezel-decor, .status-bar-mock { display: none; }
+  .phone-bezel-decor, .status-bar-mock { display: none !important; }
   .app-header { padding-top: calc(10px + env(safe-area-inset-top)) !important; }
   .app-bottom-nav { padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important; }
 }

@@ -178,9 +178,6 @@ export default function App() {
           <div className="status-bar-mock" style={{
             height: 56,
             background: 'rgba(255,248,250,0.95)',
-            display: 'flex',
-            alignItems: 'flex-end',
-            justifyContent: 'space-between',
             padding: '0 28px 8px',
             flexShrink: 0,
             position: 'relative',
