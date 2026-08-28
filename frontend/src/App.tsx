@@ -155,36 +155,27 @@ export default function App() {
   const isSubScreen = !MAIN_TABS.includes(screen as Tab) && screen !== 'home';
 
   return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* iPhone Frame */}
-      <div style={{
-        width: 393,
-        height: 852,
-        background: '#1a1a1a',
-        borderRadius: 54,
-        boxShadow: '0 0 0 2px #3a3a3a, 0 0 0 4px #222, 0 32px 80px rgba(0,0,0,0.45), inset 0 0 0 2px #555',
-        position: 'relative',
-        overflow: 'hidden',
-        flexShrink: 0,
-      }}>
-        {/* Side buttons */}
-        <div style={{ position: 'absolute', left: -3, top: 140, width: 3, height: 36, background: '#444', borderRadius: '2px 0 0 2px' }} />
-        <div style={{ position: 'absolute', left: -3, top: 190, width: 3, height: 64, background: '#444', borderRadius: '2px 0 0 2px' }} />
-        <div style={{ position: 'absolute', left: -3, top: 264, width: 3, height: 64, background: '#444', borderRadius: '2px 0 0 2px' }} />
-        <div style={{ position: 'absolute', right: -3, top: 200, width: 3, height: 80, background: '#444', borderRadius: '0 2px 2px 0' }} />
+    <div className="app-viewport" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* iPhone Frame — a device mockup for wide (desktop/preview) viewports;
+          collapses to a real edge-to-edge layout on phone-width viewports
+          (see the "Real device" media query in index.css). */}
+      <div className="phone-shell">
+        {/* Side buttons — decorative, mockup only */}
+        <div className="phone-bezel-decor">
+          <div style={{ position: 'absolute', left: -3, top: 140, width: 3, height: 36, background: '#444', borderRadius: '2px 0 0 2px' }} />
+          <div style={{ position: 'absolute', left: -3, top: 190, width: 3, height: 64, background: '#444', borderRadius: '2px 0 0 2px' }} />
+          <div style={{ position: 'absolute', left: -3, top: 264, width: 3, height: 64, background: '#444', borderRadius: '2px 0 0 2px' }} />
+          <div style={{ position: 'absolute', right: -3, top: 200, width: 3, height: 80, background: '#444', borderRadius: '0 2px 2px 0' }} />
+        </div>
 
         {/* Screen */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 50,
-          overflow: 'hidden',
-          background: 'var(--bg)',
+        <div className="phone-screen" style={{
           display: 'flex',
           flexDirection: 'column',
         }}>
-          {/* Status Bar */}
-          <div style={{
+          {/* Status Bar — decorative mockup clock/signal/battery, hidden on a
+              real device (which shows its own, or none in standalone mode) */}
+          <div className="status-bar-mock" style={{
             height: 56,
             background: 'rgba(255,248,250,0.95)',
             display: 'flex',
@@ -237,7 +228,7 @@ export default function App() {
             )}
 
             {/* App Header */}
-            <header style={{
+            <header className="app-header" style={{
               background: 'rgba(255,248,250,0.92)',
               backdropFilter: 'blur(12px)',
               borderBottom: '1px solid var(--border)',
@@ -276,7 +267,7 @@ export default function App() {
             </main>
 
             {/* Bottom Nav */}
-            <nav style={{
+            <nav className="app-bottom-nav" style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
               background: 'rgba(255,248,250,0.96)',
               backdropFilter: 'blur(16px)',

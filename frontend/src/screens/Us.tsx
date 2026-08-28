@@ -23,8 +23,9 @@ const FAV_CATEGORY_CONFIG: { key: FavCategory; emoji: string; label: string; col
 export default function Us() {
   const { state, navigate, updateFavorite, currentUser, addToPlaylist, removeFromPlaylist, addWish, removeWish, addFavPlace, removeFavPlace } = useApp();
   const [sub, setSub] = useState<SubScreen>('main');
-  const days = getDaysTogether();
-  const dur  = getDuration();
+  const relationshipStart = state.relationshipStart ? new Date(state.relationshipStart + 'T00:00:00') : null;
+  const days = relationshipStart ? getDaysTogether(relationshipStart) : 0;
+  const dur  = relationshipStart ? getDuration(relationshipStart) : { years: 0, months: 0, days: 0 };
 
   const Back = () => (
     <button onClick={() => setSub('main')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}>← Back</button>
@@ -70,37 +71,7 @@ export default function Us() {
 
   if (sub === 'favorites') return <OurFavouritesScreen onBack={() => setSub('main')} />;
 
-  if (sub === 'places') return (
-    <div style={{ paddingBottom: 32 }}>
-      <Back />
-      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 20 }}>Our Places</p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {state.places.map(pl => {
-          const mems = state.memories.filter(m => pl.memoryIds.includes(m.id));
-          return (
-            <div key={pl.id} className="card" style={{ overflow: 'hidden' }}>
-              <div style={{ height: 160, background: 'var(--sakura-light)', overflow: 'hidden' }}>
-                <img src={pl.image} alt={pl.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <div style={{ padding: '14px 16px' }}>
-                <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}</p>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{mems.length} memor{mems.length === 1 ? 'y' : 'ies'}</p>
-                {mems.length > 0 && (
-                  <div style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto' }}>
-                    {mems.map(m => (
-                      <div key={m.id} style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'var(--sakura-light)' }}>
-                        <img src={m.image} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+  if (sub === 'places') return <OurPlacesScreen onBack={() => setSub('main')} />;
 
   if (sub === 'future')   return <div style={{ paddingBottom: 0 }}><Back /><FutureUs /></div>;
   if (sub === 'calendar') return <div style={{ paddingBottom: 0 }}><Back /><Calendar /></div>;
@@ -120,7 +91,11 @@ export default function Us() {
           <Avatar user="Paoi" size={60} ring />
         </div>
         <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)', marginBottom: 4 }}>Alvin ❤️ Paoi</p>
-        <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 8 }}>Together since August 21, 2023</p>
+        <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 8 }}>
+          {relationshipStart
+            ? `Together since ${relationshipStart.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+            : <button onClick={() => navigate('settings')} style={{ background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', fontSize: 14, textDecoration: 'underline' }}>💕 Đặt ngày bắt đầu yêu</button>}
+        </p>
         <div style={{ display: 'inline-flex', gap: 12, background: 'var(--white)', borderRadius: 12, padding: '8px 16px', border: '1px solid var(--border)' }}>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--sakura-deep)' }}>{days.toLocaleString()}</p>
@@ -187,6 +162,99 @@ export default function Us() {
 }
 
 /* ─── Our Favourites (multi-category) ─────────────── */
+const PLACE_IMAGES = [
+  'https://images.unsplash.com/photo-1569144651110-3d3b0f28c474?w=600&h=400&fit=crop&auto=format',
+  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=400&fit=crop&auto=format',
+  'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=600&h=400&fit=crop&auto=format',
+  'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&h=400&fit=crop&auto=format',
+  'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&h=400&fit=crop&auto=format',
+];
+
+function OurPlacesScreen({ onBack }: { onBack: () => void }) {
+  const { state, addPlace, deletePlace } = useApp();
+  const [showAdd, setShowAdd] = useState(false);
+  const [name, setName] = useState('');
+  const [flag, setFlag] = useState('');
+  const [image, setImage] = useState(PLACE_IMAGES[0]);
+
+  const handleAdd = () => {
+    if (!name.trim()) return;
+    addPlace({ name: name.trim(), flag: flag.trim() || undefined, image });
+    setShowAdd(false);
+    setName(''); setFlag(''); setImage(PLACE_IMAGES[0]);
+  };
+
+  return (
+    <div style={{ paddingBottom: 32 }}>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}>← Back</button>
+      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 20 }}>Our Places</p>
+
+      <button onClick={() => setShowAdd(true)} style={{ width: '100%', padding: '13px', borderRadius: 14, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 14, cursor: 'pointer', marginBottom: 16 }}>
+        + Thêm địa điểm
+      </button>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {state.places.map(pl => {
+          const mems = state.memories.filter(m => pl.memoryIds.includes(m.id));
+          return (
+            <div key={pl.id} className="card" style={{ overflow: 'hidden', position: 'relative' }}>
+              <button onClick={() => deletePlace(pl.id)} style={{ position: 'absolute', top: 10, right: 10, zIndex: 1, width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.4)', color: 'white', cursor: 'pointer', fontSize: 13 }}>✕</button>
+              <div style={{ height: 160, background: 'var(--sakura-light)', overflow: 'hidden' }}>
+                <img src={pl.image} alt={pl.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div style={{ padding: '14px 16px' }}>
+                <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>{pl.flag ? `${pl.flag} ` : ''}{pl.name}</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{mems.length} memor{mems.length === 1 ? 'y' : 'ies'}</p>
+                {mems.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto' }}>
+                    {mems.map(m => (
+                      <div key={m.id} style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'var(--sakura-light)' }}>
+                        <img src={m.image} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {state.places.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
+            <span style={{ fontSize: 36, display: 'block', marginBottom: 8 }}>📍</span>
+            Chưa có địa điểm nào.
+          </div>
+        )}
+      </div>
+
+      {showAdd && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--white)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 430 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)' }}>Thêm địa điểm 📍</p>
+              <button onClick={() => setShowAdd(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 12 }}>
+              {PLACE_IMAGES.map(img => (
+                <div key={img} onClick={() => setImage(img)} style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: image === img ? '2.5px solid var(--sakura-deep)' : '2.5px solid transparent' }}>
+                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input className="input-field" placeholder="Tên địa điểm (VD: Nhật Bản 🇯🇵)" value={name} onChange={e => setName(e.target.value)} />
+              <input className="input-field" placeholder="Cờ/emoji (tuỳ chọn)" value={flag} onChange={e => setFlag(e.target.value)} maxLength={4} />
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button className="btn-ghost" onClick={() => setShowAdd(false)} style={{ flex: 1 }}>Huỷ</button>
+              <button className="btn-primary" onClick={handleAdd} style={{ flex: 2 }}>Thêm</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
   const { state, addFavPlace, removeFavPlace, updateFavorite } = useApp();
   const [activeTab, setActiveTab] = useState<FavCategory>('food');
@@ -336,8 +404,8 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: isBought ? 'line-through' : 'none', lineHeight: 1.3 }}>{w.wish}</p>
                   <p style={{ fontSize: 11, color: 'var(--sakura-deep)', marginTop: 3, fontWeight: 600 }}>{w.from}'s wishlist · {w.date}</p>
-                  {(w as any).price && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>💰 {(w as any).price}</p>}
-                  {(w as any).link && <p style={{ fontSize: 11, color: '#4A8AE8', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>🔗 {(w as any).link}</p>}
+                  {w.price && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>💰 {w.price}</p>}
+                  {w.link && <p style={{ fontSize: 11, color: '#4A8AE8', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>🔗 {w.link}</p>}
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   {!isOwner && !isBought && (
@@ -375,7 +443,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
               <button
                 onClick={() => {
                   if (wishText.trim()) {
-                    addWish({ from: currentUser, wish: wishText.trim(), date: new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }), ...(wishPrice ? { price: wishPrice } : {}), ...(wishLink ? { link: wishLink } : {}) } as any);
+                    addWish({ from: currentUser, wish: wishText.trim(), date: new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }), ...(wishPrice ? { price: wishPrice } : {}), ...(wishLink ? { link: wishLink } : {}) });
                     setWishText(''); setWishLink(''); setWishPrice(''); setShowAdd(false);
                   }
                 }}

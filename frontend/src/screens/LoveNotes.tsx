@@ -35,6 +35,7 @@ export default function LoveNotes() {
   const [openNote, setOpenNote] = useState<string | null>(null);
   const [openLetter, setOpenLetter] = useState<LoveLetter | null>(null);
   const [showCompose, setShowCompose] = useState(false);
+  const [showAddSecret, setShowAddSecret] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
   const isUnlocked = (note: SecretNote) => note.unlockDate <= today;
@@ -182,14 +183,18 @@ export default function LoveNotes() {
               </div>
             );
           })}
-          <div style={{ textAlign: 'center', padding: '20px 0', fontSize: 14, color: 'var(--ink-2)' }}>
-            Secret notes are written from the Create menu 🔐
-          </div>
+          {showAddSecret ? (
+            <SecretNoteComposer onClose={() => setShowAddSecret(false)} />
+          ) : (
+            <button onClick={() => setShowAddSecret(true)} style={{ width: '100%', padding: '14px', borderRadius: 14, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+              🔐 Viết ghi chú bí mật mới
+            </button>
+          )}
         </div>
       )}
 
       {/* FAB */}
-      {tab !== 'letters' && (
+      {tab === 'notes' && (
         <button
           onClick={() => setShowAdd(true)}
           style={{ position: 'fixed', bottom: 96, right: 20, width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', fontSize: 22, cursor: 'pointer', boxShadow: '0 4px 16px rgba(201,95,124,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
@@ -345,6 +350,47 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
             />
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Secret Note Composer ─────────────────────────── */
+function SecretNoteComposer({ onClose }: { onClose: () => void }) {
+  const { addSecretNote, currentUser } = useApp();
+  const [message, setMessage] = useState('');
+  const [unlockDate, setUnlockDate] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = () => {
+    if (!message.trim()) return setError('Viết nội dung ghi chú trước đã.');
+    if (!unlockDate) return setError('Chọn ngày mở khoá.');
+    addSecretNote({ from: currentUser, message: message.trim(), unlockDate });
+    onClose();
+  };
+
+  return (
+    <div style={{ background: 'var(--white)', border: '1.5px solid var(--border)', borderRadius: 16, padding: 16 }}>
+      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>🔐 Ghi chú bí mật mới</p>
+      <textarea
+        className="input-field"
+        placeholder="Viết điều gì đó để mở khoá sau này..."
+        value={message}
+        onChange={e => { setMessage(e.target.value); setError(''); }}
+        rows={3}
+        style={{ marginBottom: 10 }}
+      />
+      <input
+        className="input-field"
+        type="date"
+        value={unlockDate}
+        onChange={e => { setUnlockDate(e.target.value); setError(''); }}
+        style={{ marginBottom: 10 }}
+      />
+      {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 12, marginBottom: 10 }}>{error}</p>}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Huỷ</button>
+        <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2 }}>Niêm phong 🔒</button>
       </div>
     </div>
   );

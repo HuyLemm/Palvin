@@ -10,13 +10,22 @@ export default function Settings() {
   const {
     currentUser, toast, profilePhotos, updateProfilePhoto, state, toggleDarkMode, logout,
     isLinked, myProfile, partnerProfile, sentInvite, invitePartner, cancelSentInvite, pendingInvite, acceptInvite, rejectInvite,
-    updateNotifyPrefs,
+    updateNotifyPrefs, setRelationshipStart,
   } = useApp();
   const [responding, setResponding] = useState(false);
   const notifyPrefs = myProfile?.notifyPrefs ?? DEFAULT_NOTIFY_PREFS;
   const darkMode = state.darkMode;
   const [showLogout, setShowLogout] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const [editingAnniversary, setEditingAnniversary] = useState(false);
+  const [anniversaryDraft, setAnniversaryDraft] = useState(state.relationshipStart ?? '');
+
+  function saveAnniversary() {
+    if (!anniversaryDraft) return;
+    setRelationshipStart(anniversaryDraft);
+    setEditingAnniversary(false);
+  }
 
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteError, setInviteError] = useState('');
@@ -148,7 +157,28 @@ export default function Settings() {
       {/* Couple */}
       <Section title="Couple">
         <SettingRow emoji="❤️" label="Couple Name" value="Alvin ❤️ Paoi" onEdit={() => toast('Edit couple name', '✏️')} />
-        <SettingRow emoji="📅" label="Anniversary" value="August 21, 2023" onEdit={() => toast('Edit anniversary', '✏️')} />
+        {editingAnniversary ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 20, flexShrink: 0 }}>📅</span>
+            <input
+              type="date"
+              value={anniversaryDraft}
+              onChange={e => setAnniversaryDraft(e.target.value)}
+              style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: 13 }}
+            />
+            <button onClick={saveAnniversary} style={{ background: 'var(--sakura-deep)', border: 'none', borderRadius: 8, padding: '6px 12px', color: 'white', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Lưu</button>
+            <button onClick={() => setEditingAnniversary(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, padding: '6px 10px', color: 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Hủy</button>
+          </div>
+        ) : (
+          <SettingRow
+            emoji="📅"
+            label="Anniversary"
+            value={state.relationshipStart
+              ? new Date(state.relationshipStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+              : 'Chưa đặt'}
+            onEdit={() => { setAnniversaryDraft(state.relationshipStart ?? ''); setEditingAnniversary(true); }}
+          />
+        )}
       </Section>
 
       {/* Notifications */}

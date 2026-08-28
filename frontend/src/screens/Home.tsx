@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
-import { getDaysTogether, getDuration, RELATIONSHIP_START } from '../data';
+import { getDaysTogether, getDuration } from '../data';
 import type { FavCategory } from '../types';
 
 const MOODS_LIST = [
@@ -39,22 +39,6 @@ const CATEGORY_CONFIG: { key: FavCategory; emoji: string; question: string; colo
   { key: 'gaming', emoji: '🎮', question: 'Hôm nay chơi game gì?',     color: '#8B6FD4' },
 ];
 
-function getStreak(): number {
-  try {
-    const data = JSON.parse(localStorage.getItem('palvin_streak') || '{}');
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
-    if (data.lastDate === today) return data.streak || 1;
-    if (data.lastDate === yesterday) {
-      const newStreak = (data.streak || 0) + 1;
-      localStorage.setItem('palvin_streak', JSON.stringify({ lastDate: today, streak: newStreak }));
-      return newStreak;
-    }
-    localStorage.setItem('palvin_streak', JSON.stringify({ lastDate: today, streak: 1 }));
-    return 1;
-  } catch { return 1; }
-}
-
 function daysUntil(dateStr: string) {
   const diff = new Date(dateStr).getTime() - new Date().setHours(0, 0, 0, 0);
   return Math.ceil(diff / 86400000);
@@ -66,21 +50,25 @@ const MOOD_SCORE: Record<string, number> = {
 
 export default function Home() {
   const { state, navigate, setMood, currentUser, addCountdown, deleteCountdown, sendHug } = useApp();
-  const [days, setDays] = useState(getDaysTogether());
+  const relationshipStart = state.relationshipStart ? new Date(state.relationshipStart + 'T00:00:00') : null;
+  const [days, setDays] = useState(relationshipStart ? getDaysTogether(relationshipStart) : 0);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [picks, setPicks] = useState<Partial<Record<FavCategory, string>>>({});
   const [pickAnim, setPickAnim] = useState<Partial<Record<FavCategory, boolean>>>({});
   const [showAddCountdown, setShowAddCountdown] = useState(false);
-  const [streak] = useState(getStreak);
+  const streak = state.streak;
   const [hugAnim, setHugAnim] = useState(false);
   const [thinkAnim, setThinkAnim] = useState(false);
   const [vinylIdx, setVinylIdx] = useState(0);
-  const dur = getDuration();
+  const dur = relationshipStart ? getDuration(relationshipStart) : { years: 0, months: 0, days: 0 };
 
   useEffect(() => {
-    const t = setInterval(() => setDays(getDaysTogether()), 60000);
+    if (!relationshipStart) { setDays(0); return; }
+    setDays(getDaysTogether(relationshipStart));
+    const t = setInterval(() => setDays(getDaysTogether(relationshipStart)), 60000);
     return () => clearInterval(t);
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.relationshipStart]);
 
   // Cycle through playlist songs for the vinyl widget
   useEffect(() => {
@@ -164,10 +152,18 @@ export default function Home() {
           {dur.years} Years · {dur.months} Months · {dur.days} Days
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
-          <div style={{ background: 'var(--white)', borderRadius: 12, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>Since</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sakura-deep)' }}>August 21, 2023</span>
-          </div>
+          {relationshipStart ? (
+            <div style={{ background: 'var(--white)', borderRadius: 12, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)' }}>
+              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>Since</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sakura-deep)' }}>
+                {relationshipStart.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+          ) : (
+            <button onClick={() => navigate('settings')} style={{ background: 'var(--white)', border: '1.5px dashed var(--sakura-accent)', borderRadius: 12, padding: '6px 14px', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+              💕 Đặt ngày bắt đầu yêu
+            </button>
+          )}
           <div style={{ background: 'var(--white)', borderRadius: 12, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)' }}>
             <span style={{ fontSize: 16 }}>🔥</span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)' }}>{streak} day streak</span>

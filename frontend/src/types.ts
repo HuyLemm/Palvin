@@ -175,6 +175,8 @@ export interface WishItem {
   wish: string;
   date: string;
   drawn: boolean;
+  price?: string;
+  link?: string;
 }
 
 export interface LoveLetter {
@@ -226,6 +228,18 @@ export interface Reaction {
   reacted: boolean;
 }
 
+export interface DateIdea {
+  id: string;
+  emoji: string;
+  text: string;
+}
+
+export interface DateIdeaDraw {
+  id: string;
+  emoji: string;
+  text: string;
+}
+
 export interface AppState {
   posts: Post[];
   memories: Memory[];
@@ -247,10 +261,13 @@ export interface AppState {
   countdowns: Countdown[];
   playlist: PlaylistItem[];
   wishes: WishItem[];
-  hugs: { id: string; from: User; date: string; message: string }[];
+  dateIdeas: DateIdea[];
+  dateIdeaHistory: DateIdeaDraw[];
   gratitude: GratitudeEntry[];
   dateRequests: DateRequest[];
   postReactions: { [postId: string]: { [emoji: string]: { count: number; reacted: boolean } } };
   darkMode: boolean;
   favPlaces: { food: FavPlace[]; cafe: FavPlace[]; bida: FavPlace[]; gaming: FavPlace[] };
+  relationshipStart: string | null;
+  streak: number;
 }

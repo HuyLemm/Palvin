@@ -27,14 +27,14 @@ const PRESET_IDEAS = [
 interface Props { onBack: () => void; }
 
 export default function DateIdeaJar({ onBack }: Props) {
-  const { currentUser, toast } = useApp();
+  const { state, addDateIdea, removeDateIdea, drawDateIdea } = useApp();
   const [picked, setPicked] = useState<typeof PRESET_IDEAS[0] | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [newIdea, setNewIdea] = useState('');
-  const [customIdeas, setCustomIdeas] = useState<typeof PRESET_IDEAS>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [history, setHistory] = useState<typeof PRESET_IDEAS>([]);
 
+  const customIdeas = state.dateIdeas;
+  const history = state.dateIdeaHistory;
   const allIdeas = [...PRESET_IDEAS, ...customIdeas];
 
   function spin() {
@@ -51,7 +51,7 @@ export default function DateIdeaJar({ onBack }: Props) {
         clearInterval(interval);
         const final = allIdeas[Math.floor(Math.random() * allIdeas.length)];
         setPicked(final);
-        setHistory(h => [final, ...h.slice(0, 9)]);
+        drawDateIdea(final);
         setSpinning(false);
       }
     }, 120);
@@ -59,10 +59,9 @@ export default function DateIdeaJar({ onBack }: Props) {
 
   function addCustom() {
     if (!newIdea.trim()) return;
-    setCustomIdeas(c => [{ emoji: '✨', text: newIdea.trim() }, ...c]);
+    addDateIdea({ emoji: '✨', text: newIdea.trim() });
     setNewIdea('');
     setShowAdd(false);
-    toast('Đã thêm ý tưởng! ✨');
   }
 
   return (
@@ -133,11 +132,11 @@ export default function DateIdeaJar({ onBack }: Props) {
         )}
         {customIdeas.length > 0 && (
           <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {customIdeas.map((idea, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--sakura-light)', borderRadius: 10 }}>
+            {customIdeas.map(idea => (
+              <div key={idea.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--sakura-light)', borderRadius: 10 }}>
                 <span style={{ fontSize: 18 }}>{idea.emoji}</span>
                 <p style={{ fontSize: 13, color: 'var(--ink)', flex: 1 }}>{idea.text}</p>
-                <button onClick={() => setCustomIdeas(c => c.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: 'var(--ink-2)' }}>×</button>
+                <button onClick={() => removeDateIdea(idea.id)} style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: 'var(--ink-2)' }}>×</button>
               </div>
             ))}
           </div>
@@ -150,7 +149,7 @@ export default function DateIdeaJar({ onBack }: Props) {
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Đã rút gần đây</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {history.map((idea, i) => (
-              <div key={i} className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, opacity: 1 - i * 0.08 }}>
+              <div key={idea.id} className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, opacity: 1 - i * 0.08 }}>
                 <span style={{ fontSize: 22, flexShrink: 0 }}>{idea.emoji}</span>
                 <p style={{ fontSize: 14, color: 'var(--ink)' }}>{idea.text}</p>
               </div>

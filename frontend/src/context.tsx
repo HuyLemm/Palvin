@@ -5,7 +5,7 @@ if (import.meta.hot) {
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { initialState } from './data';
-import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, CalendarEvent, Goal, Mood, Bill, Trip, Capsule, Countdown, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory } from './types';
+import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, Mood, Bill, Trip, Capsule, Countdown, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, Place, DateIdea } from './types';
 import { supabase } from './lib/supabaseClient';
 import {
   updatePhoto as authUpdatePhoto, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
@@ -24,6 +24,55 @@ import {
 import {
   fetchEvents, createEvent, deleteEventRow,
 } from './calendar';
+import {
+  fetchExpenses, createExpense, deleteExpenseRow,
+  fetchBills, createBill, setBillPaid, deleteBillRow, setBillReminder,
+  fetchSavingsGoals, createSavingsGoal, updateSavingsGoalCurrent,
+} from './money';
+import {
+  fetchLoveNotes, createLoveNote, markLoveNoteRead,
+  fetchLoveLetters, createLoveLetter, deleteLoveLetterRow,
+  fetchSecretNotes, createSecretNote,
+} from './loveNotes';
+import {
+  fetchGoals, createGoal, setGoalCompleted, deleteGoalRow,
+} from './futureUs';
+import {
+  fetchCoupleSettings, updateFavoriteField, updateDarkMode, updateRelationshipStart,
+  fetchFavPlaces, createFavPlace, deleteFavPlace,
+} from './favourites';
+import {
+  fetchPlaces, createPlace, deletePlaceRow,
+} from './places';
+import {
+  fetchPlaylist, createPlaylistItem, deletePlaylistItemRow,
+} from './playlist';
+import {
+  fetchTrips, createTrip as createTripRow, updateTripRow, deleteTripRow,
+} from './trips';
+import {
+  fetchCapsules, createCapsule, openCapsuleRow,
+} from './capsules';
+import {
+  fetchWishes, createWish, drawWishRow, deleteWishRow,
+} from './wishes';
+import {
+  fetchDateIdeas, createDateIdea, deleteDateIdeaRow, fetchDateIdeaHistory, recordDateIdeaDraw,
+} from './dateIdeas';
+import {
+  fetchGratitude, createGratitude,
+} from './gratitude';
+import {
+  fetchDateRequests, createDateRequest, respondToDateRequest,
+} from './dateRequests';
+import {
+  fetchCountdowns, createCountdown, deleteCountdownRow,
+} from './countdowns';
+import {
+  fetchMoodHistory, upsertMood,
+} from './moods';
+import { createHug } from './hugs';
+import { bumpStreak } from './streak';
 
 interface ToastItem { id: string; message: string; emoji: string; }
 
@@ -87,6 +136,7 @@ interface AppContextType {
   // Love notes
   addLoveNote: (n: Omit<LoveNote, 'id' | 'read'>) => void;
   markNoteRead: (id: string) => void;
+  addSecretNote: (n: Omit<SecretNote, 'id'>) => void;
 
   // Events
   addEvent: (e: Omit<CalendarEvent, 'id'>) => void;
@@ -137,6 +187,11 @@ interface AppContextType {
   drawWish: (id: string) => void;
   removeWish: (id: string) => void;
 
+  // Date ideas
+  addDateIdea: (i: Omit<DateIdea, 'id'>) => void;
+  removeDateIdea: (id: string) => void;
+  drawDateIdea: (idea: { emoji: string; text: string }) => void;
+
   // Love letters
   addLoveLetter: (l: Omit<LoveLetter, 'id'>) => void;
   deleteLoveLetter: (id: string) => void;
@@ -158,8 +213,15 @@ interface AppContextType {
   addFavPlace: (cat: FavCategory, place: Omit<FavPlace, 'id'>) => void;
   removeFavPlace: (cat: FavCategory, id: string) => void;
 
+  // Places
+  addPlace: (p: { name: string; flag?: string; image: string }) => void;
+  deletePlace: (id: string) => void;
+
   // Dark mode
   toggleDarkMode: () => void;
+
+  // Anniversary date
+  setRelationshipStart: (date: string) => void;
 
   // Profile photos
   profilePhotos: Record<string, string>;
@@ -276,49 +338,72 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMemories(); }
   };
 
-  // Expenses
-  const addExpense = (e: Omit<Expense, 'id'>) => {
-    setState(s => ({ ...s, expenses: [{ ...e, id: uid() }, ...s.expenses] }));
+  // Expenses — backed by Supabase
+  const resolveProfileId = (who: User | 'Both'): string | null => {
+    if (who === 'Both') return null;
+    if (myProfile?.displayName === who) return myProfile.id;
+    if (partnerProfile?.displayName === who) return partnerProfile.id;
+    return null;
+  };
+
+  const addExpense = async (e: Omit<Expense, 'id'>) => {
+    const { error } = await createExpense(resolveProfileId(e.paidBy), {
+      title: e.title, category: e.category, categoryEmoji: e.categoryEmoji, amount: e.amount, date: e.date, note: e.note, type: e.type,
+    });
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshMoney();
     toast('Expense saved.', '💰');
   };
 
-  const deleteExpense = (id: string) => {
+  const deleteExpense = async (id: string) => {
     setState(s => ({ ...s, expenses: s.expenses.filter(e => e.id !== id) }));
+    const { error } = await deleteExpenseRow(id);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
     toast('Expense removed.', '🗑️');
   };
 
-  // Savings
-  const addSavingsGoal = (g: Omit<SavingsGoal, 'id'>) => {
-    setState(s => ({ ...s, savingsGoals: [...s.savingsGoals, { ...g, id: uid() }] }));
+  // Savings — backed by Supabase
+  const addSavingsGoal = async (g: Omit<SavingsGoal, 'id'>) => {
+    const { error } = await createSavingsGoal(g);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshMoney();
     toast('Savings goal added! 💰');
   };
 
-  const addToGoal = (id: string, amount: number) => {
-    setState(s => ({
-      ...s,
-      savingsGoals: s.savingsGoals.map(g =>
-        g.id === id ? { ...g, current: Math.min(g.current + amount, g.target) } : g
-      )
-    }));
+  const addToGoal = async (id: string, amount: number) => {
+    const goal = state.savingsGoals.find(g => g.id === id);
+    if (!goal) return;
+    const nextCurrent = Math.min(goal.current + amount, goal.target);
+    setState(s => ({ ...s, savingsGoals: s.savingsGoals.map(g => g.id === id ? { ...g, current: nextCurrent } : g) }));
+    const { error } = await updateSavingsGoalCurrent(id, nextCurrent);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
     toast('Added to savings! 🎉');
   };
 
-  // Love notes
-  const addLoveNote = (n: Omit<LoveNote, 'id' | 'read'>) => {
-    const note: LoveNote = { ...n, id: uid(), read: false };
-    setState(s => ({
-      ...s,
-      loveNotes: [note, ...s.loveNotes],
-      notifications: [
-        { id: uid(), emoji: '💌', message: `${n.from} sent you a love note.`, date: 'Just now', read: false },
-        ...s.notifications
-      ]
-    }));
-    toast('Love note sent 💌');
+  // Love notes / secret notes — backed by Supabase
+  const addLoveNote = async (n: Omit<LoveNote, 'id' | 'read'>) => {
+    const fromId = resolveProfileId(n.from);
+    const toId = resolveProfileId(n.to);
+    if (!fromId || !toId) return;
+    const { error } = await createLoveNote(fromId, toId, n.message, n.mood);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshLoveStuff();
+    // No manual toast — the realtime `notifications` subscription pops one for both accounts.
   };
 
-  const markNoteRead = (id: string) => {
+  const markNoteRead = async (id: string) => {
     setState(s => ({ ...s, loveNotes: s.loveNotes.map(n => n.id === id ? { ...n, read: true } : n) }));
+    const { error } = await markLoveNoteRead(id);
+    if (error) refreshLoveStuff();
+  };
+
+  const addSecretNote = async (n: Omit<SecretNote, 'id'>) => {
+    const fromId = resolveProfileId(n.from);
+    if (!fromId) return;
+    const { error } = await createSecretNote(fromId, n.message, n.unlockDate);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshLoveStuff();
+    toast('Đã lưu ghi chú bí mật 🔐');
   };
 
   // Events — backed by Supabase
@@ -336,48 +421,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Goals
-  const addGoal = (g: Omit<Goal, 'id' | 'completed'>) => {
-    setState(s => ({ ...s, goals: [...s.goals, { ...g, id: uid(), completed: false }] }));
+  const addGoal = async (g: Omit<Goal, 'id' | 'completed'>) => {
+    const { error } = await createGoal(g);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshGoals();
     toast('Goal added ✨');
   };
 
-  const toggleGoal = (id: string) => {
-    setState(s => {
-      const goals = s.goals.map(g =>
-        g.id === id
-          ? { ...g, completed: !g.completed, completedDate: !g.completed ? new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : undefined }
-          : g
-      );
-      const wasCompleted = s.goals.find(g => g.id === id)?.completed;
-      if (!wasCompleted) {
-        setCelebration(true);
-        setTimeout(() => setCelebration(false), 2000);
-        toast('Goal completed! ❤️', '🎉');
-      }
-      return { ...s, goals };
-    });
+  const toggleGoal = async (id: string) => {
+    const goal = state.goals.find(g => g.id === id);
+    if (!goal) return;
+    const nextCompleted = !goal.completed;
+    const completedDate = nextCompleted ? new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : null;
+    setState(s => ({ ...s, goals: s.goals.map(g => g.id === id ? { ...g, completed: nextCompleted, completedDate: completedDate ?? undefined } : g) }));
+    if (nextCompleted) {
+      setCelebration(true);
+      setTimeout(() => setCelebration(false), 2000);
+      toast('Goal completed! ❤️', '🎉');
+    }
+    const { error } = await setGoalCompleted(id, nextCompleted, completedDate);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshGoals(); }
   };
 
-  const deleteGoal = (id: string) => {
+  const deleteGoal = async (id: string) => {
     setState(s => ({ ...s, goals: s.goals.filter(g => g.id !== id) }));
+    const { error } = await deleteGoalRow(id);
+    if (error) refreshGoals();
   };
 
-  // Mood
-  const setMood = (user: User, mood: Mood) => {
-    const today = new Date().toISOString().slice(0, 10);
-    setState(s => {
-      const existing = s.moodHistory.find(e => e.date === today);
-      const moodHistory = existing
-        ? s.moodHistory.map(e => e.date === today ? { ...e, [user]: mood } : e)
-        : [...s.moodHistory, { date: today, [user]: mood }];
-      return { ...s, moods: { ...s.moods, [user]: mood }, moodHistory };
-    });
+  // Mood — backed by Supabase
+  const setMood = async (user: User, mood: Mood) => {
+    const profileId = resolveProfileId(user);
+    if (!profileId) return;
+    const { error } = await upsertMood(profileId, mood.emoji, mood.label);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshMoods();
     toast(`Mood updated!`, mood.emoji);
   };
 
   // Favorites
-  const updateFavorite = (key: string, val: string) => {
+  const updateFavorite = async (key: string, val: string) => {
+    if (!myProfile?.coupleId) return;
     setState(s => ({ ...s, favorites: { ...s.favorites, [key]: val } }));
+    const { error } = await updateFavoriteField(myProfile.coupleId, key, val);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
     toast('Updated!', '✨');
   };
 
@@ -394,160 +481,204 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) refreshNotifications();
   };
 
-  // Bills
-  const addBill = (b: Omit<Bill, 'id'>) => {
-    setState(s => ({ ...s, bills: [...s.bills, { ...b, id: uid() }] }));
+  // Bills — backed by Supabase
+  const addBill = async (b: Omit<Bill, 'id'>) => {
+    const { error } = await createBill(b);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshMoney();
     toast('Hóa đơn đã thêm!', '🧾');
   };
 
-  const toggleBillPaid = (id: string) => {
-    setState(s => ({
-      ...s,
-      bills: s.bills.map(b =>
-        b.id === id
-          ? { ...b, paid: !b.paid, paidDate: !b.paid ? new Date().toISOString().slice(0, 10) : undefined }
-          : b
-      )
-    }));
+  const toggleBillPaid = async (id: string) => {
+    const bill = state.bills.find(b => b.id === id);
+    if (!bill) return;
+    const nextPaid = !bill.paid;
+    const paidDate = nextPaid ? new Date().toISOString().slice(0, 10) : null;
+    setState(s => ({ ...s, bills: s.bills.map(x => x.id === id ? { ...x, paid: nextPaid, paidDate: paidDate ?? undefined } : x) }));
+    const { error } = await setBillPaid(id, nextPaid, paidDate);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); }
   };
 
-  const deleteBill = (id: string) => {
+  const deleteBill = async (id: string) => {
     setState(s => ({ ...s, bills: s.bills.filter(b => b.id !== id) }));
+    const { error } = await deleteBillRow(id);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
     toast('Đã xóa hóa đơn.', '🗑️');
   };
 
-  const toggleBillReminder = (id: string) => {
-    setState(s => ({
-      ...s,
-      bills: s.bills.map(b => b.id === id ? { ...b, reminder: !b.reminder } : b)
-    }));
+  const toggleBillReminder = async (id: string) => {
+    const bill = state.bills.find(b => b.id === id);
+    if (!bill) return;
+    const nextReminder = !bill.reminder;
+    setState(s => ({ ...s, bills: s.bills.map(x => x.id === id ? { ...x, reminder: nextReminder } : x) }));
+    const { error } = await setBillReminder(id, nextReminder);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); }
   };
 
-  // Trips
-  const addTrip = (t: Omit<Trip, 'id'>) => {
-    setState(s => ({ ...s, trips: [...s.trips, { ...t, id: uid() }] }));
+  // Trips — backed by Supabase
+  const addTrip = async (t: Omit<Trip, 'id'>) => {
+    const { error } = await createTripRow(t);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshTrips();
     toast('Trip added! ✈️');
   };
-  const updateTrip = (t: Trip) => {
+  const updateTrip = async (t: Trip) => {
     setState(s => ({ ...s, trips: s.trips.map(x => x.id === t.id ? t : x) }));
+    const { error } = await updateTripRow(t.id, t);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshTrips(); }
   };
-  const deleteTrip = (id: string) => {
+  const deleteTrip = async (id: string) => {
     setState(s => ({ ...s, trips: s.trips.filter(t => t.id !== id) }));
+    const { error } = await deleteTripRow(id);
+    if (error) { refreshTrips(); return; }
     toast('Trip removed.', '🗑️');
   };
   const toggleTripCheck = (tripId: string, itemId: string) => {
-    setState(s => ({
-      ...s,
-      trips: s.trips.map(t => t.id === tripId
-        ? { ...t, checklist: t.checklist.map(c => c.id === itemId ? { ...c, done: !c.done } : c) }
-        : t
-      )
-    }));
+    const t = state.trips.find(x => x.id === tripId);
+    if (!t) return;
+    updateTrip({ ...t, checklist: t.checklist.map(c => c.id === itemId ? { ...c, done: !c.done } : c) });
   };
 
-  // Capsules
-  const addCapsule = (c: Omit<Capsule, 'id'>) => {
-    setState(s => ({ ...s, capsules: [...s.capsules, { ...c, id: uid() }] }));
+  // Capsules — backed by Supabase
+  const addCapsule = async (c: Omit<Capsule, 'id'>) => {
+    const fromId = resolveProfileId(c.from);
+    const toId = c.to === 'both' ? null : resolveProfileId(c.to);
+    if (!fromId) return;
+    const { error } = await createCapsule(fromId, toId, c.message, c.unlockDate);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshCapsules();
     toast('Capsule sealed! 💌');
   };
-  const openCapsule = (id: string) => {
+  const openCapsule = async (id: string) => {
     setState(s => ({ ...s, capsules: s.capsules.map(c => c.id === id ? { ...c, opened: true } : c) }));
+    const { error } = await openCapsuleRow(id);
+    if (error) refreshCapsules();
   };
 
-  // Countdowns
-  const addCountdown = (c: Omit<Countdown, 'id'>) => {
-    setState(s => ({ ...s, countdowns: [...s.countdowns, { ...c, id: uid() }] }));
+  // Countdowns — backed by Supabase
+  const addCountdown = async (c: Omit<Countdown, 'id'>) => {
+    const { error } = await createCountdown(c);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshCountdowns();
     toast('Countdown added!', '⏳');
   };
-  const deleteCountdown = (id: string) => {
+  const deleteCountdown = async (id: string) => {
     setState(s => ({ ...s, countdowns: s.countdowns.filter(c => c.id !== id) }));
+    const { error } = await deleteCountdownRow(id);
+    if (error) refreshCountdowns();
   };
 
-  // Playlist
-  const addToPlaylist = (p: Omit<PlaylistItem, 'id'>) => {
-    setState(s => ({ ...s, playlist: [...s.playlist, { ...p, id: uid() }] }));
+  // Playlist — backed by Supabase
+  const addToPlaylist = async (p: Omit<PlaylistItem, 'id'>) => {
+    if (!myProfile) return;
+    const { error } = await createPlaylistItem(myProfile.id, { title: p.title, artist: p.artist, emoji: p.emoji, note: p.note });
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshPlaylist();
     toast('Added to playlist! 🎵');
   };
-  const removeFromPlaylist = (id: string) => {
+  const removeFromPlaylist = async (id: string) => {
     setState(s => ({ ...s, playlist: s.playlist.filter(p => p.id !== id) }));
+    const { error } = await deletePlaylistItemRow(id);
+    if (error) refreshPlaylist();
   };
 
-  // Wishes
-  const addWish = (w: Omit<WishItem, 'id' | 'drawn'>) => {
-    setState(s => ({ ...s, wishes: [...s.wishes, { ...w, id: uid(), drawn: false }] }));
+  // Wishes — backed by Supabase
+  const addWish = async (w: Omit<WishItem, 'id' | 'drawn'>) => {
+    const fromId = resolveProfileId(w.from);
+    if (!fromId) return;
+    const { error } = await createWish(fromId, { wish: w.wish, date: w.date, price: w.price, link: w.link });
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshWishes();
     toast('Ước nguyện đã vào hũ! 🫙', '✨');
   };
-  const drawWish = (id: string) => {
+  const drawWish = async (id: string) => {
     setState(s => ({ ...s, wishes: s.wishes.map(w => w.id === id ? { ...w, drawn: true } : w) }));
+    const { error } = await drawWishRow(id);
+    if (error) refreshWishes();
   };
-  const removeWish = (id: string) => {
+  const removeWish = async (id: string) => {
     setState(s => ({ ...s, wishes: s.wishes.filter(w => w.id !== id) }));
+    const { error } = await deleteWishRow(id);
+    if (error) refreshWishes();
+  };
+
+  // Date ideas — backed by Supabase
+  const addDateIdea = async (i: Omit<DateIdea, 'id'>) => {
+    if (!myProfile) return;
+    const { error } = await createDateIdea(myProfile.id, { emoji: i.emoji, text: i.text });
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshDateIdeas();
+    toast('Đã thêm ý tưởng! ✨');
+  };
+  const removeDateIdea = async (id: string) => {
+    setState(s => ({ ...s, dateIdeas: s.dateIdeas.filter(i => i.id !== id) }));
+    const { error } = await deleteDateIdeaRow(id);
+    if (error) refreshDateIdeas();
+  };
+  const drawDateIdea = async (idea: { emoji: string; text: string }) => {
+    if (!myProfile) return;
+    const { error } = await recordDateIdeaDraw(myProfile.id, idea);
+    if (!error) refreshDateIdeaHistory();
   };
 
   // Love letters
-  const addLoveLetter = (l: Omit<LoveLetter, 'id'>) => {
-    setState(s => ({
-      ...s,
-      loveLetters: [{ ...l, id: uid() }, ...s.loveLetters],
-      notifications: [
-        { id: uid(), emoji: '💌', message: `${l.from} wrote you a love letter.`, date: 'Just now', read: false },
-        ...s.notifications,
-      ],
-    }));
-    toast('Thư tình đã gửi 💌', '🌹');
+  const addLoveLetter = async (l: Omit<LoveLetter, 'id'>) => {
+    const fromId = resolveProfileId(l.from);
+    const toId = resolveProfileId(l.to);
+    if (!fromId || !toId) return;
+    const { error } = await createLoveLetter(fromId, toId, { title: l.title, body: l.body, stationery: l.stationery, font: l.font });
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshLoveStuff();
+    // No manual toast — the realtime `notifications` subscription pops one for both accounts.
   };
-  const deleteLoveLetter = (id: string) => {
+  const deleteLoveLetter = async (id: string) => {
     setState(s => ({ ...s, loveLetters: s.loveLetters.filter(l => l.id !== id) }));
+    const { error } = await deleteLoveLetterRow(id);
+    if (error) refreshLoveStuff();
   };
 
-  // Hugs
-  const sendHug = (from: User, message: string) => {
+  // Hugs — backed by Supabase (notify_new_hug trigger pushes the shared
+  // notification via the existing realtime subscription).
+  const sendHug = async (from: User, message: string) => {
     const to = from === 'Alvin' ? 'Paoi' : 'Alvin';
-    setState(s => ({
-      ...s,
-      hugs: [{ id: uid(), from, date: new Date().toISOString(), message }, ...s.hugs],
-      notifications: [
-        { id: uid(), emoji: '🫂', message: `${from} gửi ${to} một cái ôm thật chặt! ${message}`, date: 'Just now', read: false },
-        ...s.notifications,
-      ],
-    }));
+    const fromId = resolveProfileId(from);
+    if (!fromId) return;
+    const { error } = await createHug(fromId, message);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
     toast(`${from} đã gửi ôm cho ${to} 🫂`, '🌸');
   };
 
-  // Date requests
-  const submitDateRequest = (req: Omit<DateRequest, 'id' | 'status' | 'responseNote' | 'createdAt'>) => {
-    const newReq: DateRequest = { ...req, id: uid(), status: 'pending', responseNote: '', createdAt: new Date().toISOString() };
-    setState(s => ({
-      ...s,
-      dateRequests: [newReq, ...s.dateRequests],
-      notifications: [
-        { id: uid(), emoji: req.categoryEmoji, message: `${req.from} đã nộp đơn xin phép: ${req.activity}`, date: 'Vừa xong', read: false },
-        ...s.notifications,
-      ],
-    }));
+  // Date requests — backed by Supabase (notify_new_date_request/notify_date_request_response
+  // triggers push the shared notification, matching the original inline behaviour).
+  const submitDateRequest = async (req: Omit<DateRequest, 'id' | 'status' | 'responseNote' | 'createdAt'>) => {
+    const fromId = resolveProfileId(req.from);
+    const toId = resolveProfileId(req.to);
+    if (!fromId || !toId) return;
+    const { error } = await createDateRequest(fromId, toId, req);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshDateRequests();
     toast(`Đơn đã nộp! Chờ ${req.to} duyệt nhé 📋`, '✨');
   };
 
-  const respondToRequest = (id: string, status: 'approved' | 'rejected', note: string) => {
-    setState(s => {
-      const req = s.dateRequests.find(r => r.id === id);
-      return {
-        ...s,
-        dateRequests: s.dateRequests.map(r =>
-          r.id === id ? { ...r, status, responseNote: note, respondedAt: new Date().toISOString() } : r
-        ),
-        notifications: [
-          { id: uid(), emoji: status === 'approved' ? '✅' : '❌', message: `${req?.to} đã ${status === 'approved' ? 'DUYỆT' : 'TỪ CHỐI'} đơn xin phép của ${req?.from}${note ? `: "${note}"` : ''}`, date: 'Vừa xong', read: false },
-          ...s.notifications,
-        ],
-      };
-    });
+  const respondToRequest = async (id: string, status: 'approved' | 'rejected', note: string) => {
+    setState(s => ({
+      ...s,
+      dateRequests: s.dateRequests.map(r =>
+        r.id === id ? { ...r, status, responseNote: note, respondedAt: new Date().toISOString() } : r
+      ),
+    }));
+    const { error } = await respondToDateRequest(id, status, note);
+    if (error) { refreshDateRequests(); return; }
     toast(status === 'approved' ? 'Đã duyệt đơn! 🎉' : 'Đã từ chối đơn', status === 'approved' ? '✅' : '❌');
   };
 
   // Gratitude
-  const addGratitude = (entry: Omit<GratitudeEntry, 'id'>) => {
-    setState(s => ({ ...s, gratitude: [{ ...entry, id: uid() }, ...s.gratitude] }));
+  const addGratitude = async (entry: Omit<GratitudeEntry, 'id'>) => {
+    const fromId = resolveProfileId(entry.from);
+    if (!fromId) return;
+    const { error } = await createGratitude(fromId, entry.text, entry.date);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshGratitude();
     toast('Biết ơn đã ghi lại 🌸', '💕');
   };
 
@@ -571,27 +702,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Fav places
-  const addFavPlace = (cat: FavCategory, place: Omit<FavPlace, 'id'>) => {
-    setState(s => ({ ...s, favPlaces: { ...s.favPlaces, [cat]: [...s.favPlaces[cat], { ...place, id: uid() }] } }));
+  const addFavPlace = async (cat: FavCategory, place: Omit<FavPlace, 'id'>) => {
+    const { error } = await createFavPlace(cat, place);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshFavorites();
     toast('Đã thêm!', '✨');
   };
-  const removeFavPlace = (cat: FavCategory, id: string) => {
+  const removeFavPlace = async (cat: FavCategory, id: string) => {
     setState(s => ({ ...s, favPlaces: { ...s.favPlaces, [cat]: s.favPlaces[cat].filter(p => p.id !== id) } }));
+    const { error } = await deleteFavPlace(id);
+    if (error) refreshFavorites();
   };
 
-  // Dark mode
-  const toggleDarkMode = () => {
-    setState(s => {
-      const next = !s.darkMode;
-      if (next) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-        document.body.setAttribute('data-theme', 'dark');
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-        document.body.removeAttribute('data-theme');
-      }
-      return { ...s, darkMode: next };
-    });
+  // Places
+  const addPlace = async (p: { name: string; flag?: string; image: string }) => {
+    const { error } = await createPlace(p);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    await refreshPlaces();
+    toast('Đã thêm địa điểm!', '📍');
+  };
+  const deletePlace = async (id: string) => {
+    setState(s => ({ ...s, places: s.places.filter(p => p.id !== id) }));
+    const { error } = await deletePlaceRow(id);
+    if (error) refreshPlaces();
+  };
+
+  // Dark mode — persisted per couple so it survives reload/relogin
+  const toggleDarkMode = async () => {
+    const next = !state.darkMode;
+    if (next) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      document.body.removeAttribute('data-theme');
+    }
+    setState(s => ({ ...s, darkMode: next }));
+    if (myProfile?.coupleId) {
+      const { error } = await updateDarkMode(myProfile.coupleId, next);
+      if (error) toast('Có lỗi xảy ra', '⚠️');
+    }
+  };
+
+  // Anniversary date — either partner can set/edit it, persisted per couple.
+  const setRelationshipStart = async (date: string) => {
+    if (!myProfile?.coupleId) return;
+    setState(s => ({ ...s, relationshipStart: date }));
+    const { error } = await updateRelationshipStart(myProfile.coupleId, date);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshFavorites(); return; }
+    toast('Đã cập nhật ngày kỷ niệm 📅', '💕');
   };
 
   const refreshProfiles = useCallback(async () => {
@@ -674,6 +833,198 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLinked) refreshEvents();
   }, [isLinked, refreshEvents]);
+
+  const refreshMoney = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const [expenses, bills, savingsGoals] = await Promise.all([fetchExpenses(names), fetchBills(), fetchSavingsGoals()]);
+    setState(s => ({ ...s, expenses, bills, savingsGoals }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshMoney();
+  }, [isLinked, myProfile, partnerProfile, refreshMoney]);
+
+  const refreshLoveStuff = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const [loveNotes, loveLetters, secretNotes] = await Promise.all([fetchLoveNotes(names), fetchLoveLetters(names), fetchSecretNotes(names)]);
+    setState(s => ({ ...s, loveNotes, loveLetters, secretNotes }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshLoveStuff();
+  }, [isLinked, myProfile, partnerProfile, refreshLoveStuff]);
+
+  const refreshGoals = useCallback(async () => {
+    const goals = await fetchGoals();
+    setState(s => ({ ...s, goals }));
+  }, []);
+
+  useEffect(() => {
+    if (isLinked) refreshGoals();
+  }, [isLinked, refreshGoals]);
+
+  const refreshFavorites = useCallback(async () => {
+    if (!myProfile?.coupleId) return;
+    const [settings, favPlaces] = await Promise.all([fetchCoupleSettings(myProfile.coupleId), fetchFavPlaces()]);
+    if (settings?.darkMode) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      document.body.removeAttribute('data-theme');
+    }
+    setState(s => ({
+      ...s,
+      favorites: settings?.favorites ?? s.favorites,
+      darkMode: settings?.darkMode ?? s.darkMode,
+      relationshipStart: settings?.relationshipStart ?? s.relationshipStart,
+      favPlaces,
+    }));
+  }, [myProfile?.coupleId]);
+
+  useEffect(() => {
+    if (isLinked && myProfile) refreshFavorites();
+  }, [isLinked, myProfile, refreshFavorites]);
+
+  const refreshPlaces = useCallback(async () => {
+    const places = await fetchPlaces();
+    setState(s => ({ ...s, places }));
+  }, []);
+
+  useEffect(() => {
+    if (isLinked) refreshPlaces();
+  }, [isLinked, refreshPlaces]);
+
+  const refreshPlaylist = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const playlist = await fetchPlaylist(names);
+    setState(s => ({ ...s, playlist }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshPlaylist();
+  }, [isLinked, myProfile, partnerProfile, refreshPlaylist]);
+
+  const refreshTrips = useCallback(async () => {
+    const trips = await fetchTrips();
+    setState(s => ({ ...s, trips }));
+  }, []);
+
+  useEffect(() => {
+    if (isLinked) refreshTrips();
+  }, [isLinked, refreshTrips]);
+
+  const refreshCapsules = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const capsules = await fetchCapsules(names);
+    setState(s => ({ ...s, capsules }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshCapsules();
+  }, [isLinked, myProfile, partnerProfile, refreshCapsules]);
+
+  const refreshWishes = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const wishes = await fetchWishes(names);
+    setState(s => ({ ...s, wishes }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshWishes();
+  }, [isLinked, myProfile, partnerProfile, refreshWishes]);
+
+  const refreshDateIdeas = useCallback(async () => {
+    const dateIdeas = await fetchDateIdeas();
+    setState(s => ({ ...s, dateIdeas }));
+  }, []);
+
+  useEffect(() => {
+    if (isLinked) refreshDateIdeas();
+  }, [isLinked, refreshDateIdeas]);
+
+  const refreshDateIdeaHistory = useCallback(async () => {
+    const dateIdeaHistory = await fetchDateIdeaHistory();
+    setState(s => ({ ...s, dateIdeaHistory }));
+  }, []);
+
+  useEffect(() => {
+    if (isLinked) refreshDateIdeaHistory();
+  }, [isLinked, refreshDateIdeaHistory]);
+
+  const refreshGratitude = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const gratitude = await fetchGratitude(names);
+    setState(s => ({ ...s, gratitude }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshGratitude();
+  }, [isLinked, myProfile, partnerProfile, refreshGratitude]);
+
+  const refreshDateRequests = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const dateRequests = await fetchDateRequests(names);
+    setState(s => ({ ...s, dateRequests }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshDateRequests();
+  }, [isLinked, myProfile, partnerProfile, refreshDateRequests]);
+
+  const refreshCountdowns = useCallback(async () => {
+    const countdowns = await fetchCountdowns();
+    setState(s => ({ ...s, countdowns }));
+  }, []);
+
+  useEffect(() => {
+    if (isLinked) refreshCountdowns();
+  }, [isLinked, refreshCountdowns]);
+
+  const refreshMoods = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const moodHistory = await fetchMoodHistory(names);
+    const today = new Date().toISOString().slice(0, 10);
+    const todayEntry = moodHistory.find(e => e.date === today);
+    setState(s => ({ ...s, moodHistory, moods: { Alvin: todayEntry?.Alvin ?? null, Paoi: todayEntry?.Paoi ?? null } }));
+  }, [myProfile, partnerProfile]);
+
+  useEffect(() => {
+    if (isLinked && myProfile && partnerProfile) refreshMoods();
+  }, [isLinked, myProfile, partnerProfile, refreshMoods]);
+
+  const refreshStreak = useCallback(async () => {
+    const streak = await bumpStreak();
+    setState(s => ({ ...s, streak }));
+  }, []);
+
+  useEffect(() => {
+    if (isLinked) refreshStreak();
+  }, [isLinked, refreshStreak]);
 
   const refreshNotifications = useCallback(async () => {
     const notifications = await fetchNotifications();
@@ -760,7 +1111,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addMemory, toggleFavorite,
       addExpense, deleteExpense,
       addSavingsGoal, addToGoal,
-      addLoveNote, markNoteRead,
+      addLoveNote, markNoteRead, addSecretNote,
       addEvent, deleteEvent,
       addGoal, toggleGoal, deleteGoal,
       setMood,
@@ -772,6 +1123,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addCountdown, deleteCountdown,
       addToPlaylist, removeFromPlaylist,
       addWish, drawWish, removeWish,
+      addDateIdea, removeDateIdea, drawDateIdea,
       addLoveLetter, deleteLoveLetter,
       sendHug,
       submitDateRequest,
@@ -779,7 +1131,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addGratitude,
       addReaction,
       addFavPlace, removeFavPlace,
+      addPlace, deletePlace,
       toggleDarkMode,
+      setRelationshipStart,
       profilePhotos, updateProfilePhoto,
     }}>
       {children}

@@ -50,6 +50,44 @@ html, body {
   justify-content: center;
 }
 
+/* iPhone device mockup — desktop/preview default look */
+.phone-shell {
+  width: 393px;
+  height: 852px;
+  background: #1a1a1a;
+  border-radius: 54px;
+  box-shadow: 0 0 0 2px #3a3a3a, 0 0 0 4px #222, 0 32px 80px rgba(0,0,0,0.45), inset 0 0 0 2px #555;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.phone-screen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+/* Real device: collapse the mockup into an actual edge-to-edge layout and
+   let the app fill the real viewport instead of showing a tiny fake phone
+   frame (with its own fake status bar) inside the real browser chrome. */
+@media (max-width: 480px) {
+  html, body { height: 100dvh; }
+  .app-viewport { height: 100dvh; }
+  .phone-shell {
+    width: 100%;
+    height: 100dvh;
+    background: var(--bg);
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .phone-screen { border-radius: 0; }
+  .phone-bezel-decor, .status-bar-mock { display: none; }
+  .app-header { padding-top: calc(10px + env(safe-area-inset-top)) !important; }
+  .app-bottom-nav { padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important; }
+}
+
 * { box-sizing: border-box; }
 
 ::-webkit-scrollbar { display: none; }

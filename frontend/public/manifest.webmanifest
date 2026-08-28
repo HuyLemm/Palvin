@@ -1,0 +1,11 @@
+{
+  "name": "PALVIN",
+  "short_name": "PALVIN",
+  "description": "Không gian riêng của hai mình",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FFF8FA",
+  "theme_color": "#FFF8FA",
+  "orientation": "portrait"
+}
