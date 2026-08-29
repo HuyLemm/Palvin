@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import AddEventForm from '../components/forms/AddEventForm';
+import Icon from '../components/Icon';
 import type { CalendarEvent } from '../types';
 
 const CAT_EMOJI: Record<CalendarEvent['category'], string> = { anniversary: '💕', birthday: '🎂', trip: '✈️', date: '❤️', reminder: '📅' };
@@ -117,15 +118,15 @@ function EventCard({ event: ev, onDelete }: { event: CalendarEvent; onDelete: (i
   const d = new Date(ev.date + 'T12:00:00');
   return (
     <div className="card" style={{ padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{CAT_EMOJI[ev.category]}</div>
+      <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={CAT_EMOJI[ev.category]} size={22} /></div>
       <div style={{ flex: 1 }}>
         <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{ev.title}</p>
         <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{ev.time ? ` · ${ev.time}` : ''}</p>
-        {ev.location && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>📍 {ev.location}</p>}
+        {ev.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={12} /> {ev.location}</p>}
         {ev.notes && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 4 }}>{ev.notes}</p>}
       </div>
       {!confirm
-        ? <button onClick={() => setConfirm(true)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', opacity: 0.4, cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>✕</button>
+        ? <button onClick={() => setConfirm(true)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', opacity: 0.4, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         : <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={() => onDelete(ev.id)} style={{ background: 'var(--sakura-deep)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Delete</button>
             <button onClick={() => setConfirm(false)} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 12, color: 'var(--ink-2)' }}>No</button>

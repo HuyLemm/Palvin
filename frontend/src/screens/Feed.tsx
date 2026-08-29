@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
+import Icon from '../components/Icon';
 
 export default function Feed() {
   const { state, navigate, currentUser, openCreate } = useApp();
@@ -67,7 +68,7 @@ export default function Feed() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setShowPartnerInfo(null)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <Avatar user={partnerUser} size={56} ring />
-            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginTop: 12, marginBottom: 6 }}>Đây là nơi {partnerUser} đăng bài 💕</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginTop: 12, marginBottom: 6 }}>Đây là nơi {partnerUser} đăng bài <Icon emoji="💕" size={14} style={{ verticalAlign: -2 }} /></p>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Bạn không thể tạo bài viết thay cho {partnerUser} — hãy đợi {partnerUser} tự đăng nhé!</p>
             <button onClick={() => setShowPartnerInfo(null)} style={{ width: '100%', padding: '10px', borderRadius: 10, border: 'none', background: 'var(--sakura-accent)', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Đã hiểu</button>
           </div>

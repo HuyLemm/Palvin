@@ -1,6 +1,7 @@
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import SwipeToDelete from '../components/SwipeToDelete';
+import Icon from '../components/Icon';
 import type { AppNotification } from '../types';
 
 function dayLabel(iso: string): string {
@@ -45,15 +46,15 @@ export default function Notifications() {
           padding: '16px 18px', marginBottom: 14, borderRadius: 16,
           background: 'linear-gradient(135deg, #FFF0F4, white)', border: '1.5px solid var(--sakura-accent)',
         }}>
-          <p style={{ fontSize: 14, color: 'var(--ink)', marginBottom: 12 }}>
-            💕 <strong>{pendingInvite.name}</strong> muốn liên kết với bạn
+          <p style={{ fontSize: 14, color: 'var(--ink)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Icon emoji="💕" size={14} /> <strong>{pendingInvite.name}</strong> muốn liên kết với bạn
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => acceptInvite(pendingInvite.id)}
-              style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+              style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             >
-              Đồng ý 💕
+              Đồng ý <Icon emoji="💕" size={14} />
             </button>
             <button
               onClick={() => rejectInvite(pendingInvite.id)}
@@ -73,7 +74,7 @@ export default function Notifications() {
 
       {state.notifications.length === 0 && !pendingInvite ? (
         <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🔔</div>
+          <div style={{ marginBottom: 12 }}><Icon emoji="🔔" size={40} /></div>
           <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>No notifications</p>
           <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>You're all caught up!</p>
         </div>
@@ -103,10 +104,10 @@ export default function Notifications() {
                       {n.actor ? (
                         <Avatar user={n.actor} size={44} ring />
                       ) : (
-                        <div style={{ width: 44, height: 44, background: 'var(--sakura-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>{n.emoji}</div>
+                        <div style={{ width: 44, height: 44, background: 'var(--sakura-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={n.emoji} size={22} /></div>
                       )}
                       {n.actor && (
-                        <div style={{ position: 'absolute', bottom: -3, right: -3, width: 20, height: 20, borderRadius: '50%', background: 'var(--white)', border: '1.5px solid var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}>{n.emoji}</div>
+                        <div style={{ position: 'absolute', bottom: -3, right: -3, width: 20, height: 20, borderRadius: '50%', background: 'var(--white)', border: '1.5px solid var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.15)' }}><Icon emoji={n.emoji} size={12} /></div>
                       )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context';
+import Icon from '../components/Icon';
 import AddGoalForm from '../components/forms/AddGoalForm';
 
 export default function FutureUs() {
@@ -19,10 +20,9 @@ export default function FutureUs() {
               position: 'absolute',
               top: '30%',
               left: `${10 + i * 7}%`,
-              fontSize: 20,
               animation: `confettiFall 1.5s ease-out ${i * 0.1}s forwards`,
             }}>
-              {['🌸', '❤️', '✨', '🎉'][i % 4]}
+              <Icon emoji={['🌸', '❤️', '✨', '🎉'][i % 4]} size={20} />
             </div>
           ))}
         </div>
@@ -30,7 +30,7 @@ export default function FutureUs() {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)' }}>Future Us ✨</p>
+          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Future Us <Icon emoji="✨" size={18} /></p>
           <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{completed.length}/{state.goals.length} dreams achieved</p>
         </div>
         <button onClick={() => setShowAdd(true)} className="btn-primary" style={{ padding: '9px 16px', fontSize: 13 }}>+ Add Goal</button>
@@ -60,7 +60,7 @@ export default function FutureUs() {
       {/* Completed goals */}
       {completed.length > 0 && (
         <div>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12 }}>Achieved ✅</p>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}>Achieved <Icon emoji="✅" size={12} /></p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {completed.map(g => <GoalItem key={g.id} goal={g} onToggle={toggleGoal} onDelete={deleteGoal} />)}
           </div>
@@ -69,7 +69,7 @@ export default function FutureUs() {
 
       {state.goals.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>✨</div>
+          <div style={{ marginBottom: 12 }}><Icon emoji="✨" size={40} /></div>
           <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No goals yet</p>
           <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 20 }}>What do you dream of doing together?</p>
         </div>
@@ -85,15 +85,15 @@ function GoalItem({ goal: g, onToggle, onDelete }: { goal: any; onToggle: (id: s
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'var(--white)', borderRadius: 14, border: '1px solid var(--border)', transition: 'box-shadow 0.15s' }}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
-      <button onClick={() => onToggle(g.id)} style={{ width: 24, height: 24, borderRadius: 8, border: `2px solid ${g.completed ? 'var(--sakura-accent)' : 'var(--border)'}`, background: g.completed ? 'var(--sakura-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s', fontSize: 13 }}>
-        {g.completed && '✓'}
+      <button onClick={() => onToggle(g.id)} style={{ width: 24, height: 24, borderRadius: 8, border: `2px solid ${g.completed ? 'var(--sakura-accent)' : 'var(--border)'}`, background: g.completed ? 'var(--sakura-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s' }}>
+        {g.completed && <Icon emoji="✓" size={13} />}
       </button>
-      <span style={{ fontSize: 20 }}>{g.emoji}</span>
+      <Icon emoji={g.emoji} size={20} />
       <div style={{ flex: 1 }}>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }}>{g.title}</p>
-        {g.completed && g.completedDate && <p style={{ fontSize: 11, color: 'var(--sakura-accent)', fontWeight: 500 }}>Achieved {g.completedDate} ✨</p>}
+        {g.completed && g.completedDate && <p style={{ fontSize: 11, color: 'var(--sakura-accent)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>Achieved {g.completedDate} <Icon emoji="✨" size={11} /></p>}
       </div>
-      {hovered && <button onClick={() => onDelete(g.id)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', opacity: 0.4, cursor: 'pointer', fontSize: 15 }}>✕</button>}
+      {hovered && <button onClick={() => onDelete(g.id)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', opacity: 0.4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>}
     </div>
   );
 }

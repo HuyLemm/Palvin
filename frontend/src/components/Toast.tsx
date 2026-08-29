@@ -1,4 +1,5 @@
 import { useApp } from '../context';
+import Icon from './Icon';
 
 export default function ToastContainer() {
   const { toasts } = useApp();
@@ -24,7 +25,7 @@ export default function ToastContainer() {
             boxShadow: '0 4px 20px rgba(51,42,45,0.25)',
           }}
         >
-          <span style={{ fontSize: 16, flexShrink: 0 }}>{t.emoji}</span>
+          <Icon emoji={t.emoji} size={16} style={{ flexShrink: 0 }} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.message}</span>
         </div>
       ))}

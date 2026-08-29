@@ -25,9 +25,9 @@ import {
   fetchEvents, createEvent, deleteEventRow,
 } from './calendar';
 import {
-  fetchExpenses, createExpense, deleteExpenseRow,
-  fetchBills, createBill, setBillPaid, deleteBillRow, setBillReminder,
-  fetchSavingsGoals, createSavingsGoal, updateSavingsGoalCurrent,
+  fetchExpenses, createExpense, updateExpenseRow, deleteExpenseRow,
+  fetchBills, createBill, updateBillRow, setBillPaid, deleteBillRow, rollBillsForward,
+  fetchSavingsGoals, createSavingsGoal, updateSavingsGoalCurrent, updateSavingsGoalRow, deleteSavingsGoalRow,
 } from './money';
 import {
   fetchLoveNotes, createLoveNote, markLoveNoteRead,
@@ -129,11 +129,15 @@ interface AppContextType {
 
   // Expenses
   addExpense: (e: Omit<Expense, 'id'>) => void;
+  updateExpense: (id: string, e: Omit<Expense, 'id'>) => void;
   deleteExpense: (id: string) => void;
 
   // Savings
   addSavingsGoal: (g: Omit<SavingsGoal, 'id'>) => void;
+  updateSavingsGoal: (id: string, g: Omit<SavingsGoal, 'id' | 'current'>) => void;
+  deleteSavingsGoal: (id: string) => void;
   addToGoal: (id: string, amount: number) => void;
+  withdrawFromGoal: (id: string, amount: number) => void;
 
   // Love notes
   addLoveNote: (n: Omit<LoveNote, 'id' | 'read'>) => void;
@@ -162,10 +166,10 @@ interface AppContextType {
   updateNotifyPrefs: (prefs: NotifyPrefs) => void;
 
   // Bills
-  addBill: (b: Omit<Bill, 'id'>) => void;
+  addBill: (b: Omit<Bill, 'id' | 'seriesId' | 'billMonth'>) => void;
+  updateBill: (id: string, b: Omit<Bill, 'id' | 'seriesId' | 'billMonth' | 'paid' | 'paidDate'>) => void;
   toggleBillPaid: (id: string) => void;
   deleteBill: (id: string) => void;
-  toggleBillReminder: (id: string) => void;
 
   // Trips
   addTrip: (t: Omit<Trip, 'id'>) => void;
@@ -377,6 +381,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toast('Expense saved.', '💰');
   };
 
+  const updateExpense = async (id: string, e: Omit<Expense, 'id'>) => {
+    const prev = state.expenses;
+    setState(s => ({ ...s, expenses: s.expenses.map(x => x.id === id ? { ...x, ...e } : x) }));
+    const { error } = await updateExpenseRow(id, resolveProfileId(e.paidBy), {
+      title: e.title, category: e.category, categoryEmoji: e.categoryEmoji, amount: e.amount, date: e.date, note: e.note, type: e.type,
+    });
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, expenses: prev })); return; }
+    toast('Đã cập nhật giao dịch.', '✏️');
+  };
+
   const deleteExpense = async (id: string) => {
     setState(s => ({ ...s, expenses: s.expenses.filter(e => e.id !== id) }));
     const { error } = await deleteExpenseRow(id);
@@ -392,14 +406,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toast('Savings goal added! 💰');
   };
 
+  const updateSavingsGoal = async (id: string, g: Omit<SavingsGoal, 'id' | 'current'>) => {
+    const prev = state.savingsGoals;
+    setState(s => ({ ...s, savingsGoals: s.savingsGoals.map(x => x.id === id ? { ...x, ...g } : x) }));
+    const { error } = await updateSavingsGoalRow(id, g);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, savingsGoals: prev })); return; }
+    toast('Đã cập nhật quỹ.', '✏️');
+  };
+
+  const deleteSavingsGoal = async (id: string) => {
+    setState(s => ({ ...s, savingsGoals: s.savingsGoals.filter(g => g.id !== id) }));
+    const { error } = await deleteSavingsGoalRow(id);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
+    toast('Đã xóa quỹ.', '🗑️');
+  };
+
   const addToGoal = async (id: string, amount: number) => {
     const goal = state.savingsGoals.find(g => g.id === id);
-    if (!goal) return;
+    if (!goal || amount <= 0) return;
     const nextCurrent = Math.min(goal.current + amount, goal.target);
+    const delta = nextCurrent - goal.current;
+    if (delta <= 0) return;
     setState(s => ({ ...s, savingsGoals: s.savingsGoals.map(g => g.id === id ? { ...g, current: nextCurrent } : g) }));
     const { error } = await updateSavingsGoalCurrent(id, nextCurrent);
     if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
-    toast('Added to savings! 🎉');
+    // Deposits move money out of everyday spending, so mirror it as an expense in Thu chi.
+    await createExpense(resolveProfileId(currentUser), {
+      title: `Nạp vào quỹ ${goal.title}`, category: 'Tiết kiệm', categoryEmoji: goal.emoji || '💰',
+      amount: delta, date: new Date().toISOString().split('T')[0], note: `Nạp tiền vào quỹ "${goal.title}"`, type: 'expense',
+    });
+    await refreshMoney();
+    toast('Đã nạp vào quỹ! 🎉');
+  };
+
+  const withdrawFromGoal = async (id: string, amount: number) => {
+    const goal = state.savingsGoals.find(g => g.id === id);
+    if (!goal || amount <= 0) return;
+    const nextCurrent = Math.max(goal.current - amount, 0);
+    const delta = goal.current - nextCurrent;
+    if (delta <= 0) return;
+    setState(s => ({ ...s, savingsGoals: s.savingsGoals.map(g => g.id === id ? { ...g, current: nextCurrent } : g) }));
+    const { error } = await updateSavingsGoalCurrent(id, nextCurrent);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
+    // Withdrawals bring money back into everyday spending, so mirror it as income in Thu chi.
+    await createExpense(resolveProfileId(currentUser), {
+      title: `Rút từ quỹ ${goal.title}`, category: 'Tiết kiệm', categoryEmoji: goal.emoji || '💰',
+      amount: delta, date: new Date().toISOString().split('T')[0], note: `Rút tiền từ quỹ "${goal.title}"`, type: 'income',
+    });
+    await refreshMoney();
+    toast('Đã rút quỹ! 💸');
   };
 
   // Love notes / secret notes — backed by Supabase
@@ -510,11 +565,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Bills — backed by Supabase
-  const addBill = async (b: Omit<Bill, 'id'>) => {
-    const { error } = await createBill(b);
+  const addBill = async (b: Omit<Bill, 'id' | 'seriesId' | 'billMonth'>) => {
+    const { error } = await createBill({ ...b, seriesId: crypto.randomUUID(), billMonth: new Date().toISOString().slice(0, 7) });
     if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
     await refreshMoney();
     toast('Hóa đơn đã thêm!', '🧾');
+  };
+
+  const updateBill = async (id: string, b: Omit<Bill, 'id' | 'seriesId' | 'billMonth' | 'paid' | 'paidDate'>) => {
+    const prev = state.bills;
+    setState(s => ({ ...s, bills: s.bills.map(x => x.id === id ? { ...x, ...b } : x) }));
+    const { error } = await updateBillRow(id, b);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, bills: prev })); return; }
+    toast('Đã cập nhật hóa đơn.', '✏️');
   };
 
   const toggleBillPaid = async (id: string) => {
@@ -524,23 +587,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const paidDate = nextPaid ? new Date().toISOString().slice(0, 10) : null;
     setState(s => ({ ...s, bills: s.bills.map(x => x.id === id ? { ...x, paid: nextPaid, paidDate: paidDate ?? undefined } : x) }));
     const { error } = await setBillPaid(id, nextPaid, paidDate);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); }
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
+    // Mirror the payment (or its reversal) into Thu chi, same as goal deposit/withdraw.
+    // Tagged with billId so deleting the bill later also removes these (on delete cascade).
+    const today = new Date().toISOString().slice(0, 10);
+    await createExpense(resolveProfileId(currentUser), nextPaid ? {
+      title: `Thanh toán hóa đơn ${bill.title}`, category: 'Hóa đơn', categoryEmoji: bill.emoji || '🧾',
+      amount: bill.amount, date: today, note: `Thanh toán hóa đơn "${bill.title}"`, type: 'expense', billId: bill.id,
+    } : {
+      title: `Hủy thanh toán hóa đơn ${bill.title}`, category: 'Hóa đơn', categoryEmoji: bill.emoji || '🧾',
+      amount: bill.amount, date: today, note: `Hủy thanh toán hóa đơn "${bill.title}"`, type: 'income', billId: bill.id,
+    });
+    await refreshMoney();
   };
 
   const deleteBill = async (id: string) => {
     setState(s => ({ ...s, bills: s.bills.filter(b => b.id !== id) }));
     const { error } = await deleteBillRow(id);
     if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
+    // The bill's linked Thu chi transactions are removed by the DB's on-delete
+    // cascade — refresh so the local expenses list reflects that too.
+    await refreshMoney();
     toast('Đã xóa hóa đơn.', '🗑️');
-  };
-
-  const toggleBillReminder = async (id: string) => {
-    const bill = state.bills.find(b => b.id === id);
-    if (!bill) return;
-    const nextReminder = !bill.reminder;
-    setState(s => ({ ...s, bills: s.bills.map(x => x.id === id ? { ...x, reminder: nextReminder } : x) }));
-    const { error } = await setBillReminder(id, nextReminder);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); }
   };
 
   // Trips — backed by Supabase
@@ -867,7 +935,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const names: Record<string, User> = {};
     if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
     if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const [expenses, bills, savingsGoals] = await Promise.all([fetchExpenses(names), fetchBills(), fetchSavingsGoals()]);
+    const [expenses, billsRaw, savingsGoals] = await Promise.all([fetchExpenses(names), fetchBills(), fetchSavingsGoals()]);
+    const bills = await rollBillsForward(billsRaw, new Date().toISOString().slice(0, 7));
     setState(s => ({ ...s, expenses, bills, savingsGoals }));
   }, [myProfile, partnerProfile]);
 
@@ -1156,15 +1225,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       createModal, createStep, openCreate, closeCreate, celebration,
       toggleLike, toggleSave, addComment, addPost, editPost, deletePost,
       addMemory, toggleFavorite,
-      addExpense, deleteExpense,
-      addSavingsGoal, addToGoal,
+      addExpense, updateExpense, deleteExpense,
+      addSavingsGoal, updateSavingsGoal, deleteSavingsGoal, addToGoal, withdrawFromGoal,
       addLoveNote, markNoteRead, addSecretNote,
       addEvent, deleteEvent,
       addGoal, toggleGoal, deleteGoal,
       setMood,
       updateFavorite,
       markNotifRead, markAllRead, deleteNotification, updateNotifyPrefs,
-      addBill, toggleBillPaid, deleteBill, toggleBillReminder,
+      addBill, updateBill, toggleBillPaid, deleteBill,
       addTrip, updateTrip, deleteTrip, toggleTripCheck,
       addCapsule, openCapsule,
       addCountdown, deleteCountdown,

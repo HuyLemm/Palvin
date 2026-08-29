@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { register, login } from '../auth';
+import Icon from '../components/Icon';
 
 type Flow = 'welcome' | 'login' | 'register' | 'check-email';
 
@@ -201,7 +202,7 @@ function BackBtn({ onClick }: { onClick: () => void }) {
 function ErrorBox({ message }: { message: string }) {
   return (
     <div style={{ background: 'rgba(220,38,38,0.07)', borderRadius: 10, padding: '10px 14px', marginBottom: 6, marginTop: -4 }}>
-      <p style={{ color: '#DC2626', fontSize: 13 }}>⚠ {message}</p>
+      <p style={{ color: '#DC2626', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="⚠" size={13} /> {message}</p>
     </div>
   );
 }
@@ -244,9 +245,9 @@ export default function AuthScreen() {
   if (flow === 'check-email') {
     return (
       <AuthBg>
-        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 20px 40px', justifyContent: 'center' }}>
+        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 20px 100px', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
-            <div className="heart-beat" style={{ fontSize: 48, lineHeight: 1, marginBottom: 16 }}>📧</div>
+            <div className="heart-beat" style={{ lineHeight: 1, marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Icon emoji="📧" size={48} /></div>
             <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: '#332A2D', marginBottom: 10 }}>
               Kiểm tra email của bạn
             </p>
@@ -268,7 +269,7 @@ export default function AuthScreen() {
   if (flow === 'register') {
     return (
       <AuthBg>
-        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 20px 40px' }}>
+        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 20px 100px' }}>
           <BackBtn onClick={() => { setFlow('welcome'); setError(''); }} />
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -303,7 +304,7 @@ export default function AuthScreen() {
   if (flow === 'login') {
     return (
       <AuthBg>
-        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 20px 40px' }}>
+        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '50px 20px 100px' }}>
           <BackBtn onClick={() => { setFlow('welcome'); setError(''); }} />
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -311,7 +312,7 @@ export default function AuthScreen() {
               <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: '#332A2D', marginBottom: 6 }}>
                 Chào mừng trở lại
               </p>
-              <p style={{ fontSize: 13, color: '#8C7A80' }}>Chúng mình nhớ bạn. 🌸</p>
+              <p style={{ fontSize: 13, color: '#8C7A80', display: 'flex', alignItems: 'center', gap: 6 }}>Chúng mình nhớ bạn. <Icon emoji="🌸" size={13} /></p>
             </div>
 
             <Card>
@@ -338,7 +339,7 @@ export default function AuthScreen() {
   /* ── WELCOME SCREEN ── */
   return (
     <AuthBg>
-      <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 40, padding: '24px 24px', position: 'relative', zIndex: 1 }}>
+      <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 40, padding: '50px 20px', position: 'relative', zIndex: 1 }}>
 
         {/* Logo area */}
         <div className="auth-fade-up" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -367,7 +368,7 @@ export default function AuthScreen() {
           </p>
           <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 4 }}>
             {['🌸', '💕', '🌸'].map((e, i) => (
-              <span key={i} style={{ fontSize: 16, opacity: 0.7 }}>{e}</span>
+              <Icon key={i} emoji={e} size={16} style={{ opacity: 0.7 }} />
             ))}
           </div>
         </div>
@@ -376,8 +377,8 @@ export default function AuthScreen() {
         <div className="auth-fade-up" style={{ width: '100%', animationDelay: '0.15s' }}>
           <Card style={{ padding: '24px 22px', marginBottom: 16 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button className="btn-sakura" onClick={() => { setFlow('login'); setError(''); }}>
-                ✦ Đăng nhập
+              <button className="btn-sakura" onClick={() => { setFlow('login'); setError(''); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Icon emoji="✦" size={16} /> Đăng nhập
               </button>
               <button className="btn-ghost" onClick={() => { setFlow('register'); setError(''); }}>
                 Tạo tài khoản mới
@@ -385,8 +386,8 @@ export default function AuthScreen() {
             </div>
           </Card>
 
-          <p style={{ textAlign: 'center', fontSize: 11, color: '#B09AA0', lineHeight: 1.6 }}>
-            🔒 Đăng ký cần xác nhận qua email trước khi đăng nhập
+          <p style={{ textAlign: 'center', fontSize: 11, color: '#B09AA0', lineHeight: 1.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Icon emoji="🔒" size={11} /> Đăng ký cần xác nhận qua email trước khi đăng nhập
           </p>
         </div>
       </div>

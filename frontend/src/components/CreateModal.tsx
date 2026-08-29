@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import BottomSheet from './BottomSheet';
+import Icon from './Icon';
 import AddPostForm from './forms/AddPostForm';
 import AddMemoryForm from './forms/AddMemoryForm';
 import AddLoveNoteForm from './forms/AddLoveNoteForm';
@@ -52,7 +53,7 @@ export default function CreateModal() {
             onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--sakura-light)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--sakura)'; }}
             onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
           >
-            <span style={{ fontSize: 28 }}>{opt.icon}</span>
+            <Icon emoji={opt.icon} size={28} />
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{opt.label}</span>
           </button>
         ))}

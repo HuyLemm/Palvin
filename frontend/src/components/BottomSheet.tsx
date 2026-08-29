@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
+import Icon from './Icon';
 
 interface Props {
   onClose: () => void;
   children: React.ReactNode;
-  title?: string;
+  title?: React.ReactNode;
 }
 
 export default function BottomSheet({ onClose, children, title }: Props) {
@@ -21,7 +22,7 @@ export default function BottomSheet({ onClose, children, title }: Props) {
         {title && (
           <div style={{ padding: '0 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>{title}</span>
-            <button onClick={onClose} style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 99, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 16, color: 'var(--ink-2)' }}>✕</button>
+            <button onClick={onClose} style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 99, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--ink-2)' }}><Icon emoji="✕" size={16} /></button>
           </div>
         )}
         <div style={{ padding: '0 20px 8px' }}>

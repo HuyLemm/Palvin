@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
 import type { User } from '../types';
 import type { NotifyPrefs } from '../auth';
 
@@ -82,8 +83,8 @@ export default function Settings() {
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>{myProfile?.displayName || currentUser}</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-              {partnerProfile ? `Đã kết nối với ${partnerProfile.displayName} 💕` : 'PALVIN · Alvin ❤️ Paoi'}
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+              {partnerProfile ? <>Đã kết nối với {partnerProfile.displayName} <Icon emoji="💕" size={13} /></> : <>PALVIN · Alvin <Icon emoji="❤️" size={13} /> Paoi</>}
             </p>
           </div>
         </div>
@@ -93,25 +94,25 @@ export default function Settings() {
             <Avatar user={partnerProfile.displayName as User} size={36} />
             <div>
               <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{partnerProfile.displayName}</p>
-              <p style={{ fontSize: 11, color: 'var(--sakura-deep)' }}>Nửa kia của bạn 💖</p>
+              <p style={{ fontSize: 11, color: 'var(--sakura-deep)', display: 'flex', alignItems: 'center', gap: 4 }}>Nửa kia của bạn <Icon emoji="💖" size={11} /></p>
             </div>
             <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-2)', textAlign: 'right' }}>
-              <p>🔒 Đã liên kết</p>
+              <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><Icon emoji="🔒" size={11} /> Đã liên kết</p>
               <p>Vĩnh viễn</p>
             </div>
           </div>
         ) : pendingInvite ? (
           <div style={{ marginTop: 14, padding: '12px 14px', background: 'var(--sakura-light)', borderRadius: 12 }}>
-            <p style={{ fontSize: 13, color: 'var(--ink)', marginBottom: 12 }}>
-              💕 <strong>{pendingInvite.name}</strong> muốn liên kết với bạn
+            <p style={{ fontSize: 13, color: 'var(--ink)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Icon emoji="💕" size={14} /> <strong>{pendingInvite.name}</strong> muốn liên kết với bạn
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button
                 onClick={() => handleRespond(true)}
                 disabled={responding}
-                style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               >
-                Đồng ý 💕
+                Đồng ý <Icon emoji="💕" size={13} />
               </button>
               <button
                 onClick={() => handleRespond(false)}
@@ -137,7 +138,7 @@ export default function Settings() {
           </div>
         ) : (
           <div style={{ marginTop: 14, padding: '12px 14px', background: 'var(--sakura-light)', borderRadius: 12 }}>
-            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--sakura-deep)', marginBottom: 8 }}>Mời nửa kia liên kết 💕</p>
+            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--sakura-deep)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>Mời nửa kia liên kết <Icon emoji="💕" size={13} /></p>
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 value={inviteUsername}
@@ -156,10 +157,10 @@ export default function Settings() {
 
       {/* Couple */}
       <Section title="Couple">
-        <SettingRow emoji="❤️" label="Couple Name" value="Alvin ❤️ Paoi" onEdit={() => toast('Edit couple name', '✏️')} />
+        <SettingRow emoji="❤️" label="Couple Name" value={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Alvin <Icon emoji="❤️" size={13} /> Paoi</span>} onEdit={() => toast('Edit couple name', '✏️')} />
         {editingAnniversary ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 20, flexShrink: 0 }}>📅</span>
+            <Icon emoji="📅" size={20} style={{ flexShrink: 0 }} />
             <input
               type="date"
               value={anniversaryDraft}
@@ -216,7 +217,7 @@ export default function Settings() {
         )}
       </div>
 
-      <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--ink-2)', marginTop: 24 }}>PALVIN v1.0 · Made with ❤️ for Alvin & Paoi</p>
+      <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--ink-2)', marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>PALVIN v1.0 · Made with <Icon emoji="❤️" size={13} /> for Alvin & Paoi</p>
     </div>
   );
 }
@@ -232,10 +233,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function SettingRow({ emoji, label, value, onEdit }: { emoji: string; label: string; value: string; onEdit?: () => void }) {
+function SettingRow({ emoji, label, value, onEdit }: { emoji: string; label: string; value: React.ReactNode; onEdit?: () => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-      <span style={{ fontSize: 20, flexShrink: 0 }}>{emoji}</span>
+      <Icon emoji={emoji} size={20} style={{ flexShrink: 0 }} />
       <div style={{ flex: 1 }}>
         <p style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500 }}>{label}</p>
         <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{value}</p>
@@ -248,7 +249,7 @@ function SettingRow({ emoji, label, value, onEdit }: { emoji: string; label: str
 function ToggleRow({ emoji, label, value, onToggle }: { emoji: string; label: string; value: boolean; onToggle: () => void }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-      <span style={{ fontSize: 20, flexShrink: 0 }}>{emoji}</span>
+      <Icon emoji={emoji} size={20} style={{ flexShrink: 0 }} />
       <p style={{ flex: 1, fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{label}</p>
       <button onClick={onToggle} style={{ width: 48, height: 27, borderRadius: 99, border: 'none', background: value ? 'var(--sakura-accent)' : 'var(--border)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
         <div style={{ position: 'absolute', top: 3, left: value ? 24 : 3, width: 21, height: 21, borderRadius: '50%', background: 'white', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }} />

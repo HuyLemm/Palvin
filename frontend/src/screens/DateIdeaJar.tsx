@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context';
+import Icon from '../components/Icon';
 
 const PRESET_IDEAS = [
   { emoji: '🍜', text: 'Thử một quán mì mới chưa đến bao giờ' },
@@ -83,35 +84,35 @@ export default function DateIdeaJar({ onBack }: Props) {
         .idea-reveal { animation: ideaReveal 0.4s ease both; }
       `}</style>
 
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}>← Back</button>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={15} /> Back</button>
 
-      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4 }}>Hũ Hẹn Hò 🫙</p>
+      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Hũ Hẹn Hò <Icon emoji="🫙" size={20} /></p>
       <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 24 }}>Lắc hũ để rút một ý tưởng hẹn hò ngẫu nhiên</p>
 
       {/* Jar + result */}
       <div className="card" style={{ padding: '32px 24px', textAlign: 'center', marginBottom: 20, background: 'linear-gradient(135deg, #FFF0F4, #FADCE4)' }}>
         <button onClick={spin} disabled={spinning} style={{ background: 'none', border: 'none', cursor: spinning ? 'default' : 'pointer', display: 'inline-block' }}>
-          <div className={spinning ? 'jar-anim' : ''} style={{ fontSize: 72, lineHeight: 1, marginBottom: 16, display: 'inline-block' }}>🫙</div>
+          <div className={spinning ? 'jar-anim' : ''} style={{ lineHeight: 1, marginBottom: 16, display: 'inline-block' }}><Icon emoji="🫙" size={72} /></div>
         </button>
 
         {picked ? (
           <div className={spinning ? '' : 'idea-reveal'} key={picked.text}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>{picked.emoji}</div>
+            <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><Icon emoji={picked.emoji} size={36} /></div>
             <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', lineHeight: 1.4, marginBottom: 16 }}>{picked.text}</p>
           </div>
         ) : (
           <p style={{ fontSize: 15, color: 'var(--ink-2)', marginBottom: 16 }}>Nhấn vào hũ để rút ý tưởng!</p>
         )}
 
-        <button onClick={spin} disabled={spinning} style={{ padding: '13px 28px', background: spinning ? 'var(--border)' : 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))', border: 'none', borderRadius: 16, color: spinning ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 15, cursor: spinning ? 'default' : 'pointer', boxShadow: spinning ? 'none' : '0 4px 16px rgba(201,95,124,0.3)', transition: 'all 0.15s' }}>
-          {spinning ? '🫙 Đang lắc...' : picked ? '🔀 Rút lại' : '🫙 Lắc hũ'}
+        <button onClick={spin} disabled={spinning} style={{ padding: '13px 28px', background: spinning ? 'var(--border)' : 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))', border: 'none', borderRadius: 16, color: spinning ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 15, cursor: spinning ? 'default' : 'pointer', boxShadow: spinning ? 'none' : '0 4px 16px rgba(201,95,124,0.3)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          {spinning ? <><Icon emoji="🫙" size={16} /> Đang lắc...</> : picked ? <><Icon emoji="🔀" size={16} /> Rút lại</> : <><Icon emoji="🫙" size={16} /> Lắc hũ</>}
         </button>
       </div>
 
       {/* Add custom */}
       <div className="card" style={{ padding: '16px', marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showAdd ? 12 : 0 }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>✏️ Thêm ý tưởng của bạn</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✏️" size={14} /> Thêm ý tưởng của bạn</p>
           <button onClick={() => setShowAdd(v => !v)} style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 10, padding: '6px 14px', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
             {showAdd ? 'Hủy' : '+ Thêm'}
           </button>
@@ -127,14 +128,14 @@ export default function DateIdeaJar({ onBack }: Props) {
               style={{ flex: 1, padding: '10px 14px', fontSize: 14 }}
               autoFocus
             />
-            <button onClick={addCustom} style={{ padding: '10px 16px', background: 'var(--sakura-deep)', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, cursor: 'pointer' }}>✓</button>
+            <button onClick={addCustom} style={{ padding: '10px 16px', background: 'var(--sakura-deep)', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✓" size={16} /></button>
           </div>
         )}
         {customIdeas.length > 0 && (
           <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {customIdeas.map(idea => (
               <div key={idea.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--sakura-light)', borderRadius: 10 }}>
-                <span style={{ fontSize: 18 }}>{idea.emoji}</span>
+                <Icon emoji={idea.emoji} size={18} />
                 <p style={{ fontSize: 13, color: 'var(--ink)', flex: 1 }}>{idea.text}</p>
                 <button onClick={() => removeDateIdea(idea.id)} style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: 'var(--ink-2)' }}>×</button>
               </div>
@@ -150,7 +151,7 @@ export default function DateIdeaJar({ onBack }: Props) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {history.map((idea, i) => (
               <div key={idea.id} className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, opacity: 1 - i * 0.08 }}>
-                <span style={{ fontSize: 22, flexShrink: 0 }}>{idea.emoji}</span>
+                <Icon emoji={idea.emoji} size={22} style={{ flexShrink: 0 }} />
                 <p style={{ fontSize: 14, color: 'var(--ink)' }}>{idea.text}</p>
               </div>
             ))}
@@ -164,7 +165,7 @@ export default function DateIdeaJar({ onBack }: Props) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {allIdeas.map((idea, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'white', borderRadius: 12, border: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 20 }}>{idea.emoji}</span>
+              <Icon emoji={idea.emoji} size={20} />
               <p style={{ fontSize: 13, color: 'var(--ink)', flex: 1 }}>{idea.text}</p>
             </div>
           ))}

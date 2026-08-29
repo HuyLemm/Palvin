@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../../context';
 import BottomSheet from '../BottomSheet';
+import Icon from '../Icon';
 import type { CalendarEvent } from '../../types';
 
 const CATEGORIES: CalendarEvent['category'][] = ['anniversary', 'birthday', 'trip', 'date', 'reminder'];
@@ -24,7 +25,7 @@ export default function AddEventForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <BottomSheet onClose={onClose} title="New Event 📅">
+    <BottomSheet onClose={onClose} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>New Event <Icon emoji="📅" size={18} /></span>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 16 }}>
         <input className="input-field" placeholder="Event title..." value={title} onChange={e => setTitle(e.target.value)} />
         <div style={{ display: 'flex', gap: 10 }}>
@@ -36,7 +37,7 @@ export default function AddEventForm({ onClose }: { onClose: () => void }) {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {CATEGORIES.map(cat => (
               <button key={cat} onClick={() => setCategory(cat)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', background: category === cat ? 'var(--sakura-light)' : 'var(--bg)', border: category === cat ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: category === cat ? 'var(--sakura-deep)' : 'var(--ink-2)', transition: 'all 0.15s', textTransform: 'capitalize' }}>
-                {CAT_EMOJIS[cat]} {cat}
+                <Icon emoji={CAT_EMOJIS[cat]} size={14} /> {cat}
               </button>
             ))}
           </div>

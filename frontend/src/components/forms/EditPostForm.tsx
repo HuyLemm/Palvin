@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../../context';
 import type { Post } from '../../types';
+import Icon from '../Icon';
 
 export default function EditPostForm({ post, onClose }: { post: Post; onClose: () => void }) {
   const { editPost } = useApp();
@@ -19,7 +20,7 @@ export default function EditPostForm({ post, onClose }: { post: Post; onClose: (
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Chỉnh sửa bài viết</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', fontSize: 15, color: 'var(--ink-2)' }}>✕</button>
+          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

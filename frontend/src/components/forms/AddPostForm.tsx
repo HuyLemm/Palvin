@@ -3,6 +3,7 @@ import { useApp } from '../../context';
 import { uploadPostImage } from '../../feed';
 import BottomSheet from '../BottomSheet';
 import Avatar from '../Avatar';
+import Icon from '../Icon';
 
 interface PendingImage {
   id: string;
@@ -78,7 +79,7 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
                 {im.failed && (
                   <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'white', textAlign: 'center', padding: 4 }}>Lỗi tải ảnh</div>
                 )}
-                <button onClick={() => removeImage(im.id)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                <button onClick={() => removeImage(im.id)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
               </div>
             ))}
             <button

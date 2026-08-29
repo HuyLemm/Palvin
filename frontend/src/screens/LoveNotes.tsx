@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
 import AddLoveNoteForm from '../components/forms/AddLoveNoteForm';
 import type { SecretNote, LoveLetter, User } from '../types';
 
@@ -14,8 +15,8 @@ const STATIONERY: Record<string, { bg: string; border: string; accent: string; p
   mint:     { bg: 'linear-gradient(145deg, #F0FFF8 0%, #E0FFF0 100%)', border: '#80D0A8', accent: '#2A8A5C' },
 };
 
-const STATIONERY_NAMES: Record<string, string> = {
-  rose: '🌹 Rose', sakura: '🌸 Sakura', midnight: '🌙 Midnight', cream: '🍂 Cream', mint: '🌿 Mint',
+const STATIONERY_NAMES: Record<string, { emoji: string; label: string }> = {
+  rose: { emoji: '🌹', label: 'Rose' }, sakura: { emoji: '🌸', label: 'Sakura' }, midnight: { emoji: '🌙', label: 'Midnight' }, cream: { emoji: '🍂', label: 'Cream' }, mint: { emoji: '🌿', label: 'Mint' },
 };
 
 const FONTS: Record<string, string> = {
@@ -24,8 +25,8 @@ const FONTS: Record<string, string> = {
   sans:   "'DM Sans', sans-serif",
 };
 
-const FONT_NAMES: Record<string, string> = {
-  serif: 'Serif 📜', sans: 'Modern ✦',
+const FONT_NAMES: Record<string, { emoji: string; label: string }> = {
+  serif: { emoji: '📜', label: 'Serif' }, sans: { emoji: '✦', label: 'Modern' },
 };
 
 export default function LoveNotes() {
@@ -44,8 +45,8 @@ export default function LoveNotes() {
     <div style={{ paddingBottom: 32 }}>
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 4, background: 'var(--bg)', borderRadius: 14, padding: 4, marginBottom: 20, border: '1px solid var(--border)' }}>
-        {[{ key: 'notes' as Tab, label: '💌 Notes' }, { key: 'letters' as Tab, label: '✉️ Letters' }, { key: 'secret' as Tab, label: '🔐 Secret' }].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: tab === t.key ? 'var(--white)' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', boxShadow: tab === t.key ? '0 1px 4px rgba(51,42,45,0.08)' : 'none', transition: 'all 0.15s' }}>{t.label}</button>
+        {[{ key: 'notes' as Tab, emoji: '💌', label: 'Notes' }, { key: 'letters' as Tab, emoji: '✉️', label: 'Letters' }, { key: 'secret' as Tab, emoji: '🔐', label: 'Secret' }].map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: tab === t.key ? 'var(--white)' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', boxShadow: tab === t.key ? '0 1px 4px rgba(51,42,45,0.08)' : 'none', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Icon emoji={t.emoji} size={13} /> {t.label}</button>
         ))}
       </div>
 
@@ -55,7 +56,7 @@ export default function LoveNotes() {
         <div>
           {state.loveNotes.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>💌</div>
+              <div style={{ marginBottom: 12 }}><Icon emoji="💌" size={40} /></div>
               <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No love notes yet</p>
               <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 20 }}>Write your first note.</p>
             </div>
@@ -82,13 +83,13 @@ export default function LoveNotes() {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{note.from}</p>
-                          <span style={{ fontSize: 13 }}>→</span>
+                          <Icon emoji="→" size={13} />
                           <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--sakura-deep)' }}>{note.to}</p>
                           {!note.read && !isMine && <span style={{ background: 'var(--sakura-accent)', color: 'white', fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '2px 6px' }}>NEW</span>}
                         </div>
                         <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{note.date}</p>
                       </div>
-                      <span style={{ fontSize: 20 }}>{note.mood}</span>
+                      <Icon emoji={note.mood} size={20} />
                     </div>
                     {isExpanded && (
                       <div style={{ background: 'var(--bg)', borderRadius: 12, padding: '14px 16px', animation: 'fadeIn 0.2s ease-out' }}>
@@ -115,7 +116,7 @@ export default function LoveNotes() {
             <>
               {state.loveLetters.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>✉️</div>
+                  <div style={{ marginBottom: 12 }}><Icon emoji="✉️" size={40} /></div>
                   <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>Chưa có thư tình nào</p>
                   <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 20 }}>Viết bức thư đầu tiên cho người mình yêu.</p>
                 </div>
@@ -129,13 +130,13 @@ export default function LoveNotes() {
                         onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 24px rgba(0,0,0,0.10)'; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 2px 12px rgba(0,0,0,0.06)'; }}
                       >
-                        <div style={{ position: 'absolute', top: -16, right: -16, fontSize: 60, opacity: 0.06 }}>✉️</div>
+                        <Icon emoji="✉️" size={60} style={{ position: 'absolute', top: -16, right: -16, opacity: 0.06 }} />
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                           <div>
                             <p style={{ fontSize: 16, fontWeight: 700, color: isDark ? '#E0D0FF' : 'var(--ink)', marginBottom: 2, fontFamily: FONTS[l.font] }}>{l.title}</p>
-                            <p style={{ fontSize: 12, color: isDark ? st.accent : 'var(--ink-2)' }}>{l.from} → {l.to} · {l.date}</p>
+                            <p style={{ fontSize: 12, color: isDark ? st.accent : 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>{l.from} <Icon emoji="→" size={12} /> {l.to} · {l.date}</p>
                           </div>
-                          <span style={{ fontSize: 20 }}>💌</span>
+                          <Icon emoji="💌" size={20} />
                         </div>
                         <p style={{ fontSize: 13, color: isDark ? '#C0A0E8' : 'var(--ink-2)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, fontStyle: 'italic' }}>
                           {l.body.replace(/\n/g, ' ').slice(0, 120)}...
@@ -145,8 +146,8 @@ export default function LoveNotes() {
                   })}
                 </div>
               )}
-              <button onClick={() => setShowCompose(true)} style={{ width: '100%', padding: '14px', borderRadius: 14, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-                ✍️ Viết thư tình mới
+              <button onClick={() => setShowCompose(true)} style={{ width: '100%', padding: '14px', borderRadius: 14, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Icon emoji="✍️" size={16} /> Viết thư tình mới
               </button>
             </>
           )}
@@ -165,13 +166,13 @@ export default function LoveNotes() {
                 style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, padding: '16px', cursor: unlocked ? 'pointer' : 'default' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 12, background: unlocked ? 'var(--sakura-light)' : 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>
-                    {unlocked ? '💌' : '🔒'}
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: unlocked ? 'var(--sakura-light)' : 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {unlocked ? <Icon emoji="💌" size={22} /> : <Icon emoji="🔒" size={22} />}
                   </div>
                   <div style={{ flex: 1 }}>
                     <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>From {note.from}</p>
-                    <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>
-                      {unlocked ? 'Open your message ✨' : `Unlocks on ${new Date(note.unlockDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`}
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {unlocked ? <>Open your message <Icon emoji="✨" size={12} /></> : `Unlocks on ${new Date(note.unlockDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`}
                     </p>
                   </div>
                   {!unlocked && <span style={{ fontSize: 12, background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 99, padding: '4px 10px', color: 'var(--ink-2)', fontWeight: 500 }}>Locked</span>}
@@ -187,8 +188,8 @@ export default function LoveNotes() {
           {showAddSecret ? (
             <SecretNoteComposer onClose={() => setShowAddSecret(false)} />
           ) : (
-            <button onClick={() => setShowAddSecret(true)} style={{ width: '100%', padding: '14px', borderRadius: 14, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
-              🔐 Viết ghi chú bí mật mới
+            <button onClick={() => setShowAddSecret(true)} style={{ width: '100%', padding: '14px', borderRadius: 14, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Icon emoji="🔐" size={16} /> Viết ghi chú bí mật mới
             </button>
           )}
         </div>
@@ -218,8 +219,8 @@ function LetterReader({ letter, onClose, onDelete }: { letter: LoveLetter; onClo
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', fontSize: 15 }}>← Thư</button>
-        <button onClick={() => setConfirmDelete(true)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', fontSize: 13, opacity: 0.5 }}>🗑️</button>
+        <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', fontSize: 15 }}><Icon emoji="←" size={15} /> Thư</button>
+        <button onClick={() => setConfirmDelete(true)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', opacity: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={16} /></button>
       </div>
 
       {/* Paper */}
@@ -251,7 +252,7 @@ function LetterReader({ letter, onClose, onDelete }: { letter: LoveLetter; onClo
 
           {/* Signature flourish */}
           <div style={{ marginTop: 28, paddingTop: 16, borderTop: `1.5px solid ${st.border}40`, textAlign: 'right' }}>
-            <p style={{ fontFamily: FONTS.serif, fontSize: 18, color: isDark ? '#C0A0E8' : st.accent, fontStyle: 'italic' }}>— {letter.from} 💕</p>
+            <p style={{ fontFamily: FONTS.serif, fontSize: 18, color: isDark ? '#C0A0E8' : st.accent, fontStyle: 'italic', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>— {letter.from} <Icon emoji="💕" size={16} /></p>
           </div>
         </div>
       </div>
@@ -303,9 +304,9 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
       <div style={{ minHeight: '100%', padding: '20px 16px 40px', display: 'flex', flexDirection: 'column', maxWidth: 430, margin: '0 auto' }}>
         {/* Toolbar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>✕ Hủy</button>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'white' }}>✉️ Viết thư</p>
-          <button onClick={handleSend} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14, opacity: title && body ? 1 : 0.5 }}>Gửi 💌</button>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✕" size={14} /> Hủy</button>
+          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'white', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✉️" size={18} /> Viết thư</p>
+          <button onClick={handleSend} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14, opacity: title && body ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>Gửi <Icon emoji="💌" size={14} /></button>
         </div>
 
         {/* Stationery picker */}
@@ -313,7 +314,7 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600, marginBottom: 8 }}>Chọn nền giấy</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {Object.keys(STATIONERY).map(k => (
-              <button key={k} onClick={() => setStationery(k)} style={{ padding: '6px 12px', borderRadius: 99, border: stationery === k ? '2px solid white' : '1.5px solid rgba(255,255,255,0.2)', background: stationery === k ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)', color: 'white', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>{STATIONERY_NAMES[k]}</button>
+              <button key={k} onClick={() => setStationery(k)} style={{ padding: '6px 12px', borderRadius: 99, border: stationery === k ? '2px solid white' : '1.5px solid rgba(255,255,255,0.2)', background: stationery === k ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)', color: 'white', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji={STATIONERY_NAMES[k].emoji} size={12} /> {STATIONERY_NAMES[k].label}</button>
             ))}
           </div>
         </div>
@@ -323,7 +324,7 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', fontWeight: 600, marginBottom: 8 }}>Font chữ</p>
           <div style={{ display: 'flex', gap: 8 }}>
             {Object.keys(FONT_NAMES).map(k => (
-              <button key={k} onClick={() => setFont(k)} style={{ padding: '6px 14px', borderRadius: 99, border: font === k ? '2px solid white' : '1.5px solid rgba(255,255,255,0.2)', background: font === k ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)', color: 'white', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: FONTS[k] }}>{FONT_NAMES[k]}</button>
+              <button key={k} onClick={() => setFont(k)} style={{ padding: '6px 14px', borderRadius: 99, border: font === k ? '2px solid white' : '1.5px solid rgba(255,255,255,0.2)', background: font === k ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)', color: 'white', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: FONTS[k], display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji={FONT_NAMES[k].emoji} size={12} /> {FONT_NAMES[k].label}</button>
             ))}
           </div>
         </div>
@@ -373,7 +374,7 @@ function SecretNoteComposer({ onClose }: { onClose: () => void }) {
 
   return (
     <div style={{ background: 'var(--white)', border: '1.5px solid var(--border)', borderRadius: 16, padding: 16 }}>
-      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>🔐 Ghi chú bí mật mới</p>
+      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🔐" size={14} /> Ghi chú bí mật mới</p>
       <textarea
         className="input-field"
         placeholder="Viết điều gì đó để mở khoá sau này..."
@@ -392,7 +393,7 @@ function SecretNoteComposer({ onClose }: { onClose: () => void }) {
       {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 12, marginBottom: 10 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Huỷ</button>
-        <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2 }}>Niêm phong 🔒</button>
+        <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Niêm phong <Icon emoji="🔒" size={14} /></button>
       </div>
     </div>
   );

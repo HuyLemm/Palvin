@@ -5,6 +5,7 @@ import CreateModal from './components/CreateModal';
 import AuthScreen from './screens/AuthScreen';
 import CoupleLocked from './components/CoupleLocked';
 import Avatar from './components/Avatar';
+import Icon from './components/Icon';
 
 import Home from './screens/Home';
 import Feed from './screens/Feed';
@@ -104,11 +105,18 @@ const NAV_TABS = [
 
 
 const SCREEN_TITLES: Record<string, string> = {
-  home: 'PALVIN', feed: 'Feed', money: 'Our Money 💰', us: 'Us 🌸',
-  memories: 'Memories 🌸', 'love-notes': 'For You 💌', calendar: 'Our Calendar',
+  home: 'PALVIN', feed: 'Feed', money: 'Our Money', us: 'Us',
+  memories: 'Memories', 'love-notes': 'For You', calendar: 'Our Calendar',
   'future-us': 'Future Us', search: 'Search', notifications: 'Notifications',
-  settings: 'Settings', stats: 'Chi tiêu 📊',
+  settings: 'Settings', stats: 'Chi tiêu',
   'post-detail': 'Post', 'memory-detail': 'Memory', 'saved-posts': 'Đã lưu',
+};
+
+// Decorative emoji that used to be embedded inline in a few of the titles
+// above — kept separate so SCREEN_TITLES stays plain text and the icon is
+// rendered explicitly next to it.
+const SCREEN_TITLE_EMOJI: Record<string, string> = {
+  money: '💰', us: '🌸', memories: '🌸', 'love-notes': '💌', stats: '📊',
 };
 
 // Stay open even before the couple is linked: Settings hosts the invite/accept
@@ -326,10 +334,13 @@ export default function App() {
                 {screen === 'home' ? (
                   <div>
                     <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', lineHeight: 1 }}>PALVIN</p>
-                    <p style={{ fontSize: 10, color: 'var(--ink-2)' }}>Alvin ❤️ Paoi</p>
+                    <p style={{ fontSize: 10, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>Alvin <Icon emoji="❤️" size={10} /> Paoi</p>
                   </div>
                 ) : (
-                  <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{title}</p>
+                  <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {title}
+                    {SCREEN_TITLE_EMOJI[screen] && <Icon emoji={SCREEN_TITLE_EMOJI[screen]} size={15} />}
+                  </p>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

@@ -1,39 +1,56 @@
 import { useState } from 'react';
 import { useApp } from '../../context';
-import BottomSheet from '../BottomSheet';
+import AmountInput from '../AmountInput';
+import Icon from '../Icon';
 
-const EMOJIS = ['🌸', '✈️', '🇯🇵', '💰', '🌅', '🍳', '📷', '🌱', '🎬', '🏠', '🎁', '💪', '🌍', '🎵', '✨'];
+const EMOJIS = ['🏖️', '✈️', '🏠', '💍', '🚗', '🎓', '💻', '📱', '🎉', '💰', '🐶', '🎁'];
 
 export default function AddGoalForm({ onClose }: { onClose: () => void }) {
-  const { addGoal } = useApp();
+  const { addSavingsGoal } = useApp();
   const [title, setTitle] = useState('');
-  const [emoji, setEmoji] = useState('✨');
+  const [emoji, setEmoji] = useState(EMOJIS[0]);
+  const [target, setTarget] = useState('');
+  const [deadline, setDeadline] = useState(new Date().toISOString().split('T')[0]);
   const [error, setError] = useState('');
 
   const handleSubmit = () => {
-    if (!title.trim()) { setError('Please enter a goal.'); return; }
-    addGoal({ title, emoji });
+    if (!title.trim())      { setError('Nhập tên quỹ.'); return; }
+    if (!target || isNaN(+target) || +target <= 0) { setError('Nhập mục tiêu hợp lệ.'); return; }
+    addSavingsGoal({ title, emoji, current: 0, target: parseFloat(target), deadline });
     onClose();
   };
 
   return (
-    <BottomSheet onClose={onClose} title="New Goal ✨">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 16 }}>
-        <input className="input-field" placeholder="What do you want to achieve together?" value={title} onChange={e => setTitle(e.target.value)} />
-        <div>
-          <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Pick an emoji</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {EMOJIS.map(em => (
-              <button key={em} onClick={() => setEmoji(em)} style={{ fontSize: 22, background: emoji === em ? 'var(--sakura-light)' : 'transparent', border: emoji === em ? '2px solid var(--sakura)' : '2px solid transparent', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', transition: 'all 0.15s' }}>{em}</button>
-            ))}
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={onClose}>
+      <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Tạo quỹ mới <Icon emoji="💰" size={16} /></p>
+          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <input className="input-field" placeholder="Tên quỹ (VD: Du lịch Đà Lạt)" value={title} onChange={e => setTitle(e.target.value)} />
+          <div>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {EMOJIS.map(e => (
+                <button key={e} onClick={() => setEmoji(e)} style={{
+                  width: 38, height: 38, border: emoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)',
+                  borderRadius: 10, background: emoji === e ? 'var(--sakura-light)' : 'var(--bg)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}><Icon emoji={e} size={18} /></button>
+              ))}
+            </div>
+          </div>
+          <AmountInput placeholder="Mục tiêu (VND)" value={target} onChange={setTarget} />
+          <input className="input-field" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} />
+          {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Hủy</button>
+            <button onClick={handleSubmit} style={{ flex: 2, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #E67F9A, #C95F7C)', color: 'white', fontWeight: 700, fontSize: 15 }}>Tạo quỹ</button>
           </div>
         </div>
-        {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2 }}>Add Goal</button>
-        </div>
       </div>
-    </BottomSheet>
+    </div>
   );
 }

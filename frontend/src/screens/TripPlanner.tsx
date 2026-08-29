@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context';
+import Icon from '../components/Icon';
 import type { Trip } from '../types';
 
 const VND = (n: number) => n >= 1000000
@@ -39,7 +40,7 @@ export default function TripPlanner() {
 
       {state.trips.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>✈️</div>
+          <div style={{ marginBottom: 12 }}><Icon emoji="✈️" size={48} /></div>
           <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>Chưa có chuyến đi nào</p>
           <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>Lên kế hoạch cho chuyến phiêu lưu tiếp theo!</p>
         </div>
@@ -54,10 +55,10 @@ export default function TripPlanner() {
               <div key={t.id} onClick={() => setSelected(t.id)} className="card" style={{ padding: '16px 18px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{ width: 48, height: 48, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>{t.emoji}</div>
+                    <div style={{ width: 48, height: 48, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={t.emoji} size={24} /></div>
                     <div>
                       <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{t.title}</p>
-                      <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>📍 {t.destination}</p>
+                      <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={12} /> {t.destination}</p>
                     </div>
                   </div>
                   <span style={{ fontSize: 10, fontWeight: 700, color: STATUS_COLORS[t.status], background: `${STATUS_COLORS[t.status]}18`, padding: '4px 10px', borderRadius: 99 }}>{STATUS_LABELS[t.status]}</span>
@@ -65,7 +66,7 @@ export default function TripPlanner() {
 
                 {t.status !== 'completed' && d > 0 && (
                   <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 16 }}>⏳</span>
+                    <Icon emoji="⏳" size={16} />
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)' }}>{d} ngày nữa</span>
                     <span style={{ fontSize: 11, color: 'var(--ink-2)' }}>· {t.startDate}</span>
                   </div>
@@ -127,17 +128,17 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
 
   return (
     <div style={{ paddingBottom: 32 }}>
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}>← Back</button>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={15} /> Back</button>
 
       {/* Hero */}
       <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
-        <p style={{ fontSize: 32, marginBottom: 4 }}>{t.emoji}</p>
+        <p style={{ marginBottom: 4 }}><Icon emoji={t.emoji} size={32} style={{ color: 'white' }} /></p>
         <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'white', lineHeight: 1.2, marginBottom: 2 }}>{t.title}</p>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 8 }}>📍 {t.destination} · {t.startDate} → {t.endDate}</p>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}><Icon emoji="📍" size={13} /> {t.destination} · {t.startDate} <Icon emoji="→" size={13} /> {t.endDate}</p>
         {t.status !== 'completed' && d > 0 && (
           <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.2)', borderRadius: 99, padding: '4px 12px' }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>⏳ {d} ngày nữa!</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="⏳" size={13} /> {d} ngày nữa!</span>
           </div>
         )}
       </div>
@@ -217,11 +218,11 @@ function AddTripForm({ onClose, onAdd }: { onClose: () => void; onAdd: (t: Omit<
       <div style={{ background: 'var(--white)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 430, animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)' }}>Chuyến đi mới</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           {EMOJIS.map(e => (
-            <button key={e} onClick={() => setEmoji(e)} style={{ width: 38, height: 38, border: emoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: emoji === e ? 'var(--sakura-light)' : 'var(--bg)', fontSize: 18, cursor: 'pointer' }}>{e}</button>
+            <button key={e} onClick={() => setEmoji(e)} style={{ width: 38, height: 38, border: emoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: emoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={18} /></button>
           ))}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

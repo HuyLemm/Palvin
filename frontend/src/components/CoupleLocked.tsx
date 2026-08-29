@@ -1,4 +1,5 @@
 import { useApp } from '../context';
+import Icon from './Icon';
 
 export default function CoupleLocked() {
   const { navigate } = useApp();
@@ -14,7 +15,7 @@ export default function CoupleLocked() {
         boxShadow: '0 10px 28px rgba(201,95,124,0.25)',
         marginBottom: 22,
       }}>
-        <span style={{ fontSize: 32 }}>🔒</span>
+        <Icon emoji="🔒" size={32} />
       </div>
 
       <div style={{
@@ -30,7 +31,7 @@ export default function CoupleLocked() {
           Chưa liên kết với nửa kia
         </p>
         <p style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.7, marginBottom: 20 }}>
-          Tính năng này chỉ mở khi hai người đã liên kết tài khoản. Mời nửa kia ngay trong Settings để bắt đầu 💕
+          Tính năng này chỉ mở khi hai người đã liên kết tài khoản. Mời nửa kia ngay trong Settings để bắt đầu <Icon emoji="💕" size={13} style={{ verticalAlign: -2 }} />
         </p>
         <button
           onClick={() => navigate('settings')}

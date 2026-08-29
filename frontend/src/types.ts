@@ -55,6 +55,8 @@ export interface Bill {
   paidDate?: string;
   reminder: boolean;
   note?: string;
+  seriesId: string;
+  billMonth: string;
 }
 
 export interface SavingsGoal {

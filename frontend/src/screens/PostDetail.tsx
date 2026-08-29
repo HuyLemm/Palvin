@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
 
 function BookmarkIcon({ filled }: { filled: boolean }) {
   return (
@@ -26,14 +27,14 @@ export default function PostDetail() {
 
   return (
     <div style={{ paddingBottom: 32 }}>
-      <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}>← Back</button>
+      <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
 
       <div className="card" style={{ overflow: 'hidden' }}>
         <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
           <Avatar user={post.author} size={38} ring />
           <div>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{post.author}</p>
-            <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{post.date}{post.location ? ` · 📍 ${post.location}` : ''}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{post.date}{post.location ? <> · <Icon emoji="📍" size={12} style={{ verticalAlign: -2 }} /> {post.location}</> : ''}</p>
           </div>
         </div>
         <div style={{ position: 'relative', background: 'var(--sakura-light)' }}>
@@ -54,7 +55,7 @@ export default function PostDetail() {
         <div style={{ padding: '14px 16px' }}>
           <div style={{ display: 'flex', gap: 16, marginBottom: 12 }}>
             <button onClick={() => toggleLike(post.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 600, color: post.liked ? 'var(--sakura-accent)' : 'var(--ink-2)', padding: 0 }}>
-              <span style={{ fontSize: 22 }}>{post.liked ? '❤️' : '🤍'}</span> {post.likes}
+              <Icon emoji={post.liked ? '❤️' : '🤍'} size={22} /> {post.likes}
             </button>
             <button onClick={() => toggleSave(post.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: post.saved ? 'var(--sakura-accent)' : 'var(--ink-2)', padding: 0, marginLeft: 'auto', display: 'flex' }}>
               <BookmarkIcon filled={post.saved} />

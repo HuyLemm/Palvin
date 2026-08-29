@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import AddMemoryForm from '../components/forms/AddMemoryForm';
+import Icon from '../components/Icon';
 
 type Filter = 'All' | '2026' | '2025' | '2024' | '2023';
 const FILTERS: Filter[] = ['All', '2026', '2025', '2024', '2023'];
@@ -31,7 +32,7 @@ export default function Memories() {
 
       {memories.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>🌸</div>
+          <div style={{ marginBottom: 12 }}><Icon emoji="🌸" size={40} /></div>
           <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No memories yet</p>
           <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 20 }}>Let's create your first little memory.</p>
           <button className="btn-primary" onClick={() => setShowAdd(true)}>Add Memory</button>
@@ -48,7 +49,7 @@ export default function Memories() {
               <div style={{ padding: '10px 12px 12px' }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3, marginBottom: 3 }}>{m.title}</p>
                 <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{m.date}</p>
-                {m.location && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>📍 {m.location}</p>}
+                {m.location && <p style={{ fontSize: 11, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 3 }}><Icon emoji="📍" size={11} /> {m.location}</p>}
               </div>
             </div>
           ))}

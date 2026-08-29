@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../../context';
 import BottomSheet from '../BottomSheet';
+import Icon from '../Icon';
 
 const IMAGES = [
   'https://images.unsplash.com/photo-1488161628813-04466f872be2?w=600&h=800&fit=crop&auto=format',
@@ -34,7 +35,7 @@ export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <BottomSheet onClose={onClose} title="New Memory 🌸">
+    <BottomSheet onClose={onClose} title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>New Memory <Icon emoji="🌸" size={16} /></span>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 16 }}>
         <input className="input-field" placeholder="Memory title..." value={title} onChange={e => setTitle(e.target.value)} />
         <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} />

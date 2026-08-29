@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
 import { getDaysTogether, getDuration } from '../data';
 import type { FavCategory } from '../types';
 
@@ -143,7 +144,7 @@ export default function Home() {
         border: '1px solid var(--border)',
       }}>
         {['🌸', '🌸', '🌸'].map((p, i) => (
-          <span key={i} style={{ position: 'absolute', fontSize: 18, opacity: 0.2, top: `${20 + i * 30}%`, left: i % 2 === 0 ? '5%' : '88%', transform: `rotate(${i * 30}deg)` }}>{p}</span>
+          <Icon key={i} emoji={p} size={18} style={{ position: 'absolute', opacity: 0.2, top: `${20 + i * 30}%`, left: i % 2 === 0 ? '5%' : '88%', transform: `rotate(${i * 30}deg)` }} />
         ))}
         <p style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Together for</p>
         <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 64, fontWeight: 400, color: 'var(--sakura-deep)', lineHeight: 1, marginBottom: 8 }}>
@@ -162,12 +163,12 @@ export default function Home() {
               </span>
             </div>
           ) : (
-            <button onClick={() => navigate('settings')} style={{ background: 'var(--white)', border: '1.5px dashed var(--sakura-accent)', borderRadius: 12, padding: '6px 14px', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
-              💕 Đặt ngày bắt đầu yêu
+            <button onClick={() => navigate('settings')} style={{ background: 'var(--white)', border: '1.5px dashed var(--sakura-accent)', borderRadius: 12, padding: '6px 14px', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <Icon emoji="💕" size={14} /> Đặt ngày bắt đầu yêu
             </button>
           )}
           <div style={{ background: 'var(--white)', borderRadius: 12, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 16 }}>🔥</span>
+            <Icon emoji="🔥" size={16} />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)' }}>{streak} day streak</span>
           </div>
         </div>
@@ -186,7 +187,7 @@ export default function Home() {
               </div>
             </div>
             <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-              <p style={{ fontSize: 10, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>♪ Our Playlist</p>
+              <p style={{ fontSize: 10, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="♪" size={10} /> Our Playlist</p>
               <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.title}</p>
               <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{currentSong.artist}</p>
             </div>
@@ -208,7 +209,7 @@ export default function Home() {
           { emoji: '🌿', value: state.gratitude.length, label: 'Biết ơn' },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '12px 6px', textAlign: 'center' }}>
-            <p style={{ fontSize: 20, marginBottom: 4 }}>{s.emoji}</p>
+            <p style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={s.emoji} size={20} /></p>
             <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--sakura-deep)', lineHeight: 1 }}>{s.value}</p>
             <p style={{ fontSize: 10, color: 'var(--ink-2)', marginTop: 2 }}>{s.label}</p>
           </div>
@@ -227,10 +228,10 @@ export default function Home() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           }}
         >
-          <span style={{ fontSize: 32, display: 'block', transition: 'transform 0.3s', transform: hugAnim ? 'scale(1.3)' : 'scale(1)' }}>🫂</span>
+          <Icon emoji="🫂" size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: hugAnim ? 'scale(1.3)' : 'scale(1)' }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : 'var(--sakura-deep)' }}>Gửi ôm</span>
-          <span style={{ fontSize: 11, color: hugAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center' }}>
-            {currentUser === 'Alvin' ? 'cho Paoi 💗' : 'cho Alvin 💙'}
+          <span style={{ fontSize: 11, color: hugAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {currentUser === 'Alvin' ? <>cho Paoi <Icon emoji="💗" size={11} /></> : <>cho Alvin <Icon emoji="💙" size={11} /></>}
           </span>
         </button>
 
@@ -244,17 +245,17 @@ export default function Home() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           }}
         >
-          <span style={{ fontSize: 32, display: 'block', transition: 'transform 0.3s', transform: thinkAnim ? 'scale(1.3)' : 'scale(1)' }}>💭</span>
+          <Icon emoji="💭" size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: thinkAnim ? 'scale(1.3)' : 'scale(1)' }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : '#8B6FD4' }}>Đang nghĩ đến em</span>
-          <span style={{ fontSize: 11, color: thinkAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center' }}>
-            {currentUser === 'Alvin' ? 'nhắn Paoi 💗' : 'nhắn Alvin 💙'}
+          <span style={{ fontSize: 11, color: thinkAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {currentUser === 'Alvin' ? <>nhắn Paoi <Icon emoji="💗" size={11} /></> : <>nhắn Alvin <Icon emoji="💙" size={11} /></>}
           </span>
         </button>
       </div>
 
       {/* Today's question pickers — from Our Favourites */}
       <div className="card" style={{ padding: '16px 18px', marginBottom: 16 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 14 }}>Hôm nay của mình 🎲</p>
+        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>Hôm nay của mình <Icon emoji="🎲" size={14} /></p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {CATEGORY_CONFIG.map(cat => {
             const list = state.favPlaces[cat.key];
@@ -264,7 +265,7 @@ export default function Home() {
               <div key={cat.key} style={{ background: 'var(--bg)', borderRadius: 14, padding: '12px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 20 }}>{cat.emoji}</span>
+                    <Icon emoji={cat.emoji} size={20} />
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2 }}>{cat.question}</p>
                       {list.length === 0 && (
@@ -275,9 +276,9 @@ export default function Home() {
                   {list.length > 0 && (
                     <button
                       onClick={() => rollPick(cat.key)}
-                      style={{ background: `${cat.color}20`, border: `1.5px solid ${cat.color}40`, borderRadius: 10, padding: '6px 12px', color: cat.color, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}
+                      style={{ background: `${cat.color}20`, border: `1.5px solid ${cat.color}40`, borderRadius: 10, padding: '6px 12px', color: cat.color, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
                     >
-                      {picked ? '🔀' : '✨ Gợi ý'}
+                      {picked ? <Icon emoji="🔀" size={14} /> : <><Icon emoji="✨" size={14} /> Gợi ý</>}
                     </button>
                   )}
                 </div>
@@ -295,8 +296,8 @@ export default function Home() {
       {/* This day last year */}
       {lastYearMems.length > 0 && (
         <div style={{ marginBottom: 16, background: 'linear-gradient(135deg, #FFF8E6, #FFFAEF)', border: '1px solid #F5E6B0', borderRadius: 20, padding: '16px 18px', overflow: 'hidden', position: 'relative' }}>
-          <div style={{ position: 'absolute', top: -8, right: -8, fontSize: 48, opacity: 0.08 }}>📅</div>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#B8860B', marginBottom: 10 }}>Ngày này năm ngoái ✨</p>
+          <Icon emoji="📅" size={48} style={{ position: 'absolute', top: -8, right: -8, opacity: 0.08 }} />
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#B8860B', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>Ngày này năm ngoái <Icon emoji="✨" size={14} /></p>
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2 }}>
             {lastYearMems.map(m => (
               <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ flexShrink: 0, width: 120, cursor: 'pointer' }}>
@@ -323,9 +324,9 @@ export default function Home() {
               const d = daysUntil(cd.date);
               return (
                 <div key={cd.id} style={{ flexShrink: 0, width: 110, background: `${cd.color}15`, border: `1.5px solid ${cd.color}30`, borderRadius: 16, padding: '14px 12px', textAlign: 'center', position: 'relative' }}>
-                  <button onClick={() => deleteCountdown(cd.id)} style={{ position: 'absolute', top: 4, right: 6, background: 'none', border: 'none', fontSize: 10, cursor: 'pointer', color: 'var(--ink-2)', opacity: 0.4 }}>✕</button>
-                  <div style={{ fontSize: 22, marginBottom: 4 }}>{cd.emoji}</div>
-                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: cd.color, lineHeight: 1 }}>{d <= 0 ? '🎉' : d}</div>
+                  <button onClick={() => deleteCountdown(cd.id)} style={{ position: 'absolute', top: 4, right: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', opacity: 0.4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={10} /></button>
+                  <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={cd.emoji} size={22} /></div>
+                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: cd.color, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{d <= 0 ? <Icon emoji="🎉" size={26} /> : d}</div>
                   {d > 0 && <div style={{ fontSize: 9, color: cd.color, fontWeight: 700, marginBottom: 4 }}>NGÀY NỮA</div>}
                   <div style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 600, lineHeight: 1.3 }}>{cd.title}</div>
                 </div>
@@ -336,7 +337,7 @@ export default function Home() {
       )}
       {state.countdowns.length === 0 && (
         <div style={{ marginBottom: 16, textAlign: 'center' }}>
-          <button onClick={() => setShowAddCountdown(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: '1.5px dashed var(--sakura)', borderRadius: 14, padding: '10px 18px', cursor: 'pointer', fontWeight: 600 }}>⏳ Thêm đếm ngược</button>
+          <button onClick={() => setShowAddCountdown(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: '1.5px dashed var(--sakura)', borderRadius: 14, padding: '10px 18px', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="⏳" size={14} /> Thêm đếm ngược</button>
         </div>
       )}
 
@@ -352,8 +353,8 @@ export default function Home() {
               <Avatar user={u} size={36} />
               <div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{u}</p>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>
-                  {state.moods[u] ? `${state.moods[u]!.emoji} ${state.moods[u]!.label}` : '— chưa cập nhật'}
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {state.moods[u] ? <><Icon emoji={state.moods[u]!.emoji} size={14} /> {state.moods[u]!.label}</> : '— chưa cập nhật'}
                 </p>
               </div>
             </div>
@@ -439,7 +440,7 @@ export default function Home() {
                 {MOODS_LIST.map(m => (
                   <button key={m.emoji} onClick={() => { setMood(currentUser, m); setShowMoodPicker(false); }}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '14px 8px', borderRadius: 14, background: state.moods[currentUser]?.emoji === m.emoji ? 'var(--sakura-light)' : 'var(--bg)', border: state.moods[currentUser]?.emoji === m.emoji ? '1.5px solid var(--sakura)' : '1.5px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s' }}>
-                    <span style={{ fontSize: 28 }}>{m.emoji}</span>
+                    <Icon emoji={m.emoji} size={28} />
                     <span style={{ fontSize: 11, color: 'var(--ink-2)', textAlign: 'center', lineHeight: 1.2, fontWeight: 500 }}>{m.label}</span>
                   </button>
                 ))}
@@ -468,10 +469,10 @@ function AddCountdownModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c:
       <div style={{ background: 'var(--white)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 430, animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)' }}>Thêm đếm ngược</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', fontSize: 16 }}>✕</button>
+          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-          {EMOJIS.map(e => <button key={e} onClick={() => setEmoji(e)} style={{ width: 36, height: 36, border: emoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: emoji === e ? 'var(--sakura-light)' : 'var(--bg)', fontSize: 18, cursor: 'pointer' }}>{e}</button>)}
+          {EMOJIS.map(e => <button key={e} onClick={() => setEmoji(e)} style={{ width: 36, height: 36, border: emoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: emoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={18} /></button>)}
         </div>
         <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
           {COLORS.map(c => <button key={c} onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: color === c ? '3px solid var(--ink)' : 'none', cursor: 'pointer' }} />)}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context';
+import Icon from '../components/Icon';
 import type { DateRequest, User } from '../types';
 
 const CATEGORIES = [
@@ -131,23 +132,23 @@ export default function DatePermit({ onBack }: Props) {
         .permit-input::placeholder { color: #C4ADB4; }
       `}</style>
 
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}>← Back</button>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={15} /> Back</button>
 
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--ink)', marginBottom: 4 }}>Đơn Xin Phép 📋</p>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Nộp đơn để xin phép đi chơi — người kia duyệt 💕</p>
+        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Đơn Xin Phép <Icon emoji="📋" size={22} /></p>
+        <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Nộp đơn để xin phép đi chơi — người kia duyệt <Icon emoji="💕" size={13} /></p>
       </div>
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 6, background: 'var(--sakura-light)', borderRadius: 14, padding: 4, marginBottom: 20 }}>
         {[
-          { key: 'submit', label: '📝 Nộp đơn' },
-          { key: 'inbox', label: `📥 Cần duyệt${pendingForMe.length > 0 ? ` (${pendingForMe.length})` : ''}` },
-          { key: 'mine', label: '📁 Đơn của tôi' },
+          { key: 'submit', emoji: '📝', label: 'Nộp đơn' },
+          { key: 'inbox', emoji: '📥', label: `Cần duyệt${pendingForMe.length > 0 ? ` (${pendingForMe.length})` : ''}` },
+          { key: 'mine', emoji: '📁', label: 'Đơn của tôi' },
         ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{ flex: 1, padding: '9px 4px', borderRadius: 11, border: 'none', background: tab === t.key ? 'white' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: tab === t.key ? 700 : 500, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s', boxShadow: tab === t.key ? '0 1px 6px rgba(201,95,124,0.12)' : 'none' }}>
-            {t.label}
+          <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{ flex: 1, padding: '9px 4px', borderRadius: 11, border: 'none', background: tab === t.key ? 'white' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: tab === t.key ? 700 : 500, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s', boxShadow: tab === t.key ? '0 1px 6px rgba(201,95,124,0.12)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            <Icon emoji={t.emoji} size={13} /> {t.label}
           </button>
         ))}
       </div>
@@ -158,9 +159,9 @@ export default function DatePermit({ onBack }: Props) {
         <div>
           {submitted ? (
             <div className="success-pop" style={{ textAlign: 'center', padding: '48px 24px' }}>
-              <p style={{ fontSize: 64, marginBottom: 12 }}>📬</p>
+              <p style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji="📬" size={64} /></p>
               <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)', marginBottom: 6 }}>Đơn đã nộp!</p>
-              <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>Đang chờ {partnerUser} duyệt nhé 🥺</p>
+              <p style={{ fontSize: 14, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Đang chờ {partnerUser} duyệt nhé <Icon emoji="🥺" size={14} /></p>
             </div>
           ) : (
             <div>
@@ -181,7 +182,7 @@ export default function DatePermit({ onBack }: Props) {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                     {CATEGORIES.map(c => (
                       <button key={c.label} onClick={() => { setCategory(c.label); setCategoryEmoji(c.emoji); setActivity(c.label); }} style={{ padding: '10px 4px', border: `2px solid ${category === c.label ? 'var(--sakura-accent)' : 'var(--border)'}`, borderRadius: 12, background: category === c.label ? 'var(--sakura-light)' : 'white', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'all 0.15s' }}>
-                        <span style={{ fontSize: 22 }}>{c.emoji}</span>
+                        <Icon emoji={c.emoji} size={22} />
                         <span style={{ fontSize: 10, fontWeight: 600, color: category === c.label ? 'var(--sakura-deep)' : 'var(--ink-2)', lineHeight: 1.2, textAlign: 'center' }}>{c.label}</span>
                       </button>
                     ))}
@@ -214,7 +215,7 @@ export default function DatePermit({ onBack }: Props) {
 
                 {/* Reason */}
                 <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Lý do / Lời hứa 🥺</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Lý do / Lời hứa <Icon emoji="🥺" size={12} /></label>
                   <textarea
                     className="permit-input"
                     placeholder="VD: Em hứa về trước 10 giờ và sẽ mua bánh cho anh/em~"
@@ -233,13 +234,13 @@ export default function DatePermit({ onBack }: Props) {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: 10, color: 'var(--ink-2)', marginBottom: 2 }}>Chữ ký</p>
-                    <p style={{ fontSize: 22 }}>❤️</p>
+                    <p style={{ display: 'flex', justifyContent: 'flex-end' }}><Icon emoji="❤️" size={22} /></p>
                   </div>
                 </div>
               </div>
 
-              <button onClick={handleSubmit} style={{ width: '100%', padding: '15px', background: 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))', border: 'none', borderRadius: 16, color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 6px 20px rgba(201,95,124,0.3)', transition: 'opacity 0.15s' }}>
-                📋 Nộp đơn cho {partnerUser}
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '15px', background: 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))', border: 'none', borderRadius: 16, color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 6px 20px rgba(201,95,124,0.3)', transition: 'opacity 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Icon emoji="📋" size={16} /> Nộp đơn cho {partnerUser}
               </button>
             </div>
           )}
@@ -251,7 +252,7 @@ export default function DatePermit({ onBack }: Props) {
         <div>
           {allForMe.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-              <p style={{ fontSize: 48, marginBottom: 12 }}>📭</p>
+              <p style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji="📭" size={48} /></p>
               <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--ink)', marginBottom: 4 }}>Chưa có đơn nào</p>
               <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{currentUser === 'Alvin' ? 'Paoi' : 'Alvin'} chưa nộp đơn nào cả</p>
             </div>
@@ -278,7 +279,7 @@ export default function DatePermit({ onBack }: Props) {
         <div>
           {myRequests.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 20px' }}>
-              <p style={{ fontSize: 48, marginBottom: 12 }}>📝</p>
+              <p style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji="📝" size={48} /></p>
               <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--ink)', marginBottom: 4 }}>Chưa có đơn nào</p>
               <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Nộp đơn xin phép đầu tiên đi!</p>
             </div>
@@ -322,7 +323,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
       {/* Card top banner */}
       <div style={{ background: cfg.bg, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 22 }}>{req.categoryEmoji}</span>
+          <Icon emoji={req.categoryEmoji} size={22} />
           <div>
             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{req.from} → {req.to}</p>
             <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatCreated(req.createdAt)}</p>
@@ -338,7 +339,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
       <div style={{ padding: '16px 18px' }}>
         {/* Activity + location */}
         <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 19, color: 'var(--ink)', marginBottom: 4 }}>{req.activity}</p>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 12 }}>📍 {req.location}</p>
+        <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={13} /> {req.location}</p>
 
         {/* Info grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
@@ -349,7 +350,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {/* Reason */}
         {req.reason && (
           <div style={{ background: 'var(--sakura-light)', borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', marginBottom: 4 }}>🥺 LÝ DO / LỜI HỨA</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="🥺" size={12} /> LÝ DO / LỜI HỨA</p>
             <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, fontStyle: 'italic' }}>"{req.reason}"</p>
           </div>
         )}
@@ -357,8 +358,8 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {/* Response note */}
         {req.responseNote && (
           <div style={{ background: req.status === 'approved' ? '#F0FDF4' : '#FEF2F2', borderRadius: 12, padding: '10px 14px', marginBottom: 12, border: `1px solid ${req.status === 'approved' ? '#86EFAC' : '#FCA5A5'}` }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: req.status === 'approved' ? '#16A34A' : '#DC2626', marginBottom: 4 }}>
-              {req.status === 'approved' ? '✅ GHI CHÚ KHI DUYỆT' : '❌ LÝ DO TỪ CHỐI'}
+            <p style={{ fontSize: 11, fontWeight: 700, color: req.status === 'approved' ? '#16A34A' : '#DC2626', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Icon emoji={req.status === 'approved' ? '✅' : '❌'} size={12} /> {req.status === 'approved' ? 'GHI CHÚ KHI DUYỆT' : 'LÝ DO TỪ CHỐI'}
             </p>
             <p style={{ fontSize: 13, color: 'var(--ink)', fontStyle: 'italic' }}>"{req.responseNote}"</p>
           </div>
@@ -368,10 +369,10 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {showActions && !isResponding && (
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
             <button onClick={onApprove} style={{ flex: 1, padding: '11px', background: '#16A34A', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              ✅ Duyệt
+              <Icon emoji="✅" size={14} /> Duyệt
             </button>
             <button onClick={onReject} style={{ flex: 1, padding: '11px', background: '#DC2626', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              ❌ Từ chối
+              <Icon emoji="❌" size={14} /> Từ chối
             </button>
           </div>
         )}
@@ -389,8 +390,8 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
               style={{ marginBottom: 10 }}
             />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => handleRespond(req.id, 'approved')} style={{ flex: 1, padding: '10px', background: '#16A34A', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>✅ Duyệt</button>
-              <button onClick={() => handleRespond(req.id, 'rejected')} style={{ flex: 1, padding: '10px', background: '#DC2626', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>❌ Từ chối</button>
+              <button onClick={() => handleRespond(req.id, 'approved')} style={{ flex: 1, padding: '10px', background: '#16A34A', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="✅" size={14} /> Duyệt</button>
+              <button onClick={() => handleRespond(req.id, 'rejected')} style={{ flex: 1, padding: '10px', background: '#DC2626', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="❌" size={14} /> Từ chối</button>
             </div>
           </div>
         )}
@@ -402,7 +403,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
 function InfoCell({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <div style={{ background: '#FAFAFA', borderRadius: 10, padding: '8px 12px', border: '1px solid var(--border)' }}>
-      <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>{icon} {label}</p>
+      <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji={icon} size={11} /> {label}</p>
       <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{value || '—'}</p>
     </div>
   );

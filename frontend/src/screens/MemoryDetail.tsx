@@ -1,5 +1,6 @@
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
 
 export default function MemoryDetail() {
   const { state, selectedId, goBack, toggleFavorite } = useApp();
@@ -9,7 +10,7 @@ export default function MemoryDetail() {
 
   return (
     <div style={{ paddingBottom: 32 }}>
-      <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}>← Back</button>
+      <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
 
       <div style={{ borderRadius: 20, overflow: 'hidden', background: 'var(--sakura-light)', marginBottom: 20, maxHeight: 440 }}>
         <img src={memory.image} alt={memory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', maxHeight: 440 }} />
@@ -19,10 +20,10 @@ export default function MemoryDetail() {
         <div>
           <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--ink)', lineHeight: 1.2, marginBottom: 4 }}>{memory.title}</h1>
           <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>{memory.date}</p>
-          {memory.location && <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>📍 {memory.location}</p>}
+          {memory.location && <p style={{ fontSize: 14, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={14} /> {memory.location}</p>}
         </div>
-        <button onClick={() => toggleFavorite(memory.id)} style={{ background: memory.favorite ? 'var(--sakura-light)' : 'var(--bg)', border: `1.5px solid ${memory.favorite ? 'var(--sakura)' : 'var(--border)'}`, borderRadius: 12, padding: '8px 14px', cursor: 'pointer', fontSize: 18, transition: 'all 0.2s' }}>
-          {memory.favorite ? '❤️' : '🤍'}
+        <button onClick={() => toggleFavorite(memory.id)} style={{ background: memory.favorite ? 'var(--sakura-light)' : 'var(--bg)', border: `1.5px solid ${memory.favorite ? 'var(--sakura)' : 'var(--border)'}`, borderRadius: 12, padding: '8px 14px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon emoji={memory.favorite ? '❤️' : '🤍'} size={18} />
         </button>
       </div>
 

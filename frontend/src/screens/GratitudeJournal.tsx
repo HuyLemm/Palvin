@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
+import Icon from '../components/Icon';
 import type { User } from '../types';
 
 const PROMPTS = [
@@ -48,22 +49,22 @@ export default function GratitudeJournal({ onBack }: Props) {
         .gratitude-in { animation: gratitudeIn 0.4s ease both; }
       `}</style>
 
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}>← Back</button>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
 
-      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4 }}>Nhật Ký Biết Ơn 🌸</p>
+      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>Nhật Ký Biết Ơn <Icon emoji="🌸" size={20} /></p>
       <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Ghi lại điều bạn trân trọng về nhau mỗi ngày</p>
 
       {/* Write entry */}
       <div className="card" style={{ padding: '20px', marginBottom: 20, background: 'linear-gradient(135deg, #FFF8FC, #FADCE4)' }}>
         {alreadyToday ? (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
-            <p style={{ fontSize: 28, marginBottom: 8 }}>✅</p>
+            <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><Icon emoji="✅" size={28} /></div>
             <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--sakura-deep)' }}>Bạn đã ghi hôm nay!</p>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 4, fontStyle: 'italic', lineHeight: 1.5 }}>"{alreadyToday.text}"</p>
           </div>
         ) : (
           <>
-            <p style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--sakura-deep)', marginBottom: 12, lineHeight: 1.5 }}>💭 {PROMPTS[promptIdx]}</p>
+            <p style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--sakura-deep)', marginBottom: 12, lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💭" size={14} /> {PROMPTS[promptIdx]}</p>
             <textarea
               value={text}
               onChange={e => setText(e.target.value)}
@@ -75,8 +76,8 @@ export default function GratitudeJournal({ onBack }: Props) {
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
               <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{text.length} ký tự</p>
-              <button onClick={handleSubmit} disabled={!text.trim()} style={{ padding: '10px 20px', background: text.trim() ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 12, color: text.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: text.trim() ? 'pointer' : 'default', transition: 'all 0.15s' }}>
-                Ghi lại 🌸
+              <button onClick={handleSubmit} disabled={!text.trim()} style={{ padding: '10px 20px', background: text.trim() ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 12, color: text.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: text.trim() ? 'pointer' : 'default', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                Ghi lại <Icon emoji="🌸" size={14} />
               </button>
             </div>
           </>
@@ -109,7 +110,7 @@ export default function GratitudeJournal({ onBack }: Props) {
       {/* Entries */}
       {filtered.length === 0 ? (
         <div className="card" style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <p style={{ fontSize: 32, marginBottom: 12 }}>🌸</p>
+          <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji="🌸" size={32} /></div>
           <p style={{ fontSize: 15, color: 'var(--ink-2)' }}>Chưa có ghi chép nào</p>
         </div>
       ) : (
@@ -122,7 +123,7 @@ export default function GratitudeJournal({ onBack }: Props) {
                   <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{g.from}</p>
                   <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatDate(g.date)}</p>
                 </div>
-                <span style={{ marginLeft: 'auto', fontSize: 18 }}>🌸</span>
+                <Icon emoji="🌸" size={18} style={{ marginLeft: 'auto' }} />
               </div>
               <p style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.6, fontStyle: 'italic', borderLeft: '3px solid var(--sakura)', paddingLeft: 12 }}>"{g.text}"</p>
             </div>

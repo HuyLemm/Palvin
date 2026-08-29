@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from './Avatar';
+import Icon from './Icon';
 import EditPostForm from './forms/EditPostForm';
 import type { Post } from '../types';
 
@@ -70,7 +71,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
         <Avatar user={post.author} size={38} ring />
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{post.author}</p>
-          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{post.date}{post.location ? ` · 📍 ${post.location}` : ''}</p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{post.date}{post.location ? <> · <Icon emoji="📍" size={12} style={{ verticalAlign: 'middle' }} /> {post.location}</> : null}</p>
         </div>
         {isMine && (
           <button onClick={() => setShowOptions(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', padding: 4, display: 'flex' }}><MoreIcon /></button>
@@ -107,7 +108,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
         )}
         {likedAnim && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-            <span style={{ fontSize: 72, animation: 'heartPop 0.4s ease-out forwards' }}>❤️</span>
+            <Icon emoji="❤️" size={72} style={{ animation: 'heartPop 0.4s ease-out forwards' }} />
           </div>
         )}
       </div>
@@ -117,18 +118,18 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8, position: 'relative' }}>
           {/* Like */}
           <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: post.liked ? 'var(--sakura-accent)' : 'var(--ink-2)', transition: 'color 0.15s', padding: 0 }}>
-            <span style={{ fontSize: 20, transition: 'transform 0.15s', transform: post.liked ? 'scale(1.1)' : 'scale(1)' }}>{post.liked ? '❤️' : '🤍'}</span>
+            <Icon emoji={post.liked ? '❤️' : '🤍'} size={20} style={{ transition: 'transform 0.15s', transform: post.liked ? 'scale(1.1)' : 'scale(1)' }} />
             {post.likes}
           </button>
 
           {/* Comment */}
           <button onClick={() => setCommentingId(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: 'var(--ink-2)', padding: 0 }}>
-            <span style={{ fontSize: 18 }}>💬</span> {post.comments.length}
+            <Icon emoji="💬" size={18} /> {post.comments.length}
           </button>
 
           {/* Reaction button */}
           <button onClick={() => setReactionPickerOpen(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: 'var(--ink-2)', padding: 0 }}>
-            <span style={{ fontSize: 18 }}>😊</span>
+            <Icon emoji="😊" size={18} />
             {totalReactions > 0 && <span style={{ fontSize: 12 }}>{totalReactions}</span>}
           </button>
 
@@ -147,7 +148,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
                   <button key={emoji} onClick={() => handleReaction(emoji)} style={{ background: reacted ? 'var(--sakura-light)' : 'none', border: 'none', borderRadius: 12, padding: '6px 8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, transition: 'transform 0.1s' }}
                     onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.3)')}
                     onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}>
-                    <span style={{ fontSize: 24 }}>{emoji}</span>
+                    <Icon emoji={emoji} size={24} />
                     {r?.count > 0 && <span style={{ fontSize: 10, color: 'var(--sakura-deep)', fontWeight: 700 }}>{r.count}</span>}
                   </button>
                 );
@@ -161,7 +162,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
             {topReactions.map(([emoji, r]) => (
               <span key={emoji} style={{ fontSize: 13, background: 'var(--sakura-light)', borderRadius: 20, padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                {emoji} <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sakura-deep)' }}>{r.count}</span>
+                <Icon emoji={emoji} size={13} /> <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sakura-deep)' }}>{r.count}</span>
               </span>
             ))}
           </div>
@@ -212,8 +213,8 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
     {showOptions && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setShowOptions(false)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 8, width: '100%', maxWidth: 300, overflow: 'hidden', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => { setShowEdit(true); setShowOptions(false); }} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', fontSize: 15, fontWeight: 600, color: 'var(--ink)', cursor: 'pointer' }}>✏️ Chỉnh sửa bài viết</button>
-            <button onClick={() => { setConfirmDelete(true); setShowOptions(false); }} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', fontSize: 15, fontWeight: 600, color: '#DC2626', cursor: 'pointer' }}>🗑️ Xóa bài viết</button>
+            <button onClick={() => { setShowEdit(true); setShowOptions(false); }} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', fontSize: 15, fontWeight: 600, color: 'var(--ink)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="✏️" size={16} /> Chỉnh sửa bài viết</button>
+            <button onClick={() => { setConfirmDelete(true); setShowOptions(false); }} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', fontSize: 15, fontWeight: 600, color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="🗑️" size={16} /> Xóa bài viết</button>
             <button onClick={() => setShowOptions(false)} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', fontSize: 15, fontWeight: 500, color: 'var(--ink-2)', cursor: 'pointer' }}>Hủy</button>
           </div>
         </div>
