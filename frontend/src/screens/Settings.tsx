@@ -8,7 +8,7 @@ const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses
 
 export default function Settings() {
   const {
-    currentUser, toast, profilePhotos, updateProfilePhoto, state, toggleDarkMode, logout,
+    currentUser, toast, updateProfilePhoto, state, toggleDarkMode, logout,
     isLinked, myProfile, partnerProfile, sentInvite, invitePartner, cancelSentInvite, pendingInvite, acceptInvite, rejectInvite,
     updateNotifyPrefs, setRelationshipStart,
   } = useApp();
@@ -71,7 +71,7 @@ export default function Settings() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {/* Avatar with edit */}
           <div style={{ position: 'relative', flexShrink: 0 }}>
-            <Avatar user={currentUser} size={64} ring photoUrl={profilePhotos[currentUser]} />
+            <Avatar user={currentUser} size={64} ring />
             <button
               onClick={() => fileRef.current?.click()}
               style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--sakura-deep)', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
@@ -90,7 +90,7 @@ export default function Settings() {
         {/* Partner info / invite form */}
         {isLinked && partnerProfile ? (
           <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--sakura-light)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Avatar user={partnerProfile.displayName as User} size={36} photoUrl={profilePhotos[partnerProfile.displayName]} />
+            <Avatar user={partnerProfile.displayName as User} size={36} />
             <div>
               <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{partnerProfile.displayName}</p>
               <p style={{ fontSize: 11, color: 'var(--sakura-deep)' }}>Nửa kia của bạn 💖</p>

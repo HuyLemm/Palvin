@@ -143,22 +143,40 @@ function ScreenRouter() {
 const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 
 export default function App() {
-  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, profilePhotos, authed, authLoading, profileLoaded, isLinked, pendingInvite, toast } = useApp();
+  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, authed, authLoading, profileLoaded, isLinked, pendingInvite, toast } = useApp();
   const stillResolvingSession = authLoading || (authed && !profileLoaded);
   // iOS Safari doesn't support the interactive-widget viewport meta property
   // (Chrome/Firefox only), so it always shrinks the visual viewport when the
   // keyboard opens — which our height:100%/dvh chain then follows, making
-  // the whole app visibly reflow. Snapshot the real height once (before any
-  // keyboard can open) into a CSS variable, and never update it in response
-  // to a resize — only true device rotation should ever change it — so the
-  // layout stays put and the keyboard simply overlaps the bottom instead.
+  // the whole app visibly reflow. Track the LARGEST innerHeight ever seen
+  // (never shrink --app-vh in response to a resize) instead of a one-shot
+  // snapshot: a single read taken before Safari's chrome finishes settling
+  // right after launch can be too small and gets stuck that way for the
+  // whole session (leaving a gap at the bottom showing html's background),
+  // whereas the keyboard only ever shrinks the viewport, never grows it
+  // past the true full height — so "keep the max" naturally ignores it
+  // while still self-correcting a bad initial read.
   useEffect(() => {
+    let maxHeight = 0;
     const setAppHeight = () => {
-      document.documentElement.style.setProperty('--app-vh', `${window.innerHeight}px`);
+      if (window.innerHeight > maxHeight) {
+        maxHeight = window.innerHeight;
+        document.documentElement.style.setProperty('--app-vh', `${maxHeight}px`);
+      }
     };
     setAppHeight();
-    window.addEventListener('orientationchange', setAppHeight);
-    return () => window.removeEventListener('orientationchange', setAppHeight);
+    // A few delayed re-checks catch Safari's chrome settling shortly after
+    // launch, without needing a live resize listener (which would also
+    // fire — harmlessly, since it only grows — on the keyboard opening).
+    const timers = [100, 400, 1000].map(ms => setTimeout(setAppHeight, ms));
+    const onOrientationChange = () => { maxHeight = 0; setAppHeight(); };
+    window.addEventListener('orientationchange', onOrientationChange);
+    window.addEventListener('resize', setAppHeight);
+    return () => {
+      timers.forEach(clearTimeout);
+      window.removeEventListener('orientationchange', onOrientationChange);
+      window.removeEventListener('resize', setAppHeight);
+    };
   }, []);
 
   // iOS Safari only auto-scrolls a focused input into view if it's visible
@@ -383,7 +401,7 @@ export default function App() {
                 transform: activeTab === 'settings' ? 'scale(1.12)' : 'scale(1)',
               }}>
                 <div style={{ position: 'relative' }}>
-                  <Avatar user={currentUser} size={26} photoUrl={profilePhotos[currentUser]} />
+                  <Avatar user={currentUser} size={26} />
                   {activeTab === 'settings' && (
                     <div style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: 'var(--sakura-deep)' }} />
                   )}

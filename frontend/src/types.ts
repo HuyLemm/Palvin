@@ -106,7 +106,13 @@ export interface AppNotification {
   message: string;
   emoji: string;
   date: string;
+  createdAt: string;
   read: boolean;
+  actor?: User;
+  targetScreen?: string;
+  targetId?: string;
+  previewImageUrl?: string;
+  previewText?: string;
 }
 
 export interface Mood {

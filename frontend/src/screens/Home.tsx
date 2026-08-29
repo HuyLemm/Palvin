@@ -103,9 +103,11 @@ export default function Home() {
 
   const handleThinking = () => {
     setThinkAnim(true);
+    // kind:'thinking' gets its own short headline server-side ("X đang nghĩ
+    // đến bạn 💭") instead of the generic hug one — the random flavor text
+    // goes into the notification's preview_text, not the toast/headline.
     const msg = THINKING_MESSAGES[Math.floor(Math.random() * THINKING_MESSAGES.length)];
-    const other = currentUser === 'Alvin' ? 'Paoi' : 'Alvin';
-    sendHug(currentUser, `${currentUser} đang nghĩ đến ${other}... ${msg}`);
+    sendHug(currentUser, msg, 'thinking');
     setTimeout(() => setThinkAnim(false), 800);
   };
 

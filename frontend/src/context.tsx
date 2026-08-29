@@ -16,7 +16,7 @@ import {
   fetchPosts, createPost, addPostComment, setLiked, setSaved, toggleReaction, updatePostRow, deletePostRow,
 } from './feed';
 import {
-  fetchNotifications, markNotificationRead, markAllNotificationsRead,
+  fetchNotifications, markNotificationRead, markAllNotificationsRead, deleteNotificationRow,
 } from './notifications';
 import {
   fetchMemories, createMemory, setMemoryFavorite,
@@ -158,6 +158,7 @@ interface AppContextType {
   // Notifications
   markNotifRead: (id: string) => void;
   markAllRead: () => void;
+  deleteNotification: (id: string) => void;
   updateNotifyPrefs: (prefs: NotifyPrefs) => void;
 
   // Bills
@@ -199,7 +200,7 @@ interface AppContextType {
   deleteLoveLetter: (id: string) => void;
 
   // Hugs
-  sendHug: (from: User, message: string) => void;
+  sendHug: (from: User, message: string, kind?: 'hug' | 'thinking') => void;
 
   // Date requests
   submitDateRequest: (req: Omit<DateRequest, 'id' | 'status' | 'responseNote' | 'createdAt'>) => void;
@@ -502,6 +503,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) refreshNotifications();
   };
 
+  const deleteNotification = async (id: string) => {
+    setState(s => ({ ...s, notifications: s.notifications.filter(n => n.id !== id) }));
+    const { error } = await deleteNotificationRow(id);
+    if (error) refreshNotifications();
+  };
+
   // Bills — backed by Supabase
   const addBill = async (b: Omit<Bill, 'id'>) => {
     const { error } = await createBill(b);
@@ -660,13 +667,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Hugs — backed by Supabase (notify_new_hug trigger pushes the shared
   // notification via the existing realtime subscription).
-  const sendHug = async (from: User, message: string) => {
+  const sendHug = async (from: User, message: string, kind: 'hug' | 'thinking' = 'hug') => {
     const to = from === 'Alvin' ? 'Paoi' : 'Alvin';
     const fromId = resolveProfileId(from);
     if (!fromId) return;
-    const { error } = await createHug(fromId, message);
+    const { error } = await createHug(fromId, message, kind);
     if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
-    toast(`${from} đã gửi ôm cho ${to} 🫂`, '🌸');
+    toast(kind === 'thinking' ? `${from} đang nghĩ đến ${to} 💭` : `${from} đã gửi ôm cho ${to} 🫂`, '🌸');
   };
 
   // Date requests — backed by Supabase (notify_new_date_request/notify_date_request_response
@@ -1048,9 +1055,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [isLinked, refreshStreak]);
 
   const refreshNotifications = useCallback(async () => {
-    const notifications = await fetchNotifications();
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const notifications = await fetchNotifications(names, myProfile.id);
     setState(s => ({ ...s, notifications }));
-  }, []);
+  }, [myProfile, partnerProfile]);
 
   // Realtime: pop a toast + prepend the item the instant a notification row is
   // inserted for this couple, instead of waiting on a poll interval.
@@ -1058,23 +1069,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!isLinked || !myProfile?.coupleId) return;
     refreshNotifications();
     const coupleId = myProfile.coupleId;
+    const myId = myProfile.id;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
     const channel = supabase
       .channel(`notifications-${coupleId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `couple_id=eq.${coupleId}` },
         (payload) => {
-          const row = payload.new as { id: string; emoji: string | null; message: string; read: boolean };
+          const row = payload.new as { id: string; emoji: string | null; message: string; read: boolean; actor_profile_id: string | null; target_screen: string | null; target_id: string | null; preview_image_url: string | null; preview_text: string | null };
+          // Skip your own actions — you already got a local toast for those
+          // when you did them; this feed is only meant to tell the partner.
+          if (row.actor_profile_id === myId) return;
           setState(s => {
             if (s.notifications.some(n => n.id === row.id)) return s;
-            return { ...s, notifications: [{ id: row.id, emoji: row.emoji ?? '🔔', message: row.message, read: row.read, date: 'Just now' }, ...s.notifications] };
+            const notif = {
+              id: row.id, emoji: row.emoji ?? '🔔', message: row.message, read: row.read, date: 'Just now', createdAt: new Date().toISOString(),
+              actor: row.actor_profile_id ? names[row.actor_profile_id] : undefined,
+              targetScreen: row.target_screen ?? undefined,
+              targetId: row.target_id ?? undefined,
+              previewImageUrl: row.preview_image_url ?? undefined,
+              previewText: row.preview_text ?? undefined,
+            };
+            return { ...s, notifications: [notif, ...s.notifications] };
           });
           toast(row.message, row.emoji ?? '🔔');
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [isLinked, myProfile?.coupleId, refreshNotifications]);
+  }, [isLinked, myProfile, partnerProfile, refreshNotifications]);
 
   const updateNotifyPrefs = async (prefs: NotifyPrefs) => {
     const res = await authUpdateNotifyPrefs(prefs);
@@ -1137,7 +1163,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addGoal, toggleGoal, deleteGoal,
       setMood,
       updateFavorite,
-      markNotifRead, markAllRead, updateNotifyPrefs,
+      markNotifRead, markAllRead, deleteNotification, updateNotifyPrefs,
       addBill, toggleBillPaid, deleteBill, toggleBillReminder,
       addTrip, updateTrip, deleteTrip, toggleTripCheck,
       addCapsule, openCapsule,

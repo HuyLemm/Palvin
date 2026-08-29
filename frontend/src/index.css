@@ -88,6 +88,12 @@ html, body {
        otherwise leaves a sliver of default white uncovered at the bottom. */
     min-height: calc(var(--app-vh, 100dvh) + env(safe-area-inset-top));
   }
+  html, body {
+    /* Safety net: if --app-vh is ever still short by a pixel or two, this
+       makes the sliver blend into the app's own background instead of
+       standing out as the decorative desktop gradient's lavender tail. */
+    background: var(--bg);
+  }
   body {
     /* No padding here — .phone-shell/.phone-screen are the app's real
        visual canvas and must cover body edge-to-edge; padding on body would
@@ -162,13 +168,19 @@ html, body {
   70%  { transform: scale(0.9); }
   100% { transform: scale(1); }
 }
+/* No translateX here: centering is already handled by the outer container's
+   own translateX(-50%) — this animation runs on the inner pill, which
+   doesn't need to re-center itself. The old keyframes had a redundant
+   translateX(-50%) baked in, which shifted the pill left by half of ITS
+   OWN width during the animation, then snapped back to its real centered
+   position once the animation ended — reading as a left-to-center jerk. */
 @keyframes toastIn {
-  from { transform: translateY(-20px) translateX(-50%); opacity: 0; }
-  to   { transform: translateY(0)     translateX(-50%); opacity: 1; }
+  from { transform: translateY(-20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
 }
 @keyframes toastOut {
-  from { transform: translateY(0)     translateX(-50%); opacity: 1; }
-  to   { transform: translateY(-20px) translateX(-50%); opacity: 0; }
+  from { transform: translateY(0); opacity: 1; }
+  to   { transform: translateY(-20px); opacity: 0; }
 }
 @keyframes confettiFall {
   0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }

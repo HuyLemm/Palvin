@@ -1,3 +1,4 @@
+import { useApp } from '../context';
 import type { User } from '../types';
 
 interface Props {
@@ -14,6 +15,11 @@ const PAOI_GRAD  = 'linear-gradient(135deg, #F3A6B9, #FADCE4)';
 const PAOI_TEXT  = '#C95F7C';
 
 export default function Avatar({ user, size = 40, ring = false, story = false, photoUrl, onClick }: Props) {
+  // Every call site used to have to remember to pass photoUrl itself, and
+  // most didn't — resolve it here from context so a profile photo shows up
+  // everywhere automatically. An explicit photoUrl prop still wins if passed.
+  const { profilePhotos } = useApp();
+  const resolvedPhotoUrl = photoUrl ?? profilePhotos[user as string];
   const isAlvin = user === 'Alvin';
   const grad = isAlvin ? ALVIN_GRAD : PAOI_GRAD;
   const textColor = isAlvin ? '#fff' : PAOI_TEXT;
@@ -26,7 +32,7 @@ export default function Avatar({ user, size = 40, ring = false, story = false, p
     ? { outline: '2.5px solid transparent', backgroundImage: 'linear-gradient(white,white), linear-gradient(135deg, #F3A6B9, #E67F9A)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }
     : {};
 
-  if (photoUrl) {
+  if (resolvedPhotoUrl) {
     return (
       <div
         onClick={onClick}
@@ -39,7 +45,7 @@ export default function Avatar({ user, size = 40, ring = false, story = false, p
           ...ringStyle,
         }}
       >
-        <img src={photoUrl} alt={String(user)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={resolvedPhotoUrl} alt={String(user)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
     );
   }
