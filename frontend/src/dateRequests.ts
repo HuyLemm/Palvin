@@ -64,3 +64,17 @@ export async function respondToDateRequest(id: string, status: 'approved' | 'rej
     status, response_note: note, responded_at: new Date().toISOString(),
   }).eq('id', id);
 }
+
+export async function updateDateRequestRow(
+  id: string,
+  req: { category: string; categoryEmoji: string; activity: string; location: string; date: string; time: string; reason: string },
+) {
+  return supabase.from('date_requests').update({
+    category: req.category, category_emoji: req.categoryEmoji, activity: req.activity,
+    location: req.location, request_date: req.date, request_time: req.time, reason: req.reason,
+  }).eq('id', id);
+}
+
+export async function deleteDateRequestRow(id: string) {
+  return supabase.from('date_requests').delete().eq('id', id);
+}

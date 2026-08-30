@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
@@ -23,11 +23,21 @@ const FAV_CATEGORY_CONFIG: { key: FavCategory; emoji: string; label: string; col
 ];
 
 export default function Us() {
-  const { state, navigate, updateFavorite, currentUser, addToPlaylist, removeFromPlaylist, addWish, removeWish, addFavPlace, removeFavPlace } = useApp();
-  const [sub, setSub] = useState<SubScreen>('main');
+  const { state, navigate, screen, selectedId, updateFavorite, currentUser, addToPlaylist, removeFromPlaylist, addWish, removeWish, addFavPlace, removeFavPlace } = useApp();
+  // A tapped date-request notification lands on the "Us" screen with a real
+  // dateRequests id attached (a plain tab click never carries one). Read it
+  // straight into the initial state so the first render already shows the
+  // permit sub-screen — no flash of the Us main menu first.
+  const [sub, setSub] = useState<SubScreen>(() => (screen === 'us' && selectedId) ? 'permit' : 'main');
   const relationshipStart = state.relationshipStart ? new Date(state.relationshipStart + 'T00:00:00') : null;
   const days = relationshipStart ? getDaysTogether(relationshipStart) : 0;
   const dur  = relationshipStart ? getDuration(relationshipStart) : { years: 0, months: 0, days: 0 };
+
+  // Covers the case where Us is already mounted (not remounted) and a new
+  // notification tap arrives while the user is already sitting on this screen.
+  useEffect(() => {
+    if (screen === 'us' && selectedId) setSub('permit');
+  }, [screen, selectedId]);
 
   const Back = () => (
     <button onClick={() => setSub('main')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
@@ -36,7 +46,7 @@ export default function Us() {
   if (sub === 'wishjar')  return <GiftWishlistScreen onBack={() => setSub('main')} />;
   if (sub === 'dateidea') return <DateIdeaJar onBack={() => setSub('main')} />;
   if (sub === 'gratitude') return <GratitudeJournal onBack={() => setSub('main')} />;
-  if (sub === 'permit')   return <DatePermit onBack={() => setSub('main')} />;
+  if (sub === 'permit')   return <DatePermit onBack={() => setSub('main')} initialRequestId={selectedId ?? undefined} />;
 
   if (sub === 'story') {
     const timeline = [...state.memories].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

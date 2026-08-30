@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
+import EditDateRequestForm from '../components/forms/EditDateRequestForm';
 import type { DateRequest, User } from '../types';
 
 const CATEGORIES = [
@@ -24,13 +25,20 @@ const STATUS_CONFIG = {
   rejected: { label: 'TỪ CHỐI',  bg: '#FEF2F2', border: '#FCA5A5', color: '#7F1D1D', stamp: '#DC2626' },
 };
 
-interface Props { onBack: () => void; }
+interface Props { onBack: () => void; initialRequestId?: string; }
 
-export default function DatePermit({ onBack }: Props) {
+export default function DatePermit({ onBack, initialRequestId }: Props) {
   const { state, currentUser, submitDateRequest, respondToRequest, toast } = useApp();
   const partnerUser: User = currentUser === 'Alvin' ? 'Paoi' : 'Alvin';
 
-  const [tab, setTab] = useState<'submit' | 'inbox' | 'mine'>('submit');
+  // Coming from a notification tap: land on whichever tab actually holds that
+  // request — "inbox" if I'm the one who needs to approve it, "mine" if I'm
+  // the one who submitted it and I'm seeing the response.
+  const [tab, setTab] = useState<'submit' | 'inbox' | 'mine'>(() => {
+    const req = initialRequestId ? state.dateRequests.find(r => r.id === initialRequestId) : null;
+    if (req) return req.to === currentUser ? 'inbox' : 'mine';
+    return 'submit';
+  });
 
   // Form state
   const [category, setCategory] = useState('');
@@ -45,6 +53,9 @@ export default function DatePermit({ onBack }: Props) {
   // Response state
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [responseNote, setResponseNote] = useState('');
+
+  // Editing my own still-pending request (once approved/rejected, it's locked)
+  const [editingRequest, setEditingRequest] = useState<DateRequest | null>(null);
 
   const myRequests = state.dateRequests.filter(r => r.from === currentUser);
   const pendingForMe = state.dateRequests.filter(r => r.to === currentUser && r.status === 'pending');
@@ -99,6 +110,20 @@ export default function DatePermit({ onBack }: Props) {
     return `${days} ngày trước`;
   }
 
+  // Groups by the day the request was created — same "ngày X tháng Y" header
+  // style as the Thu chi tab. Relies on state.dateRequests already coming
+  // sorted newest-first, so same-day items stay contiguous.
+  function groupByDay(requests: DateRequest[]): { label: string; items: DateRequest[] }[] {
+    const groups: { label: string; items: DateRequest[] }[] = [];
+    for (const r of requests) {
+      const label = new Date(r.createdAt).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long' });
+      const last = groups[groups.length - 1];
+      if (last && last.label === label) last.items.push(r);
+      else groups.push({ label, items: [r] });
+    }
+    return groups;
+  }
+
   return (
     <div style={{ paddingBottom: 40 }}>
       <style>{`
@@ -143,12 +168,13 @@ export default function DatePermit({ onBack }: Props) {
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 6, background: 'var(--sakura-light)', borderRadius: 14, padding: 4, marginBottom: 20 }}>
         {[
-          { key: 'submit', emoji: '📝', label: 'Nộp đơn' },
-          { key: 'inbox', emoji: '📥', label: `Cần duyệt${pendingForMe.length > 0 ? ` (${pendingForMe.length})` : ''}` },
-          { key: 'mine', emoji: '📁', label: 'Đơn của tôi' },
+          { key: 'submit', emoji: '📝', label: 'Nộp đơn', count: 0 },
+          { key: 'inbox', emoji: '📥', label: 'Cần duyệt', count: pendingForMe.length },
+          { key: 'mine', emoji: '📁', label: 'Đơn của tôi', count: 0 },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{ flex: 1, padding: '9px 4px', borderRadius: 11, border: 'none', background: tab === t.key ? 'white' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: tab === t.key ? 700 : 500, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s', boxShadow: tab === t.key ? '0 1px 6px rgba(201,95,124,0.12)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <Icon emoji={t.emoji} size={13} /> {t.label}
+            {t.count > 0 && <span style={{ color: '#DC2626', fontWeight: 800 }}>({t.count})</span>}
           </button>
         ))}
       </div>
@@ -203,13 +229,13 @@ export default function DatePermit({ onBack }: Props) {
 
                 {/* Date + Time */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Ngày đi *</label>
-                    <input type="date" className="permit-input" value={date} onChange={e => setDate(e.target.value)} />
+                    <input type="date" className="permit-input" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
                   </div>
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Giờ *</label>
-                    <input type="time" className="permit-input" value={time} onChange={e => setTime(e.target.value)} />
+                    <input type="time" className="permit-input" value={time} onChange={e => setTime(e.target.value)} style={{ width: '100%', minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
                   </div>
                 </div>
 
@@ -257,17 +283,24 @@ export default function DatePermit({ onBack }: Props) {
               <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{currentUser === 'Alvin' ? 'Paoi' : 'Alvin'} chưa nộp đơn nào cả</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {allForMe.map((req, i) => (
-                <PermitCard key={req.id} req={req} showActions={req.status === 'pending'} formatDate={formatDate} formatCreated={formatCreated}
-                  onApprove={() => { setRespondingId(req.id); setResponseNote(''); }}
-                  onReject={() => { setRespondingId(req.id); setResponseNote(''); }}
-                  respondingId={respondingId}
-                  responseNote={responseNote}
-                  setResponseNote={setResponseNote}
-                  handleRespond={handleRespond}
-                  animIndex={i}
-                />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {groupByDay(allForMe).map(group => (
+                <div key={group.label}>
+                  <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10, padding: '0 2px' }}>{group.label}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {group.items.map((req, i) => (
+                      <PermitCard key={req.id} req={req} showActions={req.status === 'pending'} formatDate={formatDate} formatCreated={formatCreated}
+                        onApprove={() => { setRespondingId(req.id); setResponseNote(''); }}
+                        onReject={() => { setRespondingId(req.id); setResponseNote(''); }}
+                        respondingId={respondingId}
+                        responseNote={responseNote}
+                        setResponseNote={setResponseNote}
+                        handleRespond={handleRespond}
+                        animIndex={i}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -284,25 +317,35 @@ export default function DatePermit({ onBack }: Props) {
               <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Nộp đơn xin phép đầu tiên đi!</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {myRequests.map((req, i) => (
-                <PermitCard key={req.id} req={req} showActions={false} formatDate={formatDate} formatCreated={formatCreated}
-                  onApprove={() => {}} onReject={() => {}}
-                  respondingId={null} responseNote="" setResponseNote={() => {}} handleRespond={() => {}}
-                  animIndex={i}
-                />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {groupByDay(myRequests).map(group => (
+                <div key={group.label}>
+                  <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10, padding: '0 2px' }}>{group.label}</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {group.items.map((req, i) => (
+                      <PermitCard key={req.id} req={req} showActions={false} formatDate={formatDate} formatCreated={formatCreated}
+                        onApprove={() => {}} onReject={() => {}}
+                        respondingId={null} responseNote="" setResponseNote={() => {}} handleRespond={() => {}}
+                        onEdit={req.status === 'pending' ? () => setEditingRequest(req) : undefined}
+                        animIndex={i}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </div>
       )}
       </div>
+
+      {editingRequest && <EditDateRequestForm req={editingRequest} onClose={() => setEditingRequest(null)} />}
     </div>
   );
 }
 
 /* ── Permit card component ── */
-function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, onReject, respondingId, responseNote, setResponseNote, handleRespond, animIndex }: {
+function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, onReject, respondingId, responseNote, setResponseNote, handleRespond, onEdit, animIndex }: {
   req: DateRequest;
   showActions: boolean;
   formatDate: (s: string) => string;
@@ -313,6 +356,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
   responseNote: string;
   setResponseNote: (s: string) => void;
   handleRespond: (id: string, status: 'approved' | 'rejected') => void;
+  onEdit?: () => void;
   animIndex: number;
 }) {
   const cfg = STATUS_CONFIG[req.status];
@@ -329,9 +373,17 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
             <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatCreated(req.createdAt)}</p>
           </div>
         </div>
-        {/* Stamp */}
-        <div className={req.status !== 'pending' ? 'stamp-anim' : ''} style={{ padding: '4px 10px', border: `2.5px solid ${cfg.stamp}`, borderRadius: 8, transform: req.status !== 'pending' ? 'rotate(-8deg)' : 'none', opacity: req.status === 'pending' ? 0.6 : 1 }}>
-          <p style={{ fontSize: 11, fontWeight: 900, color: cfg.stamp, letterSpacing: '0.06em', fontFamily: 'monospace' }}>{cfg.label}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Stamp */}
+          <div className={req.status !== 'pending' ? 'stamp-anim' : ''} style={{ padding: '4px 10px', border: `2.5px solid ${cfg.stamp}`, borderRadius: 8, transform: req.status !== 'pending' ? 'rotate(-8deg)' : 'none', opacity: req.status === 'pending' ? 0.6 : 1 }}>
+            <p style={{ fontSize: 11, fontWeight: 900, color: cfg.stamp, letterSpacing: '0.06em', fontFamily: 'monospace' }}>{cfg.label}</p>
+          </div>
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              style={{ background: 'white', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
+            ><Icon emoji="✏️" size={12} /></button>
+          )}
         </div>
       </div>
 

@@ -11,7 +11,7 @@ import {
   Palette, Pizza, Waves, Tent, Beer, Target, Briefcase, ShoppingCart, Inbox,
   FolderOpen, MailOpen, MailX, Music2, ScrollText, Lightbulb, Bookmark, Hand,
   Unlock, Globe, Mountain, Building2, Ship, Landmark, Map, Link2, Disc,
-  Headphones, Ticket, Umbrella, DollarSign, TrendingDown, Hourglass,
+  Headphones, Ticket, Umbrella, DollarSign, TrendingDown, Hourglass, Cat, PawPrint,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -68,7 +68,7 @@ export const EMOJI_ICON_MAP: Record<string, LucideIcon> = {
   '🖼️': Image, '🖼': Image, '📸': Camera, '📷': Camera,
   '📊': BarChart3, '📈': TrendingUp, '📉': TrendingDown,
   '💡': Lightbulb,
-  '🐶': Dog,
+  '🐶': Dog, '🐱': Cat, '🐾': PawPrint,
   '🛍️': ShoppingBag, '🛍': ShoppingBag, '🛒': ShoppingCart,
   '💧': Droplet,
   '📡': Satellite,

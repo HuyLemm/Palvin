@@ -1,4 +1,4 @@
-import { useEffect, type JSX } from 'react';
+import { useEffect, useState, type JSX } from 'react';
 import { useApp } from './context';
 import Toast from './components/Toast';
 import CreateModal from './components/CreateModal';
@@ -153,6 +153,26 @@ const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 export default function App() {
   const { screen, navigate, goBack, state, createModal, openCreate, currentUser, authed, authLoading, profileLoaded, isLinked, pendingInvite, toast } = useApp();
   const stillResolvingSession = authLoading || (authed && !profileLoaded);
+
+  // A simulated fill (no real multi-step progress exists to measure) that
+  // eases toward ~90% while we wait, then snaps to 100% and holds briefly
+  // the moment the session/profile actually resolves — never lies about
+  // being done, just makes the short wait feel less like a bare spinner.
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [loadingVisible, setLoadingVisible] = useState(stillResolvingSession);
+  useEffect(() => {
+    if (!stillResolvingSession) {
+      setLoadProgress(100);
+      const t = setTimeout(() => setLoadingVisible(false), 400);
+      return () => clearTimeout(t);
+    }
+    setLoadingVisible(true);
+    setLoadProgress(0);
+    const interval = setInterval(() => {
+      setLoadProgress(p => p >= 90 ? p : p + (90 - p) * 0.15 + 1.5);
+    }, 180);
+    return () => clearInterval(interval);
+  }, [stillResolvingSession]);
   // iOS Safari doesn't support the interactive-widget viewport meta property
   // (Chrome/Firefox only), so it always shrinks the visual viewport when the
   // keyboard opens — which our height:100%/dvh chain then follows, making
@@ -299,14 +319,60 @@ export default function App() {
             {/* Loading — covers the brief gap while we check the session + fetch the
                 profile/link state, so the UI never flashes the wrong screen (e.g.
                 "locked" before we actually know isLinked) while that resolves. */}
-            {stillResolvingSession && (
-              <div style={{ position: 'absolute', inset: 0, zIndex: 200, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{
-                  width: 40, height: 40, borderRadius: '50%',
-                  border: '3px solid var(--sakura-light)', borderTopColor: 'var(--sakura-accent)',
-                  animation: 'palvin-spin 0.8s linear infinite',
-                }} />
-                <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+            {loadingVisible && (
+              <div style={{
+                position: 'absolute', inset: 0, zIndex: 200, background: 'var(--bg)',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden', opacity: loadProgress >= 100 ? 0 : 1, transition: 'opacity 0.35s ease',
+              }}>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', width: 0, height: 0, pointerEvents: 'none' }}>
+                  {[
+                    { emoji: '🌸', delay: '0s', dur: '4.5s' },
+                    { emoji: '🐶', delay: '0.6s', dur: '5.5s' },
+                    { emoji: '💕', delay: '1.2s', dur: '5s' },
+                    { emoji: '✨', delay: '1.8s', dur: '6s' },
+                    { emoji: '🐱', delay: '0.3s', dur: '5.2s' },
+                    { emoji: '🐾', delay: '0.9s', dur: '4.8s' },
+                    { emoji: '🎀', delay: '1.5s', dur: '5.8s' },
+                  ].map((p, i, arr) => {
+                    const size = 28;
+                    const radius = 150;
+                    // Evenly spaced around the circle by index, so with N items no two
+                    // can ever land on the same angle (fixed angles previously repeated
+                    // at -90°/270°, which is the same point — that's why two icons sat
+                    // on top of each other).
+                    const angle = -90 + i * (360 / arr.length);
+                    const rad = (angle * Math.PI) / 180;
+                    const x = Math.cos(rad) * radius;
+                    const y = Math.sin(rad) * radius;
+                    return (
+                      <div key={i} style={{
+                        position: 'absolute', top: y, left: x,
+                        animation: `floatBob ${p.dur} ease-in-out ${p.delay} infinite`,
+                      }}>
+                        <Icon emoji={p.emoji} size={size} />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="heart-beat" style={{ marginBottom: 18, position: 'relative', zIndex: 1 }}>
+                  <Icon emoji="🌸" size={44} style={{ color: 'var(--sakura-accent)' }} />
+                </div>
+                <div style={{ width: 130, height: 7, background: 'var(--sakura-light)', borderRadius: 99, overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+                  <div style={{
+                    width: `${loadProgress}%`, height: '100%', borderRadius: 99,
+                    background: 'linear-gradient(90deg, var(--sakura-accent), var(--sakura-deep))',
+                    transition: 'width 0.2s ease',
+                  }} />
+                </div>
+                <p style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', letterSpacing: '0.02em', position: 'relative', zIndex: 1 }}>{Math.round(loadProgress)}%</p>
+                <p style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-2)', position: 'relative', zIndex: 1 }}>Đang tải...</p>
+                <style>{`
+                  @keyframes floatBob {
+                    0%, 100% { transform: translate(-50%, -50%) translateY(0) scale(1); opacity: 0.5; }
+                    50% { transform: translate(-50%, -50%) translateY(-16px) scale(1.1); opacity: 0.85; }
+                  }
+                `}</style>
               </div>
             )}
 
@@ -349,7 +415,15 @@ export default function App() {
                 </button>
                 <button onClick={() => handleTabClick('notifications')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
-                  {unreadNotifs > 0 && <div style={{ position: 'absolute', top: 6, right: 6, width: 7, height: 7, background: 'var(--sakura-accent)', borderRadius: '50%' }} />}
+                  {unreadNotifs > 0 && (
+                    <div style={{
+                      position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, padding: '0 3px',
+                      background: '#DC2626', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1.5px solid var(--white)',
+                    }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, color: 'white', lineHeight: 1 }}>{unreadNotifs > 99 ? '99+' : unreadNotifs}</span>
+                    </div>
+                  )}
                 </button>
               </div>
             </header>

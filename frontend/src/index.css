@@ -200,6 +200,12 @@ html, body {
 .animate-heart-pop { animation: heartPop 0.4s cubic-bezier(0.32,0.72,0,1); }
 .animate-petal     { animation: petalDrift 2s ease-in infinite; }
 
+@keyframes heartBeat {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); }
+}
+.heart-beat { display: inline-flex; animation: heartBeat 1.1s ease-in-out infinite; }
+
 .font-display { font-family: 'DM Serif Display', serif; }
 
 .card {

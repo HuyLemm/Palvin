@@ -63,7 +63,7 @@ import {
   fetchGratitude, createGratitude,
 } from './gratitude';
 import {
-  fetchDateRequests, createDateRequest, respondToDateRequest,
+  fetchDateRequests, createDateRequest, respondToDateRequest, updateDateRequestRow, deleteDateRequestRow,
 } from './dateRequests';
 import {
   fetchCountdowns, createCountdown, deleteCountdownRow,
@@ -209,6 +209,8 @@ interface AppContextType {
   // Date requests
   submitDateRequest: (req: Omit<DateRequest, 'id' | 'status' | 'responseNote' | 'createdAt'>) => void;
   respondToRequest: (id: string, status: 'approved' | 'rejected', note: string) => void;
+  updateDateRequest: (id: string, req: Pick<DateRequest, 'category' | 'categoryEmoji' | 'activity' | 'location' | 'date' | 'time' | 'reason'>) => void;
+  deleteDateRequest: (id: string) => void;
 
   // Gratitude
   addGratitude: (entry: Omit<GratitudeEntry, 'id'>) => void;
@@ -768,6 +770,23 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toast(status === 'approved' ? 'Đã duyệt đơn! 🎉' : 'Đã từ chối đơn', status === 'approved' ? '✅' : '❌');
   };
 
+  // Only ever called from the "mine" tab on a still-pending request — once
+  // approved/rejected, DatePermit hides the edit/delete controls entirely.
+  const updateDateRequest = async (id: string, req: Pick<DateRequest, 'category' | 'categoryEmoji' | 'activity' | 'location' | 'date' | 'time' | 'reason'>) => {
+    const prev = state.dateRequests;
+    setState(s => ({ ...s, dateRequests: s.dateRequests.map(r => r.id === id ? { ...r, ...req } : r) }));
+    const { error } = await updateDateRequestRow(id, req);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, dateRequests: prev })); return; }
+    toast('Đã cập nhật đơn.', '✏️');
+  };
+
+  const deleteDateRequest = async (id: string) => {
+    setState(s => ({ ...s, dateRequests: s.dateRequests.filter(r => r.id !== id) }));
+    const { error } = await deleteDateRequestRow(id);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshDateRequests(); return; }
+    toast('Đã xóa đơn.', '🗑️');
+  };
+
   // Gratitude
   const addGratitude = async (entry: Omit<GratitudeEntry, 'id'>) => {
     const fromId = resolveProfileId(entry.from);
@@ -1171,6 +1190,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => { supabase.removeChannel(channel); };
   }, [isLinked, myProfile, partnerProfile, refreshNotifications]);
 
+  // Realtime: date_requests has no notification row for deletes (only
+  // insert/response do), so an already-open session needs its own direct
+  // subscription — covers submit, approve/reject, edit, AND delete, so
+  // "Cần duyệt" never shows a pending request that the other side already
+  // deleted (or anything else stale) without needing a page reload.
+  useEffect(() => {
+    if (!isLinked || !myProfile?.coupleId) return;
+    const coupleId = myProfile.coupleId;
+    const channel = supabase
+      .channel(`date-requests-${coupleId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'date_requests', filter: `couple_id=eq.${coupleId}` },
+        () => { refreshDateRequests(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isLinked, myProfile, refreshDateRequests]);
+
   const updateNotifyPrefs = async (prefs: NotifyPrefs) => {
     const res = await authUpdateNotifyPrefs(prefs);
     if (!res.ok) { toast(res.error || 'Có lỗi xảy ra', '⚠️'); return; }
@@ -1244,6 +1282,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       sendHug,
       submitDateRequest,
       respondToRequest,
+      updateDateRequest,
+      deleteDateRequest,
       addGratitude,
       addReaction,
       addFavPlace, removeFavPlace,
