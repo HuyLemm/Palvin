@@ -31,3 +31,11 @@ export async function fetchGratitude(names: ProfileNames): Promise<GratitudeEntr
 export async function createGratitude(fromId: string, text: string, date: string) {
   return supabase.from('gratitude_entries').insert({ from_profile_id: fromId, text, entry_date: date });
 }
+
+export async function updateGratitudeRow(id: string, text: string) {
+  return supabase.from('gratitude_entries').update({ text }).eq('id', id);
+}
+
+export async function deleteGratitudeRow(id: string) {
+  return supabase.from('gratitude_entries').delete().eq('id', id);
+}

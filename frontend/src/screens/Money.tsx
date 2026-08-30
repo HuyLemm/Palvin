@@ -41,6 +41,13 @@ const BILL_CAT_LABELS: Record<string, string> = {
   other: 'Khác',
 };
 
+const FREQUENCY_PRESETS = [1, 2, 3, 6, 12];
+function frequencyLabel(n: number): string {
+  if (n === 1) return 'Hàng tháng';
+  if (n === 12) return 'Hàng năm';
+  return `${n} tháng/lần`;
+}
+
 export default function Money() {
   const { state, addToGoal, withdrawFromGoal, addBill, toggleBillPaid } = useApp();
   const [tab, setTab] = useState<Tab>('expenses');
@@ -731,6 +738,9 @@ function BillCard({ bill: b, onTogglePaid, onEdit, getDueStatus }: {
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: 'var(--ink-2)' }}>{BILL_CAT_LABELS[b.category]}</span>
+            {b.frequencyMonths !== 1 && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: '#8B6FD4', background: 'rgba(139,111,212,0.1)', padding: '1px 6px', borderRadius: 99 }}>{frequencyLabel(b.frequencyMonths)}</span>
+            )}
             {b.note && <span style={{ fontSize: 10, color: 'var(--ink-2)', opacity: 0.7 }}>· {b.note}</span>}
           </div>
           {b.paid && b.paidDate && (
@@ -768,6 +778,7 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
   const [amount, setAmount] = useState('');
   const [dueDay, setDueDay] = useState('');
   const [note, setNote] = useState('');
+  const [frequencyMonths, setFrequencyMonths] = useState(1);
 
   const EMOJIS = ['🏠', '⚡', '💧', '📡', '🎬', '🎵', '🚗', '📱', '🏋️', '🛡️', '🧾'];
   const CAT_OPTIONS: { key: Bill['category']; label: string }[] = [
@@ -780,7 +791,7 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
 
   const handleSubmit = () => {
     if (!title || !amount || !dueDay) return;
-    onAdd({ title, emoji, category, amount: +amount, dueDay: +dueDay, paid: false, reminder: true, note });
+    onAdd({ title, emoji, category, amount: +amount, dueDay: +dueDay, paid: false, reminder: true, note, frequencyMonths });
     onClose();
   };
 
@@ -810,6 +821,26 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
           <select className="input-field" value={category} onChange={e => setCategory(e.target.value as Bill['category'])}>
             {CAT_OPTIONS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
+
+          <div>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Chu kỳ lặp lại</p>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+              {FREQUENCY_PRESETS.map(f => (
+                <button key={f} onClick={() => setFrequencyMonths(f)} style={{
+                  padding: '6px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  border: frequencyMonths === f ? 'none' : '1.5px solid var(--border)',
+                  background: frequencyMonths === f ? '#8B6FD4' : 'var(--bg)',
+                  color: frequencyMonths === f ? 'white' : 'var(--ink-2)',
+                }}>{frequencyLabel(f)}</button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input className="input-field" type="number" min="1" max="60" value={frequencyMonths}
+                onChange={e => setFrequencyMonths(Math.min(60, Math.max(1, +e.target.value || 1)))}
+                style={{ width: 90 }} />
+              <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>tháng / lần (tùy chỉnh)</span>
+            </div>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <AmountInput placeholder="Số tiền (VND)" value={amount} onChange={setAmount} />

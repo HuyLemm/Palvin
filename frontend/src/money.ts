@@ -94,9 +94,10 @@ interface BillRow {
   note: string | null;
   series_id: string;
   bill_month: string;
+  frequency_months: number;
 }
 
-const BILL_COLUMNS = 'id, title, emoji, category, amount, due_day, paid, paid_date, reminder, note, series_id, bill_month';
+const BILL_COLUMNS = 'id, title, emoji, category, amount, due_day, paid, paid_date, reminder, note, series_id, bill_month, frequency_months';
 
 function rowToBill(row: BillRow): Bill {
   return {
@@ -112,6 +113,7 @@ function rowToBill(row: BillRow): Bill {
     note: row.note ?? undefined,
     seriesId: row.series_id,
     billMonth: row.bill_month,
+    frequencyMonths: row.frequency_months,
   };
 }
 
@@ -137,10 +139,11 @@ export async function createBill(b: Omit<Bill, 'id'>) {
     note: b.note ?? null,
     series_id: b.seriesId,
     bill_month: b.billMonth,
+    frequency_months: b.frequencyMonths,
   }).select(BILL_COLUMNS).single();
 }
 
-export async function updateBillRow(id: string, b: { title: string; emoji: string; category: Bill['category']; amount: number; dueDay: number; reminder: boolean; note?: string }) {
+export async function updateBillRow(id: string, b: { title: string; emoji: string; category: Bill['category']; amount: number; dueDay: number; reminder: boolean; note?: string; frequencyMonths: number }) {
   return supabase.from('bills').update({
     title: b.title,
     emoji: b.emoji,
@@ -149,6 +152,7 @@ export async function updateBillRow(id: string, b: { title: string; emoji: strin
     due_day: b.dueDay,
     reminder: b.reminder,
     note: b.note || null,
+    frequency_months: b.frequencyMonths,
   }).eq('id', id);
 }
 
@@ -160,24 +164,46 @@ export async function deleteBillRow(id: string) {
   return supabase.from('bills').delete().eq('id', id);
 }
 
-// Any recurring bill whose latest instance is from a past month gets rolled
-// forward into a fresh unpaid row for the current month — this is what makes
-// rent/internet/subscriptions "auto-renew" every month instead of staying
-// stuck on whichever month they were first added.
+function monthIndex(m: string): number {
+  const [y, mo] = m.split('-').map(Number);
+  return y * 12 + (mo - 1);
+}
+function monthFromIndex(idx: number): string {
+  const y = Math.floor(idx / 12);
+  const mo = (idx % 12) + 1;
+  return `${y}-${String(mo).padStart(2, '0')}`;
+}
+
+// Any recurring bill whose latest instance is due again by now gets rolled
+// forward into a fresh unpaid row — respecting its own cadence, so a monthly
+// bill renews every month but a quarterly/yearly one only renews every
+// 3/12 months instead of spawning a new row every single month. When it
+// catches up after a longer gap (app not opened in a while), it lands on the
+// most recent cycle that's actually due — not literally "the current month"
+// — so the cadence never drifts off its original anchor day/month.
 export async function rollBillsForward(bills: Bill[], currentMonth: string): Promise<Bill[]> {
   const latestBySeries = new Map<string, Bill>();
   for (const b of bills) {
     const cur = latestBySeries.get(b.seriesId);
     if (!cur || b.billMonth > cur.billMonth) latestBySeries.set(b.seriesId, b);
   }
-  const toCreate = [...latestBySeries.values()].filter(b => b.billMonth < currentMonth);
+  const curIdx = monthIndex(currentMonth);
+  const toCreate: { bill: Bill; nextBillMonth: string }[] = [];
+  for (const b of latestBySeries.values()) {
+    const freq = Math.max(1, b.frequencyMonths || 1);
+    const diff = curIdx - monthIndex(b.billMonth);
+    if (diff < freq) continue; // not due yet
+    const cycles = Math.floor(diff / freq);
+    toCreate.push({ bill: b, nextBillMonth: monthFromIndex(monthIndex(b.billMonth) + cycles * freq) });
+  }
   if (toCreate.length === 0) return bills;
 
   const created: Bill[] = [];
-  for (const b of toCreate) {
+  for (const { bill: b, nextBillMonth } of toCreate) {
     const { data, error } = await createBill({
       title: b.title, emoji: b.emoji, category: b.category, amount: b.amount, dueDay: b.dueDay,
-      paid: false, reminder: b.reminder, note: b.note, seriesId: b.seriesId, billMonth: currentMonth,
+      paid: false, reminder: b.reminder, note: b.note, seriesId: b.seriesId, billMonth: nextBillMonth,
+      frequencyMonths: b.frequencyMonths,
     });
     if (!error && data) created.push(rowToBill(data as BillRow));
   }

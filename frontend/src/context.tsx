@@ -54,13 +54,15 @@ import {
   fetchCapsules, createCapsule, openCapsuleRow,
 } from './capsules';
 import {
-  fetchWishes, createWish, drawWishRow, deleteWishRow,
+  fetchWishes, createWish, updateWishRow, setWishDrawnRow, deleteWishRow,
 } from './wishes';
 import {
-  fetchDateIdeas, createDateIdea, deleteDateIdeaRow, fetchDateIdeaHistory, recordDateIdeaDraw,
+  fetchDateIdeas, createDateIdea, updateDateIdeaRow, deleteDateIdeaRow,
+  fetchDateIdeaPresets, updateDateIdeaPresetRow, deleteDateIdeaPresetRow,
+  fetchDateIdeaHistory, recordDateIdeaDraw,
 } from './dateIdeas';
 import {
-  fetchGratitude, createGratitude,
+  fetchGratitude, createGratitude, updateGratitudeRow, deleteGratitudeRow,
 } from './gratitude';
 import {
   fetchDateRequests, createDateRequest, respondToDateRequest, updateDateRequestRow, deleteDateRequestRow,
@@ -191,12 +193,16 @@ interface AppContextType {
 
   // Wishes
   addWish: (w: Omit<WishItem, 'id' | 'drawn'>) => void;
-  drawWish: (id: string) => void;
+  updateWish: (id: string, w: { wish: string; price?: string; link?: string; linkImage?: string; linkTitle?: string; linkDescription?: string }) => void;
+  drawWish: (id: string, drawn?: boolean) => void;
   removeWish: (id: string) => void;
 
   // Date ideas
   addDateIdea: (i: Omit<DateIdea, 'id'>) => void;
+  updateDateIdea: (id: string, i: { emoji: string; text: string }) => void;
   removeDateIdea: (id: string) => void;
+  updateDateIdeaPreset: (id: string, i: { emoji: string; text: string }) => void;
+  removeDateIdeaPreset: (id: string) => void;
   drawDateIdea: (idea: { emoji: string; text: string }) => void;
 
   // Love letters
@@ -214,6 +220,8 @@ interface AppContextType {
 
   // Gratitude
   addGratitude: (entry: Omit<GratitudeEntry, 'id'>) => void;
+  updateGratitude: (id: string, text: string) => void;
+  deleteGratitude: (id: string) => void;
 
   // Reactions
   addReaction: (postId: string, emoji: string) => void;
@@ -684,14 +692,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addWish = async (w: Omit<WishItem, 'id' | 'drawn'>) => {
     const fromId = resolveProfileId(w.from);
     if (!fromId) return;
-    const { error } = await createWish(fromId, { wish: w.wish, date: w.date, price: w.price, link: w.link });
+    const { error } = await createWish(fromId, { wish: w.wish, date: w.date, price: w.price, link: w.link, linkImage: w.linkImage, linkTitle: w.linkTitle, linkDescription: w.linkDescription });
     if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
     await refreshWishes();
     toast('Ước nguyện đã vào hũ! 🫙', '✨');
   };
-  const drawWish = async (id: string) => {
-    setState(s => ({ ...s, wishes: s.wishes.map(w => w.id === id ? { ...w, drawn: true } : w) }));
-    const { error } = await drawWishRow(id);
+  const updateWish = async (id: string, w: { wish: string; price?: string; link?: string; linkImage?: string; linkTitle?: string; linkDescription?: string }) => {
+    setState(s => ({ ...s, wishes: s.wishes.map(x => x.id === id ? { ...x, ...w } : x) }));
+    const { error } = await updateWishRow(id, w);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshWishes(); }
+  };
+  const drawWish = async (id: string, drawn: boolean = true) => {
+    setState(s => ({ ...s, wishes: s.wishes.map(w => w.id === id ? { ...w, drawn } : w) }));
+    const { error } = await setWishDrawnRow(id, drawn);
     if (error) refreshWishes();
   };
   const removeWish = async (id: string) => {
@@ -712,6 +725,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, dateIdeas: s.dateIdeas.filter(i => i.id !== id) }));
     const { error } = await deleteDateIdeaRow(id);
     if (error) refreshDateIdeas();
+  };
+  const updateDateIdea = async (id: string, i: { emoji: string; text: string }) => {
+    const prev = state.dateIdeas;
+    setState(s => ({ ...s, dateIdeas: s.dateIdeas.map(x => x.id === id ? { ...x, ...i } : x) }));
+    const { error } = await updateDateIdeaRow(id, i);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, dateIdeas: prev })); return; }
+    toast('Đã cập nhật ý tưởng.', '✏️');
+  };
+  // Presets — same shape as custom ideas, just their own table (see 0032).
+  const updateDateIdeaPreset = async (id: string, i: { emoji: string; text: string }) => {
+    const prev = state.dateIdeaPresets;
+    setState(s => ({ ...s, dateIdeaPresets: s.dateIdeaPresets.map(x => x.id === id ? { ...x, ...i } : x) }));
+    const { error } = await updateDateIdeaPresetRow(id, i);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, dateIdeaPresets: prev })); return; }
+    toast('Đã cập nhật ý tưởng.', '✏️');
+  };
+  const removeDateIdeaPreset = async (id: string) => {
+    setState(s => ({ ...s, dateIdeaPresets: s.dateIdeaPresets.filter(i => i.id !== id) }));
+    const { error } = await deleteDateIdeaPresetRow(id);
+    if (error) refreshDateIdeaPresets();
   };
   const drawDateIdea = async (idea: { emoji: string; text: string }) => {
     if (!myProfile) return;
@@ -795,6 +828,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
     await refreshGratitude();
     toast('Biết ơn đã ghi lại 🌸', '💕');
+  };
+
+  const updateGratitude = async (id: string, text: string) => {
+    const prev = state.gratitude;
+    setState(s => ({ ...s, gratitude: s.gratitude.map(g => g.id === id ? { ...g, text } : g) }));
+    const { error } = await updateGratitudeRow(id, text);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, gratitude: prev })); return; }
+    toast('Đã cập nhật.', '✏️');
+  };
+
+  const deleteGratitude = async (id: string) => {
+    setState(s => ({ ...s, gratitude: s.gratitude.filter(g => g.id !== id) }));
+    const { error } = await deleteGratitudeRow(id);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshGratitude(); return; }
+    toast('Đã xóa.', '🗑️');
   };
 
   // Reactions
@@ -1074,6 +1122,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isLinked) refreshDateIdeas();
   }, [isLinked, refreshDateIdeas]);
 
+  const refreshDateIdeaPresets = useCallback(async () => {
+    const dateIdeaPresets = await fetchDateIdeaPresets();
+    setState(s => ({ ...s, dateIdeaPresets }));
+  }, []);
+
+  useEffect(() => {
+    if (isLinked) refreshDateIdeaPresets();
+  }, [isLinked, refreshDateIdeaPresets]);
+
   const refreshDateIdeaHistory = useCallback(async () => {
     const dateIdeaHistory = await fetchDateIdeaHistory();
     setState(s => ({ ...s, dateIdeaHistory }));
@@ -1276,8 +1333,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addCapsule, openCapsule,
       addCountdown, deleteCountdown,
       addToPlaylist, removeFromPlaylist,
-      addWish, drawWish, removeWish,
-      addDateIdea, removeDateIdea, drawDateIdea,
+      addWish, updateWish, drawWish, removeWish,
+      addDateIdea, updateDateIdea, removeDateIdea, updateDateIdeaPreset, removeDateIdeaPreset, drawDateIdea,
       addLoveLetter, deleteLoveLetter,
       sendHug,
       submitDateRequest,
@@ -1285,6 +1342,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateDateRequest,
       deleteDateRequest,
       addGratitude,
+      updateGratitude,
+      deleteGratitude,
       addReaction,
       addFavPlace, removeFavPlace,
       addPlace, deletePlace,

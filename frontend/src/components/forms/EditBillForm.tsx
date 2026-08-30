@@ -12,6 +12,12 @@ const CAT_OPTIONS: { key: Bill['category']; label: string }[] = [
   { key: 'subscription', label: 'Subscription' },
   { key: 'other', label: 'Khác' },
 ];
+const FREQUENCY_PRESETS = [1, 2, 3, 6, 12];
+function frequencyLabel(n: number): string {
+  if (n === 1) return 'Hàng tháng';
+  if (n === 12) return 'Hàng năm';
+  return `${n} tháng/lần`;
+}
 
 export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: () => void }) {
   const { updateBill, deleteBill } = useApp();
@@ -21,6 +27,7 @@ export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: (
   const [amount, setAmount] = useState(String(Math.round(bill.amount)));
   const [dueDay, setDueDay] = useState(String(bill.dueDay));
   const [note, setNote] = useState(bill.note ?? '');
+  const [frequencyMonths, setFrequencyMonths] = useState(bill.frequencyMonths);
   const [error, setError] = useState('');
   const [confirmSave, setConfirmSave] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -33,7 +40,7 @@ export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: (
   };
 
   const confirmSubmit = () => {
-    updateBill(bill.id, { title, emoji, category, amount: parseFloat(amount), dueDay: +dueDay, reminder: bill.reminder, note });
+    updateBill(bill.id, { title, emoji, category, amount: parseFloat(amount), dueDay: +dueDay, reminder: bill.reminder, note, frequencyMonths });
     setConfirmSave(false);
     onClose();
   };
@@ -71,6 +78,26 @@ export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: (
           <select className="input-field" value={category} onChange={e => setCategory(e.target.value as Bill['category'])}>
             {CAT_OPTIONS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
+
+          <div>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Chu kỳ lặp lại</p>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+              {FREQUENCY_PRESETS.map(f => (
+                <button key={f} onClick={() => setFrequencyMonths(f)} style={{
+                  padding: '6px 12px', borderRadius: 99, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  border: frequencyMonths === f ? 'none' : '1.5px solid var(--border)',
+                  background: frequencyMonths === f ? '#8B6FD4' : 'var(--bg)',
+                  color: frequencyMonths === f ? 'white' : 'var(--ink-2)',
+                }}>{frequencyLabel(f)}</button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input className="input-field" type="number" min="1" max="60" value={frequencyMonths}
+                onChange={e => setFrequencyMonths(Math.min(60, Math.max(1, +e.target.value || 1)))}
+                style={{ width: 90 }} />
+              <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>tháng / lần (tùy chỉnh)</span>
+            </div>
+          </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <AmountInput placeholder="Số tiền (VND)" value={amount} onChange={setAmount} />

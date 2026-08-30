@@ -61,3 +61,15 @@ export async function createMemory(
 export async function setMemoryFavorite(id: string, favorite: boolean) {
   return supabase.from('memories').update({ favorite }).eq('id', id);
 }
+
+// Reuses the same `post-images` bucket/RLS as feed.ts's uploadPostImage —
+// its policy only checks the couple-id folder prefix, so a `memories/`
+// subfolder is already covered without any new bucket or migration.
+export async function uploadMemoryImage(coupleId: string, file: File): Promise<string | null> {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `${coupleId}/memories/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  if (error) return null;
+  const { data } = supabase.storage.from('post-images').getPublicUrl(path);
+  return data.publicUrl;
+}

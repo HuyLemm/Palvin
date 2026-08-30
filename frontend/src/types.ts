@@ -57,6 +57,8 @@ export interface Bill {
   note?: string;
   seriesId: string;
   billMonth: string;
+  // How often it recurs: 1 = monthly, 2 = every 2 months, 3 = every 3 months, 12 = yearly.
+  frequencyMonths: number;
 }
 
 export interface SavingsGoal {
@@ -185,6 +187,9 @@ export interface WishItem {
   drawn: boolean;
   price?: string;
   link?: string;
+  linkImage?: string;
+  linkTitle?: string;
+  linkDescription?: string;
 }
 
 export interface LoveLetter {
@@ -270,6 +275,7 @@ export interface AppState {
   playlist: PlaylistItem[];
   wishes: WishItem[];
   dateIdeas: DateIdea[];
+  dateIdeaPresets: DateIdea[];
   dateIdeaHistory: DateIdeaDraw[];
   gratitude: GratitudeEntry[];
   dateRequests: DateRequest[];

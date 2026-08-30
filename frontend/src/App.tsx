@@ -416,7 +416,7 @@ export default function App() {
                 <button onClick={() => handleTabClick('notifications')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
                   {unreadNotifs > 0 && (
-                    <div style={{
+                    <div key={unreadNotifs} className="animate-heart-pop" style={{
                       position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, padding: '0 3px',
                       background: '#DC2626', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: '1.5px solid var(--white)',

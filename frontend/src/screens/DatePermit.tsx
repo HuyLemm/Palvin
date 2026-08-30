@@ -174,7 +174,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{ flex: 1, padding: '9px 4px', borderRadius: 11, border: 'none', background: tab === t.key ? 'white' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: tab === t.key ? 700 : 500, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s', boxShadow: tab === t.key ? '0 1px 6px rgba(201,95,124,0.12)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <Icon emoji={t.emoji} size={13} /> {t.label}
-            {t.count > 0 && <span style={{ color: '#DC2626', fontWeight: 800 }}>({t.count})</span>}
+            {t.count > 0 && <span key={t.count} className="animate-heart-pop" style={{ display: 'inline-block', color: '#DC2626', fontWeight: 800 }}>({t.count})</span>}
           </button>
         ))}
       </div>

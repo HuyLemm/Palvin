@@ -2,44 +2,35 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
 
-const PRESET_IDEAS = [
-  { emoji: '🍜', text: 'Thử một quán mì mới chưa đến bao giờ' },
-  { emoji: '🎬', text: 'Xem phim tại nhà, tắt điện thoại hẳn' },
-  { emoji: '🌅', text: 'Dậy sớm xem bình minh cùng nhau' },
-  { emoji: '🧁', text: 'Làm bánh cùng nhau, dù có thất bại' },
-  { emoji: '🚲', text: 'Đạp xe không cần điểm đến' },
-  { emoji: '📷', text: 'Đi chụp ảnh phố phường, random' },
-  { emoji: '☕', text: 'Ngồi cà phê cả buổi sáng, không vội' },
-  { emoji: '🎮', text: 'Chơi board game hoặc video game cùng nhau' },
-  { emoji: '🌿', text: 'Đi chợ hoa, mua một chậu cây mới' },
-  { emoji: '🛁', text: 'Spa tại nhà — mặt nạ, nhạc nhẹ, nến thơm' },
-  { emoji: '🎨', text: 'Cùng vẽ tranh (không cần đẹp)' },
-  { emoji: '🎵', text: 'Mỗi người chọn 5 bài hát, nghe cùng nhau' },
-  { emoji: '🌙', text: 'Ra ban công ngắm sao buổi tối' },
-  { emoji: '📖', text: 'Đọc sách cùng nhau ở một quán ổn' },
-  { emoji: '🍕', text: 'Tự làm pizza tại nhà' },
-  { emoji: '💌', text: 'Viết thư tay cho nhau, đọc cùng lúc' },
-  { emoji: '🎤', text: 'Hát karaoke tại nhà, to hết cỡ' },
-  { emoji: '🏊', text: 'Đi bơi buổi sáng sớm' },
-  { emoji: '🌸', text: 'Ngắm hoàng hôn ở một điểm cao' },
-  { emoji: '🎪', text: 'Đi dạo trung tâm thương mại không mua gì' },
-];
-
 interface Props { onBack: () => void; }
 
+type Idea = { id: string; emoji: string; text: string };
+type EditableIdea = Idea & { source: 'preset' | 'custom' };
+
 export default function DateIdeaJar({ onBack }: Props) {
-  const { state, addDateIdea, removeDateIdea, drawDateIdea } = useApp();
-  const [picked, setPicked] = useState<typeof PRESET_IDEAS[0] | null>(null);
+  const { state, addDateIdea, updateDateIdea, removeDateIdea, updateDateIdeaPreset, removeDateIdeaPreset, drawDateIdea } = useApp();
+  const [picked, setPicked] = useState<{ emoji: string; text: string } | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [newIdea, setNewIdea] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [editingIdea, setEditingIdea] = useState<EditableIdea | null>(null);
+  const [editIdeaText, setEditIdeaText] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; source: 'preset' | 'custom' } | null>(null);
 
+  const presetIdeas = state.dateIdeaPresets;
   const customIdeas = state.dateIdeas;
   const history = state.dateIdeaHistory;
-  const allIdeas = [...PRESET_IDEAS, ...customIdeas];
+  const allIdeas = [...presetIdeas, ...customIdeas];
+  // Same list, tagged with where each idea came from — presets and your own
+  // added ideas are both editable/deletable the same way, just via different
+  // tables under the hood (see 0032_date_idea_presets.sql).
+  const editableIdeas: EditableIdea[] = [
+    ...presetIdeas.map(i => ({ ...i, source: 'preset' as const })),
+    ...customIdeas.map(i => ({ ...i, source: 'custom' as const })),
+  ];
 
   function spin() {
-    if (spinning) return;
+    if (spinning || allIdeas.length === 0) return;
     setSpinning(true);
     setPicked(null);
     let count = 0;
@@ -63,6 +54,21 @@ export default function DateIdeaJar({ onBack }: Props) {
     addDateIdea({ emoji: '✨', text: newIdea.trim() });
     setNewIdea('');
     setShowAdd(false);
+  }
+
+  function saveEditIdea() {
+    if (!editingIdea || !editIdeaText.trim()) return;
+    const payload = { emoji: editingIdea.emoji, text: editIdeaText.trim() };
+    if (editingIdea.source === 'preset') updateDateIdeaPreset(editingIdea.id, payload);
+    else updateDateIdea(editingIdea.id, payload);
+    setEditingIdea(null);
+  }
+
+  function confirmDeleteNow() {
+    if (!confirmDelete) return;
+    if (confirmDelete.source === 'preset') removeDateIdeaPreset(confirmDelete.id);
+    else removeDateIdea(confirmDelete.id);
+    setConfirmDelete(null);
   }
 
   return (
@@ -104,7 +110,7 @@ export default function DateIdeaJar({ onBack }: Props) {
           <p style={{ fontSize: 15, color: 'var(--ink-2)', marginBottom: 16 }}>Nhấn vào hũ để rút ý tưởng!</p>
         )}
 
-        <button onClick={spin} disabled={spinning} style={{ padding: '13px 28px', background: spinning ? 'var(--border)' : 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))', border: 'none', borderRadius: 16, color: spinning ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 15, cursor: spinning ? 'default' : 'pointer', boxShadow: spinning ? 'none' : '0 4px 16px rgba(201,95,124,0.3)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <button onClick={spin} disabled={spinning} style={{ margin: '0 auto', padding: '13px 28px', background: spinning ? 'var(--border)' : 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))', border: 'none', borderRadius: 16, color: spinning ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 15, cursor: spinning ? 'default' : 'pointer', boxShadow: spinning ? 'none' : '0 4px 16px rgba(201,95,124,0.3)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           {spinning ? <><Icon emoji="🫙" size={16} /> Đang lắc...</> : picked ? <><Icon emoji="🔀" size={16} /> Rút lại</> : <><Icon emoji="🫙" size={16} /> Lắc hũ</>}
         </button>
       </div>
@@ -131,22 +137,11 @@ export default function DateIdeaJar({ onBack }: Props) {
             <button onClick={addCustom} style={{ padding: '10px 16px', background: 'var(--sakura-deep)', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✓" size={16} /></button>
           </div>
         )}
-        {customIdeas.length > 0 && (
-          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {customIdeas.map(idea => (
-              <div key={idea.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--sakura-light)', borderRadius: 10 }}>
-                <Icon emoji={idea.emoji} size={18} />
-                <p style={{ fontSize: 13, color: 'var(--ink)', flex: 1 }}>{idea.text}</p>
-                <button onClick={() => removeDateIdea(idea.id)} style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: 'var(--ink-2)' }}>×</button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* History */}
       {history.length > 0 && (
-        <div>
+        <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Đã rút gần đây</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {history.map((idea, i) => (
@@ -159,18 +154,64 @@ export default function DateIdeaJar({ onBack }: Props) {
         </div>
       )}
 
-      {/* All ideas list */}
-      <div style={{ marginTop: 20 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Tất cả ý tưởng ({allIdeas.length})</p>
+      {/* All ideas list — editable, whether preset or your own */}
+      <div>
+        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Tất cả ý tưởng ({editableIdeas.length})</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {allIdeas.map((idea, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'white', borderRadius: 12, border: '1px solid var(--border)' }}>
+          {editableIdeas.map(idea => (
+            <div key={`${idea.source}-${idea.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'white', borderRadius: 12, border: '1px solid var(--border)' }}>
               <Icon emoji={idea.emoji} size={20} />
               <p style={{ fontSize: 13, color: 'var(--ink)', flex: 1 }}>{idea.text}</p>
+              <button
+                onClick={() => { setEditingIdea(idea); setEditIdeaText(idea.text); }}
+                style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 24, height: 24, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              ><Icon emoji="✏️" size={11} /></button>
+              <button
+                onClick={() => setConfirmDelete({ id: idea.id, source: idea.source })}
+                style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 24, height: 24, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              ><Icon emoji="🗑️" size={11} /></button>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Edit idea (preset or custom) */}
+      {editingIdea && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setEditingIdea(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Sửa ý tưởng <Icon emoji="✏️" size={15} /></p>
+              <button onClick={() => setEditingIdea(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+            </div>
+            <input
+              className="input-field"
+              value={editIdeaText}
+              onChange={e => setEditIdeaText(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && saveEditIdea()}
+              autoFocus
+              style={{ marginBottom: 14 }}
+            />
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setEditingIdea(null)} className="btn-ghost" style={{ flex: 1 }}>Hủy</button>
+              <button onClick={saveEditIdea} disabled={!editIdeaText.trim()} style={{ flex: 2, padding: '13px', background: editIdeaText.trim() ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 14, color: editIdeaText.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, cursor: editIdeaText.trim() ? 'pointer' : 'default' }}>Lưu thay đổi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete idea */}
+      {confirmDelete && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDelete(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa ý tưởng này?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
+              <button onClick={confirmDeleteNow} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

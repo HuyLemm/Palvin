@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
+import AmountInput from '../components/AmountInput';
 import { getDaysTogether, getDuration } from '../data';
+import { uploadPlaceImage } from '../places';
 import FutureUs from './FutureUs';
 import Calendar from './Calendar';
 import TripPlanner from './TripPlanner';
@@ -11,7 +13,7 @@ import TimeCapsule from './TimeCapsule';
 import DateIdeaJar from './DateIdeaJar';
 import GratitudeJournal from './GratitudeJournal';
 import DatePermit from './DatePermit';
-import type { FavCategory, FavPlace } from '../types';
+import type { FavCategory, FavPlace, WishItem } from '../types';
 
 type SubScreen = 'main' | 'story' | 'favorites' | 'places' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit';
 
@@ -176,26 +178,37 @@ export default function Us() {
 }
 
 /* ─── Our Favourites (multi-category) ─────────────── */
-const PLACE_IMAGES = [
-  'https://images.unsplash.com/photo-1569144651110-3d3b0f28c474?w=600&h=400&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=400&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?w=600&h=400&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=600&h=400&fit=crop&auto=format',
-  'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=600&h=400&fit=crop&auto=format',
-];
-
 function OurPlacesScreen({ onBack }: { onBack: () => void }) {
-  const { state, addPlace, deletePlace } = useApp();
+  const { state, addPlace, deletePlace, myProfile } = useApp();
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState('');
   const [flag, setFlag] = useState('');
-  const [image, setImage] = useState(PLACE_IMAGES[0]);
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [image, setImage] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [addError, setAddError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (!file || !myProfile?.coupleId) return;
+    setAddError('');
+    setPreviewUrl(URL.createObjectURL(file));
+    setImage('');
+    setUploading(true);
+    uploadPlaceImage(myProfile.coupleId, file).then(url => {
+      setUploading(false);
+      if (url) setImage(url);
+      else setAddError('Tải ảnh thất bại, thử lại nhé.');
+    });
+  };
 
   const handleAdd = () => {
     if (!name.trim()) return;
+    if (!image) { setAddError(uploading ? 'Đợi ảnh tải xong nhé.' : 'Chọn một ảnh trước đã.'); return; }
     addPlace({ name: name.trim(), flag: flag.trim() || undefined, image });
     setShowAdd(false);
-    setName(''); setFlag(''); setImage(PLACE_IMAGES[0]);
+    setName(''); setFlag(''); setImage(''); setPreviewUrl(''); setAddError('');
   };
 
   return (
@@ -247,20 +260,38 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
               <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Thêm địa điểm <Icon emoji="📍" size={18} /></p>
               <button onClick={() => setShowAdd(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 12 }}>
-              {PLACE_IMAGES.map(img => (
-                <div key={img} onClick={() => setImage(img)} style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', border: image === img ? '2.5px solid var(--sakura-deep)' : '2.5px solid transparent' }}>
-                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+              {previewUrl && (
+                <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2.5px solid var(--sakura-deep)' }}>
+                  <img src={previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: uploading ? 0.5 : 1 }} />
+                  {uploading && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-spin 0.7s linear infinite' }} />
+                    </div>
+                  )}
                 </div>
-              ))}
+              )}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >{previewUrl ? '↻' : '+'}</button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={e => { handleFile(e.target.files); e.target.value = ''; }}
+                style={{ display: 'none' }}
+              />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <input className="input-field" placeholder="Tên địa điểm (VD: Nhật Bản 🇯🇵)" value={name} onChange={e => setName(e.target.value)} />
               <input className="input-field" placeholder="Cờ/emoji (tuỳ chọn)" value={flag} onChange={e => setFlag(e.target.value)} maxLength={4} />
+              {addError && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{addError}</p>}
             </div>
+            <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <button className="btn-ghost" onClick={() => setShowAdd(false)} style={{ flex: 1 }}>Huỷ</button>
-              <button className="btn-primary" onClick={handleAdd} style={{ flex: 2 }}>Thêm</button>
+              <button className="btn-primary" onClick={handleAdd} disabled={uploading} style={{ flex: 2, opacity: uploading ? 0.6 : 1 }}>{uploading ? 'Đang tải ảnh...' : 'Thêm'}</button>
             </div>
           </div>
         </div>
@@ -374,28 +405,196 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
 }
 
 /* ─── Gift Wishlist ───────────────────────────────── */
+type LinkPreview = { title?: string; image?: string; description?: string };
+
 function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
-  const { state, currentUser, addWish, removeWish, drawWish } = useApp();
+  const { state, currentUser, addWish, updateWish, removeWish, drawWish } = useApp();
   const [showAdd, setShowAdd] = useState(false);
   const [wishText, setWishText] = useState('');
   const [wishLink, setWishLink] = useState('');
   const [wishPrice, setWishPrice] = useState('');
-  const [filterUser, setFilterUser] = useState<'all' | 'Alvin' | 'Paoi'>('all');
+  const [filter, setFilter] = useState<'all' | 'Alvin' | 'Paoi' | 'bought'>('all');
+  const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const [editingWish, setEditingWish] = useState<WishItem | null>(null);
+  const [editText, setEditText] = useState('');
+  const [editPrice, setEditPrice] = useState('');
+  const [editLink, setEditLink] = useState('');
+  const [editOriginalLink, setEditOriginalLink] = useState('');
+  const [editLinkPreview, setEditLinkPreview] = useState<LinkPreview | null>(null);
+  const [editPreviewLoading, setEditPreviewLoading] = useState(false);
+  const [confirmDeleteWish, setConfirmDeleteWish] = useState<string | null>(null);
 
   const other = currentUser === 'Alvin' ? 'Paoi' : 'Alvin';
 
-  const filtered = filterUser === 'all' ? state.wishes : state.wishes.filter(w => w.from === filterUser);
+  const filtered = state.wishes.filter(w => {
+    if (filter === 'bought') return w.drawn;
+    if (w.drawn) return false;
+    if (filter === 'all') return true;
+    return w.from === filter;
+  });
+
+  const closeAdd = () => {
+    setShowAdd(false); setWishText(''); setWishLink(''); setWishPrice(''); setLinkPreview(null);
+  };
+
+  // Fetch a compact title/image/description preview for whatever link the
+  // user pastes, via a client-side link-unfurling API — the app has no
+  // backend of its own to do this CORS-safe fetch server-side, so it goes
+  // straight from the browser. Debounced so it doesn't fire on every
+  // keystroke. Note: it can't extract a price — that's rendered by JS on
+  // most shop pages, not present in static page metadata — so price stays
+  // a manual field.
+  async function fetchLinkPreview(url: string): Promise<LinkPreview | null> {
+    try {
+      const apiKey = import.meta.env.VITE_MICROLINK_API_KEY as string | undefined;
+      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=false${apiKey ? `&apiKey=${apiKey}` : ''}`);
+      const json = await res.json();
+      if (json.status === 'success') {
+        return {
+          title: json.data?.title ?? undefined,
+          image: json.data?.image?.url ?? json.data?.logo?.url ?? undefined,
+          description: json.data?.description ?? undefined,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  useEffect(() => {
+    const url = wishLink.trim();
+    if (!/^https?:\/\/.+/i.test(url)) { setLinkPreview(null); setPreviewLoading(false); return; }
+    setPreviewLoading(true);
+    const timer = setTimeout(async () => {
+      setLinkPreview(await fetchLinkPreview(url));
+      setPreviewLoading(false);
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [wishLink]);
+
+  function openEditWish(w: WishItem) {
+    setEditingWish(w);
+    setEditText(w.wish);
+    setEditPrice(w.price ?? '');
+    setEditLink(w.link ?? '');
+    setEditOriginalLink(w.link ?? '');
+    setEditLinkPreview((w.linkImage || w.linkTitle || w.linkDescription) ? { image: w.linkImage, title: w.linkTitle, description: w.linkDescription } : null);
+  }
+  function closeEditWish() {
+    setEditingWish(null); setEditText(''); setEditPrice(''); setEditLink(''); setEditOriginalLink(''); setEditLinkPreview(null); setEditPreviewLoading(false);
+  }
+
+  // Re-fetch the preview only when the link actually changed, or when the
+  // wish has a link but never had a preview stored (older items added
+  // before this feature existed) — so opening edit on a legacy item
+  // backfills it, but saving other fields on an already-previewed item
+  // never wastes an API call.
+  useEffect(() => {
+    if (!editingWish) return;
+    const url = editLink.trim();
+    const unchanged = url === editOriginalLink.trim();
+    if (unchanged && editLinkPreview) { setEditPreviewLoading(false); return; }
+    if (!/^https?:\/\/.+/i.test(url)) { if (!unchanged) setEditLinkPreview(null); setEditPreviewLoading(false); return; }
+    setEditPreviewLoading(true);
+    const timer = setTimeout(async () => {
+      setEditLinkPreview(await fetchLinkPreview(url));
+      setEditPreviewLoading(false);
+    }, unchanged ? 0 : 700);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editLink, editOriginalLink, editingWish]);
+
+  function saveEditWish() {
+    if (!editingWish || !editText.trim()) return;
+    updateWish(editingWish.id, {
+      wish: editText.trim(),
+      price: editPrice || undefined,
+      link: editLink || undefined,
+      linkImage: editLink ? editLinkPreview?.image : undefined,
+      linkTitle: editLink ? editLinkPreview?.title : undefined,
+      linkDescription: editLink ? editLinkPreview?.description : undefined,
+    });
+    closeEditWish();
+  }
+
+  function renderWishCard(w: WishItem, index: number) {
+    const isOwner = w.from === currentUser;
+    const isBought = w.drawn;
+    return (
+      <div key={w.id} className="card wish-card" style={{ padding: '14px 16px', opacity: isBought ? 0.6 : 1, animation: `wishCardIn 0.3s cubic-bezier(0.32,0.72,0,1) both`, animationDelay: `${Math.min(index, 6) * 30}ms` }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: isBought ? 'var(--bg)' : (w.from === 'Paoi' ? '#FFE4EC' : '#E4ECFF'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s ease' }}>
+            <Icon emoji={isBought ? '✅' : (w.from === 'Paoi' ? '💗' : '💙')} size={20} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: isBought ? 'line-through' : 'none', lineHeight: 1.3 }}>{w.wish}</p>
+            <p style={{ fontSize: 11, color: 'var(--sakura-deep)', marginTop: 3, fontWeight: 600 }}>{w.from}'s wishlist · {w.date}</p>
+            {w.price && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💰" size={12} /> {/^\d+$/.test(w.price) ? `${Number(w.price).toLocaleString('vi-VN')} VND` : w.price}</p>}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            {!isBought && (
+              <button className="wish-action-btn" onClick={() => drawWish(w.id, true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Đã mua <Icon emoji="🎁" size={12} /></button>
+            )}
+            {isBought && (
+              <button className="wish-action-btn" onClick={() => drawWish(w.id, false)} style={{ background: 'var(--bg)', color: 'var(--ink-2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Hoàn tác <Icon emoji="↩️" size={12} /></button>
+            )}
+            {isOwner && (
+              <>
+                <button className="wish-action-btn" onClick={() => openEditWish(w)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
+                <button className="wish-action-btn" onClick={() => setConfirmDeleteWish(w.id)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={12} /></button>
+              </>
+            )}
+          </div>
+        </div>
+        {w.link && (
+          <a href={w.link} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, padding: 8, background: 'var(--bg)', borderRadius: 10, textDecoration: 'none', minWidth: 0 }}>
+            {w.linkImage
+              ? <img src={w.linkImage} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+              : <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🔗" size={16} /></div>}
+            <div style={{ minWidth: 0 }}>
+              <p style={{ fontSize: 12, color: '#4A8AE8', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.linkTitle || w.link}</p>
+              {w.linkDescription && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{w.linkDescription}</p>}
+            </div>
+          </a>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div style={{ paddingBottom: 32 }}>
+      <style>{`
+        @keyframes wishCardIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        .wish-tab-btn { transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.12s ease; }
+        .wish-tab-btn:active { transform: scale(0.95); }
+        .wish-action-btn { transition: background 0.2s ease, color 0.2s ease, transform 0.12s ease, opacity 0.2s ease; }
+        .wish-action-btn:active { transform: scale(0.94); }
+        .wish-card { transition: opacity 0.25s ease; }
+      `}</style>
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
       <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Gift Wishlist <Icon emoji="🎁" size={20} /></p>
       <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Những món đồ muốn mua — để bên kia biết mà tặng quà!</p>
 
       {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {[{ k: 'all', label: 'Tất cả', emoji: null as string | null }, { k: 'Alvin', label: "Alvin's list", emoji: '💙' }, { k: 'Paoi', label: "Paoi's list", emoji: '💗' }].map(f => (
-          <button key={f.k} onClick={() => setFilterUser(f.k as typeof filterUser)} style={{ padding: '6px 14px', borderRadius: 99, border: filterUser === f.k ? 'none' : '1.5px solid var(--border)', background: filterUser === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filterUser === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{f.label}{f.emoji && <Icon emoji={f.emoji} size={12} />}</button>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {[
+          { k: 'all', label: 'Tất cả', count: state.wishes.filter(w => !w.drawn).length },
+          { k: 'Alvin', label: "Alvin's list", count: state.wishes.filter(w => !w.drawn && w.from === 'Alvin').length },
+          { k: 'Paoi', label: "Paoi's list", count: state.wishes.filter(w => !w.drawn && w.from === 'Paoi').length },
+          { k: 'bought', label: 'Đã mua', count: state.wishes.filter(w => w.drawn).length },
+        ].map(f => (
+          <button key={f.k} className="wish-tab-btn" onClick={() => setFilter(f.k as typeof filter)} style={{ padding: '6px 14px', borderRadius: 99, border: filter === f.k ? 'none' : '1.5px solid var(--border)', background: filter === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {f.label}
+            <span style={{
+              minWidth: 17, height: 17, padding: '0 4px', borderRadius: 99, fontSize: 10, fontWeight: 800,
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              background: filter === f.k ? 'rgba(255,255,255,0.3)' : 'var(--sakura-light)',
+              color: filter === f.k ? 'white' : 'var(--sakura-deep)',
+            }}>{f.count}</span>
+          </button>
         ))}
       </div>
 
@@ -404,35 +603,9 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
         + Thêm món đồ vào wishlist <Icon emoji="🎁" size={14} />
       </button>
 
-      {/* List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {filtered.map(w => {
-          const isOwner = w.from === currentUser;
-          const isBought = w.drawn;
-          return (
-            <div key={w.id} className="card" style={{ padding: '14px 16px', opacity: isBought ? 0.6 : 1 }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 12, background: isBought ? 'var(--bg)' : (w.from === 'Paoi' ? '#FFE4EC' : '#E4ECFF'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon emoji={isBought ? '✅' : (w.from === 'Paoi' ? '💗' : '💙')} size={20} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: isBought ? 'line-through' : 'none', lineHeight: 1.3 }}>{w.wish}</p>
-                  <p style={{ fontSize: 11, color: 'var(--sakura-deep)', marginTop: 3, fontWeight: 600 }}>{w.from}'s wishlist · {w.date}</p>
-                  {w.price && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💰" size={12} /> {w.price}</p>}
-                  {w.link && <p style={{ fontSize: 11, color: '#4A8AE8', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}><Icon emoji="🔗" size={11} style={{ flexShrink: 0 }} /><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.link}</span></p>}
-                </div>
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  {!isOwner && !isBought && (
-                    <button onClick={() => drawWish(w.id)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Đã mua <Icon emoji="🎁" size={12} /></button>
-                  )}
-                  {isOwner && (
-                    <button onClick={() => removeWish(w.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', opacity: 0.35, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={14} /></button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+      {/* List — key={filter} remounts the whole batch on tab switch so it replays the entrance animation together */}
+      <div key={filter} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {filtered.map((w, i) => renderWishCard(w, i))}
         {filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
             <Icon emoji="🎁" size={36} style={{ display: 'block', marginBottom: 8 }} />
@@ -443,26 +616,97 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
 
       {/* Add modal */}
       {showAdd && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out' }}>
-          <div style={{ background: 'var(--white)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 430, animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Thêm vào wishlist <Icon emoji="🎁" size={18} /></p>
-              <button onClick={() => { setShowAdd(false); setWishText(''); setWishLink(''); setWishPrice(''); }} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeAdd}>
+          <div style={{ width: '100%', maxWidth: 380, maxHeight: '80vh', transform: 'translateY(-40px)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Thêm vào wishlist <Icon emoji="🎁" size={18} /></p>
+                <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 14 }}>Đang thêm cho <strong>{currentUser}</strong> — {other} sẽ thấy và có thể mua tặng!</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <input className="input-field" placeholder="Tên món đồ muốn mua..." value={wishText} onChange={e => setWishText(e.target.value)} />
+                <AmountInput placeholder="Giá tham khảo (VND, tùy chọn)" value={wishPrice} onChange={setWishPrice} />
+                <input className="input-field" placeholder="Link sản phẩm (tùy chọn)" value={wishLink} onChange={e => setWishLink(e.target.value)} />
+                {previewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Đang lấy thông tin từ link...</p>}
+                {!previewLoading && linkPreview && (linkPreview.image || linkPreview.title) && (
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
+                    {linkPreview.image
+                      ? <img src={linkPreview.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                      : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🔗" size={18} /></div>}
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 700, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{linkPreview.title || 'Đã lấy được ảnh sản phẩm'}</p>
+                      {linkPreview.description && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{linkPreview.description}</p>}
+                    </div>
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    if (wishText.trim()) {
+                      addWish({
+                        from: currentUser,
+                        wish: wishText.trim(),
+                        date: new Date().toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' }),
+                        ...(wishPrice ? { price: wishPrice } : {}),
+                        ...(wishLink ? { link: wishLink } : {}),
+                        ...(linkPreview?.image ? { linkImage: linkPreview.image } : {}),
+                        ...(linkPreview?.title ? { linkTitle: linkPreview.title } : {}),
+                        ...(linkPreview?.description ? { linkDescription: linkPreview.description } : {}),
+                      });
+                      closeAdd();
+                    }
+                  }}
+                  style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >Thêm vào wishlist <Icon emoji="🎁" size={15} /></button>
+              </div>
             </div>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 14 }}>Đang thêm cho <strong>{currentUser}</strong> — {other} sẽ thấy và có thể mua tặng!</p>
+          </div>
+        </div>
+      )}
+
+      {/* Edit modal */}
+      {editingWish && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditWish}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Sửa wishlist <Icon emoji="✏️" size={18} /></p>
+              <button onClick={closeEditWish} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input className="input-field" placeholder="Tên món đồ muốn mua..." value={wishText} onChange={e => setWishText(e.target.value)} />
-              <input className="input-field" placeholder="Giá tham khảo (tùy chọn)" value={wishPrice} onChange={e => setWishPrice(e.target.value)} />
-              <input className="input-field" placeholder="Link sản phẩm (tùy chọn)" value={wishLink} onChange={e => setWishLink(e.target.value)} />
+              <input className="input-field" placeholder="Tên món đồ muốn mua..." value={editText} onChange={e => setEditText(e.target.value)} />
+              <AmountInput placeholder="Giá tham khảo (VND, tùy chọn)" value={editPrice} onChange={setEditPrice} />
+              <input className="input-field" placeholder="Link sản phẩm (tùy chọn)" value={editLink} onChange={e => setEditLink(e.target.value)} />
+              {editPreviewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Đang lấy thông tin từ link...</p>}
+              {!editPreviewLoading && editLinkPreview && (editLinkPreview.image || editLinkPreview.title) && (
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
+                  {editLinkPreview.image
+                    ? <img src={editLinkPreview.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🔗" size={18} /></div>}
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 700, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{editLinkPreview.title || 'Đã lấy được ảnh sản phẩm'}</p>
+                    {editLinkPreview.description && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{editLinkPreview.description}</p>}
+                  </div>
+                </div>
+              )}
               <button
-                onClick={() => {
-                  if (wishText.trim()) {
-                    addWish({ from: currentUser, wish: wishText.trim(), date: new Date().toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }), ...(wishPrice ? { price: wishPrice } : {}), ...(wishLink ? { link: wishLink } : {}) });
-                    setWishText(''); setWishLink(''); setWishPrice(''); setShowAdd(false);
-                  }
-                }}
-                style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-              >Thêm vào wishlist <Icon emoji="🎁" size={15} /></button>
+                onClick={saveEditWish}
+                disabled={!editText.trim()}
+                style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editText.trim() ? 'pointer' : 'default', background: editText.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editText.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              >Lưu thay đổi <Icon emoji="✓" size={15} /></button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete wish */}
+      {confirmDeleteWish && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteWish(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa món này khỏi wishlist?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setConfirmDeleteWish(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
+              <button onClick={() => { removeWish(confirmDeleteWish); setConfirmDeleteWish(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
             </div>
           </div>
         </div>

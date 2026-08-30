@@ -73,6 +73,9 @@ export const initialState: AppState = {
 
   // Loaded from Supabase (see context.tsx's refreshDateIdeas) once the couple is linked.
   dateIdeas: [],
+  // Loaded from Supabase (see context.tsx's refreshDateIdeaPresets) once the couple is linked —
+  // seeded with the default catalog on that couple's first-ever fetch.
+  dateIdeaPresets: [],
   // Loaded from Supabase (see context.tsx's refreshDateIdeaHistory) once the couple is linked.
   dateIdeaHistory: [],
 

@@ -34,3 +34,15 @@ export async function createPlace(p: { name: string; flag?: string; image: strin
 export async function deletePlaceRow(id: string) {
   return supabase.from('places').delete().eq('id', id);
 }
+
+// Reuses the same `post-images` bucket/RLS as feed.ts's uploadPostImage —
+// its policy only checks the couple-id folder prefix, so a `places/`
+// subfolder is already covered without any new bucket or migration.
+export async function uploadPlaceImage(coupleId: string, file: File): Promise<string | null> {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `${coupleId}/places/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  if (error) return null;
+  const { data } = supabase.storage.from('post-images').getPublicUrl(path);
+  return data.publicUrl;
+}
