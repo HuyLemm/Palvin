@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import AmountInput from '../components/AmountInput';
 import { getDaysTogether, getDuration } from '../data';
-import { uploadPlaceImage } from '../places';
+import { uploadFavPlaceImage } from '../favourites';
 import FutureUs from './FutureUs';
 import Calendar from './Calendar';
 import TripPlanner from './TripPlanner';
@@ -13,24 +14,42 @@ import TimeCapsule from './TimeCapsule';
 import DateIdeaJar from './DateIdeaJar';
 import GratitudeJournal from './GratitudeJournal';
 import DatePermit from './DatePermit';
-import type { FavCategory, FavPlace, WishItem } from '../types';
+import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem } from '../types';
 
-type SubScreen = 'main' | 'story' | 'favorites' | 'places' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit';
+type SubScreen = 'main' | 'story' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit';
 
-const FAV_CATEGORY_CONFIG: { key: FavCategory; emoji: string; label: string; color: string; placeholder: string }[] = [
-  { key: 'food',   emoji: '🍜', label: 'Ăn uống',  color: '#E8844A', placeholder: 'Tên quán ăn...' },
-  { key: 'cafe',   emoji: '☕', label: 'Cafe',     color: '#C48A52', placeholder: 'Tên quán cafe...' },
-  { key: 'bida',   emoji: '🎱', label: 'Bida',     color: '#4A8AE8', placeholder: 'Tên sân bida...' },
-  { key: 'gaming', emoji: '🎮', label: 'Gaming',   color: '#8B6FD4', placeholder: 'Tên quán game / game...' },
-];
+// Remembers which sub-screen was showing when the user drilled into a
+// separate top-level screen (e.g. a memory's detail page) from within Us —
+// so coming back via that screen's own Back button (goBack/pop) restores
+// it, while a fresh tap on the Us tab in the bottom nav (navigate/push)
+// still resets to 'main'. Module-level so it survives Us unmounting.
+let lastUsSub: SubScreen = 'main';
+
+// Picker choices offered when creating/editing a favourites category —
+// categories themselves are user-defined and stored in fav_categories now,
+// not a fixed set, so these are just reasonable starting options.
+const CATEGORY_EMOJI_CHOICES = ['📍', '🍜', '☕', '🎱', '🎮', '🎬', '🎵', '✈️', '🏋️', '📚', '🛍️', '🎨', '🍕', '🍺'];
+const CATEGORY_COLOR_CHOICES = ['#C95F7C', '#E8844A', '#C48A52', '#4A8AE8', '#8B6FD4', '#5AC26A', '#DC2626', '#E85C97'];
 
 export default function Us() {
-  const { state, navigate, screen, selectedId, updateFavorite, currentUser, addToPlaylist, removeFromPlaylist, addWish, removeWish, addFavPlace, removeFavPlace } = useApp();
+  const { state, navigate, screen, selectedId, navSeq, lastNavWasPop, updateFavorite, currentUser, addToPlaylist, removeFromPlaylist, addWish, removeWish, addFavPlace, removeFavPlace, openCreate } = useApp();
   // A tapped date-request notification lands on the "Us" screen with a real
-  // dateRequests id attached (a plain tab click never carries one). Read it
-  // straight into the initial state so the first render already shows the
-  // permit sub-screen — no flash of the Us main menu first.
-  const [sub, setSub] = useState<SubScreen>(() => (screen === 'us' && selectedId) ? 'permit' : 'main');
+  // dateRequests id attached (a plain tab click never carries one) — go
+  // straight to 'permit'. Otherwise, if we're remounting because the user
+  // came back via a deeper screen's own Back button (a goBack/pop), restore
+  // whatever sub-screen they were on before drilling in. A fresh bottom-nav
+  // tap on the Us tab is always a push, so it falls through to 'main'.
+  const [sub, setSub] = useState<SubScreen>(() => {
+    if (screen === 'us' && selectedId) return 'permit';
+    if (screen === 'us' && lastNavWasPop) return lastUsSub;
+    return 'main';
+  });
+  // Captured once at mount. React 18 StrictMode double-invokes effects right
+  // after mount (mount → cleanup → mount again) without changing navSeq in
+  // between, so comparing against this snapshot — rather than a "first run"
+  // flag that gets consumed by the very first (synthetic) invocation — is
+  // what actually survives that double-invoke unscathed.
+  const mountNavSeq = useRef(navSeq);
   const relationshipStart = state.relationshipStart ? new Date(state.relationshipStart + 'T00:00:00') : null;
   const days = relationshipStart ? getDaysTogether(relationshipStart) : 0;
   const dur  = relationshipStart ? getDuration(relationshipStart) : { years: 0, months: 0, days: 0 };
@@ -41,21 +60,61 @@ export default function Us() {
     if (screen === 'us' && selectedId) setSub('permit');
   }, [screen, selectedId]);
 
+  // Re-tapping the Us tab while already sitting inside it doesn't remount
+  // this component (the screen value doesn't change), so this is the only
+  // way to catch it: navSeq bumps on every navigate() push, and resets us
+  // back to the main menu — but only once it's actually moved past the
+  // value captured at mount, so it doesn't undo the restore above.
+  useEffect(() => {
+    if (navSeq === mountNavSeq.current) return;
+    if (screen === 'us' && !selectedId) setSub('main');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navSeq]);
+
+  useEffect(() => { lastUsSub = sub; }, [sub]);
+
+  // Remembers how far the user had scrolled the main menu before drilling
+  // into a sub-screen, so coming back (via that screen's own Back button)
+  // lands them right back where they were instead of snapping to the top.
+  // Us itself stays mounted across this whole round trip (it's local `sub`
+  // state, not a `screen` change), so a plain ref survives it fine.
+  const mainScrollRef = useRef(0);
+  const goToSub = (key: SubScreen) => {
+    const el = document.querySelector('main');
+    if (el) mainScrollRef.current = el.scrollTop;
+    setSub(key);
+  };
+  useEffect(() => {
+    if (sub !== 'main') return;
+    const el = document.querySelector('main');
+    if (el) el.scrollTop = mainScrollRef.current;
+  }, [sub]);
+
   const Back = () => (
     <button onClick={() => setSub('main')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
   );
 
-  if (sub === 'wishjar')  return <GiftWishlistScreen onBack={() => setSub('main')} />;
-  if (sub === 'dateidea') return <DateIdeaJar onBack={() => setSub('main')} />;
-  if (sub === 'gratitude') return <GratitudeJournal onBack={() => setSub('main')} />;
-  if (sub === 'permit')   return <DatePermit onBack={() => setSub('main')} initialRequestId={selectedId ?? undefined} />;
+  // The whole sub-screen tree is keyed on `sub` and wrapped in the same
+  // .screen-transition fade used app-wide for top-level screen changes
+  // (see App.tsx) — Us's own internal navigation never touched that
+  // mechanism before since it's local state, not a `screen` change.
+  let content: ReactNode;
 
-  if (sub === 'story') {
+  if (sub === 'wishjar')  content = <GiftWishlistScreen onBack={() => setSub('main')} />;
+  else if (sub === 'dateidea') content = <DateIdeaJar onBack={() => setSub('main')} />;
+  else if (sub === 'gratitude') content = <GratitudeJournal onBack={() => setSub('main')} />;
+  else if (sub === 'permit')   content = <DatePermit onBack={() => setSub('main')} initialRequestId={selectedId ?? undefined} />;
+  else if (sub === 'story') {
     const timeline = [...state.memories].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    return (
+    content = (
       <div style={{ paddingBottom: 32 }}>
         <Back />
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 24 }}>Our Story</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)' }}>Our Story</p>
+          <button onClick={() => openCreate('memory')} style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 12, padding: '8px 14px', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            + Thêm kỷ niệm <Icon emoji="🌸" size={14} />
+          </button>
+        </div>
         {timeline.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 24px' }}>
             <Icon emoji="🌸" size={40} style={{ marginBottom: 12 }} />
@@ -64,16 +123,16 @@ export default function Us() {
           </div>
         ) : (
           <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 20, top: 0, bottom: 0, width: 2, background: 'var(--sakura-light)' }} />
+            <div style={{ position: 'absolute', left: 29, top: 0, bottom: 0, width: 3, background: 'var(--sakura-light)' }} />
             {timeline.map(m => (
-              <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ display: 'flex', gap: 16, marginBottom: 24, position: 'relative', cursor: 'pointer' }}>
-                <div style={{ width: 42, height: 42, borderRadius: '50%', overflow: 'hidden', border: '2px solid var(--sakura)', flexShrink: 0, zIndex: 1, background: 'var(--sakura-light)' }}>
+              <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ display: 'flex', gap: 18, marginBottom: 28, position: 'relative', cursor: 'pointer' }}>
+                <div style={{ width: 60, height: 60, borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--sakura)', flexShrink: 0, zIndex: 1, background: 'var(--sakura-light)' }}>
                   <img src={m.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
-                <div style={{ paddingTop: 8 }}>
-                  <p style={{ fontSize: 12, color: 'var(--sakura-accent)', fontWeight: 600, marginBottom: 2 }}>{m.date}</p>
-                  <p style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 600 }}>{m.title}</p>
-                  {m.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="📍" size={12} /> {m.location}</p>}
+                <div style={{ paddingTop: 10 }}>
+                  <p style={{ fontSize: 13, color: 'var(--sakura-accent)', fontWeight: 600, marginBottom: 3 }}>{m.date}</p>
+                  <p style={{ fontSize: 17, color: 'var(--ink)', fontWeight: 700 }}>{m.title}</p>
+                  {m.location && <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}><Icon emoji="📍" size={13} /> {m.location}</p>}
                 </div>
               </div>
             ))}
@@ -82,20 +141,17 @@ export default function Us() {
       </div>
     );
   }
-
-  if (sub === 'favorites') return <OurFavouritesScreen onBack={() => setSub('main')} />;
-
-  if (sub === 'places') return <OurPlacesScreen onBack={() => setSub('main')} />;
-
-  if (sub === 'future')   return <div style={{ paddingBottom: 0 }}><Back /><FutureUs /></div>;
-  if (sub === 'calendar') return <div style={{ paddingBottom: 0 }}><Back /><Calendar /></div>;
-  if (sub === 'trips')    return <div style={{ paddingBottom: 0 }}><Back /><TripPlanner /></div>;
-  if (sub === 'capsule')  return <div style={{ paddingBottom: 0 }}><Back /><TimeCapsule /></div>;
-  if (sub === 'playlist') return <PlaylistScreen onBack={() => setSub('main')} />;
-  if (sub === 'collage')  return <PhotoCollage onBack={() => setSub('main')} />;
+  else if (sub === 'favorites') content = <OurFavouritesScreen onBack={() => setSub('main')} />;
+  else if (sub === 'future')   content = <div style={{ paddingBottom: 0 }}><Back /><FutureUs /></div>;
+  else if (sub === 'calendar') content = <div style={{ paddingBottom: 0 }}><Back /><Calendar /></div>;
+  else if (sub === 'trips')    content = <div style={{ paddingBottom: 0 }}><Back /><TripPlanner /></div>;
+  else if (sub === 'capsule')  content = <div style={{ paddingBottom: 0 }}><Back /><TimeCapsule /></div>;
+  else if (sub === 'playlist') content = <PlaylistScreen onBack={() => setSub('main')} />;
+  else if (sub === 'collage')  content = <PhotoCollage onBack={() => setSub('main')} />;
+  else {
 
   // Main
-  return (
+  content = (
     <div style={{ paddingBottom: 32 }}>
       {/* Couple hero */}
       <div style={{ textAlign: 'center', padding: '24px 20px', background: 'linear-gradient(135deg, #FFF0F4, var(--bg))', borderRadius: 24, border: '1px solid var(--border)', marginBottom: 20 }}>
@@ -152,7 +208,6 @@ export default function Us() {
           { label: 'Our Story', emoji: '📖', key: 'story' as SubScreen, sub: 'Relationship timeline' },
           { label: 'Our Favourites', emoji: '💕', key: 'favorites' as SubScreen,
             sub: `${Object.values(state.favPlaces).flat().length} địa điểm yêu thích` },
-          { label: 'Our Places', emoji: '📍', key: 'places' as SubScreen, sub: `${state.places.length} places visited` },
           { label: 'Playlist của mình', emoji: '🎵', key: 'playlist' as SubScreen, sub: `${state.playlist.length} bài hát` },
           { label: 'Trip Planner', labelIcon: '✈️', emoji: '🗺️', key: 'trips' as SubScreen, sub: `${state.trips.length} chuyến đi` },
           { label: 'Time Capsule', labelIcon: '💌', emoji: '⏳', key: 'capsule' as SubScreen, sub: `${state.capsules.length} thư` },
@@ -160,7 +215,7 @@ export default function Us() {
           { label: 'Future Us', emoji: '✨', key: 'future' as SubScreen, sub: `${state.goals.filter(g => !g.completed).length} dreams to achieve` },
           { label: 'Our Calendar', emoji: '📅', key: 'calendar' as SubScreen, sub: `${state.events.length} events` },
         ] as { label: string; labelIcon?: string; emoji: string; key: SubScreen; sub: ReactNode }[]).map(item => (
-          <button key={item.key} onClick={() => setSub(item.key)} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, cursor: 'pointer', transition: 'background 0.15s', textAlign: 'left', width: '100%' }}
+          <button key={item.key} onClick={() => goToSub(item.key)} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, cursor: 'pointer', transition: 'background 0.15s', textAlign: 'left', width: '100%' }}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--white)'}
           >
@@ -175,153 +230,106 @@ export default function Us() {
       </div>
     </div>
   );
-}
+  }
 
-/* ─── Our Favourites (multi-category) ─────────────── */
-function OurPlacesScreen({ onBack }: { onBack: () => void }) {
-  const { state, addPlace, deletePlace, myProfile } = useApp();
-  const [showAdd, setShowAdd] = useState(false);
-  const [name, setName] = useState('');
-  const [flag, setFlag] = useState('');
-  const [previewUrl, setPreviewUrl] = useState('');
-  const [image, setImage] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const [addError, setAddError] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFile = (fileList: FileList | null) => {
-    const file = fileList?.[0];
-    if (!file || !myProfile?.coupleId) return;
-    setAddError('');
-    setPreviewUrl(URL.createObjectURL(file));
-    setImage('');
-    setUploading(true);
-    uploadPlaceImage(myProfile.coupleId, file).then(url => {
-      setUploading(false);
-      if (url) setImage(url);
-      else setAddError('Tải ảnh thất bại, thử lại nhé.');
-    });
-  };
-
-  const handleAdd = () => {
-    if (!name.trim()) return;
-    if (!image) { setAddError(uploading ? 'Đợi ảnh tải xong nhé.' : 'Chọn một ảnh trước đã.'); return; }
-    addPlace({ name: name.trim(), flag: flag.trim() || undefined, image });
-    setShowAdd(false);
-    setName(''); setFlag(''); setImage(''); setPreviewUrl(''); setAddError('');
-  };
-
-  return (
-    <div style={{ paddingBottom: 32 }}>
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
-      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 20 }}>Our Places</p>
-
-      <button onClick={() => setShowAdd(true)} style={{ width: '100%', padding: '13px', borderRadius: 14, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 14, cursor: 'pointer', marginBottom: 16 }}>
-        + Thêm địa điểm
-      </button>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {state.places.map(pl => {
-          const mems = state.memories.filter(m => pl.memoryIds.includes(m.id));
-          return (
-            <div key={pl.id} className="card" style={{ overflow: 'hidden', position: 'relative' }}>
-              <button onClick={() => deletePlace(pl.id)} style={{ position: 'absolute', top: 10, right: 10, zIndex: 1, width: 28, height: 28, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.4)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
-              <div style={{ height: 160, background: 'var(--sakura-light)', overflow: 'hidden' }}>
-                <img src={pl.image} alt={pl.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <div style={{ padding: '14px 16px' }}>
-                <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>{pl.flag ? `${pl.flag} ` : ''}{pl.name}</p>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{mems.length} memor{mems.length === 1 ? 'y' : 'ies'}</p>
-                {mems.length > 0 && (
-                  <div style={{ display: 'flex', gap: 6, marginTop: 10, overflowX: 'auto' }}>
-                    {mems.map(m => (
-                      <div key={m.id} style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: 'var(--sakura-light)' }}>
-                        <img src={m.image} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-        {state.places.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
-            <Icon emoji="📍" size={36} style={{ display: 'block', marginBottom: 8 }} />
-            Chưa có địa điểm nào.
-          </div>
-        )}
-      </div>
-
-      {showAdd && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out' }}>
-          <div style={{ background: 'var(--white)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 430, animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Thêm địa điểm <Icon emoji="📍" size={18} /></p>
-              <button onClick={() => setShowAdd(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              {previewUrl && (
-                <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2.5px solid var(--sakura-deep)' }}>
-                  <img src={previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: uploading ? 0.5 : 1 }} />
-                  {uploading && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-spin 0.7s linear infinite' }} />
-                    </div>
-                  )}
-                </div>
-              )}
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >{previewUrl ? '↻' : '+'}</button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={e => { handleFile(e.target.files); e.target.value = ''; }}
-                style={{ display: 'none' }}
-              />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input className="input-field" placeholder="Tên địa điểm (VD: Nhật Bản 🇯🇵)" value={name} onChange={e => setName(e.target.value)} />
-              <input className="input-field" placeholder="Cờ/emoji (tuỳ chọn)" value={flag} onChange={e => setFlag(e.target.value)} maxLength={4} />
-              {addError && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{addError}</p>}
-            </div>
-            <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
-            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button className="btn-ghost" onClick={() => setShowAdd(false)} style={{ flex: 1 }}>Huỷ</button>
-              <button className="btn-primary" onClick={handleAdd} disabled={uploading} style={{ flex: 2, opacity: uploading ? 0.6 : 1 }}>{uploading ? 'Đang tải ảnh...' : 'Thêm'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <div key={sub} className="screen-transition">{content}</div>;
 }
 
 function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
-  const { state, addFavPlace, removeFavPlace, updateFavorite } = useApp();
-  const [activeTab, setActiveTab] = useState<FavCategory>('food');
+  const { state, myProfile, addFavPlace, updateFavPlace, removeFavPlace, addFavCategory, updateFavCategory, removeFavCategory } = useApp();
+  const [activeTab, setActiveTab] = useState<FavCategory>('');
   const [showAdd, setShowAdd] = useState(false);
   const [inputName, setInputName] = useState('');
   const [inputNote, setInputNote] = useState('');
+  const [inputPreview, setInputPreview] = useState('');
+  const [inputImage, setInputImage] = useState('');
+  const [inputUploading, setInputUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Simple key-value favourites (song, movie kept)
-  const [editingSong, setEditingSong] = useState(false);
-  const [editingMovie, setEditingMovie] = useState(false);
-  const [songInput, setSongInput] = useState('');
-  const [movieInput, setMovieInput] = useState('');
+  const [editingPlace, setEditingPlace] = useState<FavPlace | null>(null);
+  const [editPlaceName, setEditPlaceName] = useState('');
+  const [editPlaceNote, setEditPlaceNote] = useState('');
+  const [editPlacePreview, setEditPlacePreview] = useState('');
+  const [editPlaceImage, setEditPlaceImage] = useState('');
+  const [editPlaceUploading, setEditPlaceUploading] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const [confirmDeletePlace, setConfirmDeletePlace] = useState<FavPlace | null>(null);
 
-  const cfg = FAV_CATEGORY_CONFIG.find(c => c.key === activeTab)!;
-  const list = state.favPlaces[activeTab];
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCatLabel, setNewCatLabel] = useState('');
+  const [newCatEmoji, setNewCatEmoji] = useState(CATEGORY_EMOJI_CHOICES[0]);
+  const [newCatColor, setNewCatColor] = useState(CATEGORY_COLOR_CHOICES[0]);
 
+  const [editingCategory, setEditingCategory] = useState<FavCategoryItem | null>(null);
+  const [editCatLabel, setEditCatLabel] = useState('');
+  const [editCatEmoji, setEditCatEmoji] = useState('');
+  const [editCatColor, setEditCatColor] = useState('');
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<FavCategoryItem | null>(null);
+
+  // Keep a valid tab selected as categories load in or get deleted out from
+  // under the current selection.
+  useEffect(() => {
+    if (state.favCategories.length === 0) { if (activeTab) setActiveTab(''); return; }
+    if (!state.favCategories.some(c => c.id === activeTab)) setActiveTab(state.favCategories[0].id);
+  }, [state.favCategories, activeTab]);
+
+  const cfg = state.favCategories.find(c => c.id === activeTab);
+  const list = cfg ? (state.favPlaces[activeTab] ?? []) : [];
+
+  const closeAdd = () => { setShowAdd(false); setInputName(''); setInputNote(''); setInputPreview(''); setInputImage(''); };
+  const handleAddFile = (fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (!file || !myProfile?.coupleId) return;
+    setInputPreview(URL.createObjectURL(file));
+    setInputImage('');
+    setInputUploading(true);
+    uploadFavPlaceImage(myProfile.coupleId, file).then(url => {
+      setInputUploading(false);
+      if (url) setInputImage(url);
+    });
+  };
   const handleAdd = () => {
-    if (!inputName.trim()) return;
-    addFavPlace(activeTab, { name: inputName.trim(), note: inputNote.trim() || undefined });
-    setInputName('');
-    setInputNote('');
-    setShowAdd(false);
+    if (!inputName.trim() || !cfg) return;
+    addFavPlace(activeTab, { name: inputName.trim(), note: inputNote.trim() || undefined, image: inputImage || undefined });
+    closeAdd();
+  };
+
+  const openEditPlace = (pl: FavPlace) => {
+    setEditingPlace(pl); setEditPlaceName(pl.name); setEditPlaceNote(pl.note ?? ''); setEditPlacePreview(pl.image ?? ''); setEditPlaceImage(pl.image ?? '');
+  };
+  const closeEditPlace = () => { setEditingPlace(null); setEditPlaceName(''); setEditPlaceNote(''); setEditPlacePreview(''); setEditPlaceImage(''); };
+  const handleEditFile = (fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (!file || !myProfile?.coupleId) return;
+    setEditPlacePreview(URL.createObjectURL(file));
+    setEditPlaceImage('');
+    setEditPlaceUploading(true);
+    uploadFavPlaceImage(myProfile.coupleId, file).then(url => {
+      setEditPlaceUploading(false);
+      if (url) setEditPlaceImage(url);
+    });
+  };
+  const handleSavePlace = () => {
+    if (!editingPlace || !editPlaceName.trim()) return;
+    updateFavPlace(activeTab, editingPlace.id, { name: editPlaceName.trim(), note: editPlaceNote.trim() || undefined, image: editPlaceImage || undefined });
+    closeEditPlace();
+  };
+
+  const closeAddCategory = () => { setShowAddCategory(false); setNewCatLabel(''); setNewCatEmoji(CATEGORY_EMOJI_CHOICES[0]); setNewCatColor(CATEGORY_COLOR_CHOICES[0]); };
+  const handleAddCategory = () => {
+    if (!newCatLabel.trim()) return;
+    addFavCategory({ label: newCatLabel.trim(), emoji: newCatEmoji, color: newCatColor });
+    closeAddCategory();
+  };
+
+  const openEditCategory = (cat: FavCategoryItem) => {
+    setEditingCategory(cat); setEditCatLabel(cat.label); setEditCatEmoji(cat.emoji); setEditCatColor(cat.color);
+  };
+  const closeEditCategory = () => setEditingCategory(null);
+  const handleSaveCategory = () => {
+    if (!editingCategory || !editCatLabel.trim()) return;
+    updateFavCategory(editingCategory.id, { label: editCatLabel.trim(), emoji: editCatEmoji, color: editCatColor });
+    closeEditCategory();
   };
 
   return (
@@ -330,73 +338,223 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
       <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Our Favourites <Icon emoji="💕" size={20} /></p>
       <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 18 }}>Những nơi yêu thích của hai đứa mình.</p>
 
-      {/* Simple favourites: Song + Movie */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-        {[
-          { key: 'song', emoji: '🎵', label: 'Our Song', editing: editingSong, val: state.favorites.song, onEdit: () => { setSongInput(state.favorites.song); setEditingSong(true); }, onSave: () => { updateFavorite('song', songInput); setEditingSong(false); }, input: songInput, setInput: setSongInput },
-          { key: 'movie', emoji: '🎬', label: 'Fav Movie', editing: editingMovie, val: state.favorites.movie, onEdit: () => { setMovieInput(state.favorites.movie); setEditingMovie(true); }, onSave: () => { updateFavorite('movie', movieInput); setEditingMovie(false); }, input: movieInput, setInput: setMovieInput },
-        ].map(f => (
-          <div key={f.key} className="card" style={{ padding: '12px 14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Icon emoji={f.emoji} size={18} />
-              <button onClick={f.editing ? f.onSave : f.onEdit} style={{ fontSize: 11, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: 'none', borderRadius: 8, padding: '3px 8px', cursor: 'pointer', fontWeight: 600 }}>
-                {f.editing ? 'Save' : 'Edit'}
-              </button>
-            </div>
-            <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 500, marginBottom: 4 }}>{f.label}</p>
-            {f.editing
-              ? <input className="input-field" value={f.input} onChange={e => f.setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && f.onSave()} autoFocus style={{ padding: '5px 8px', fontSize: 12 }} />
-              : <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3 }}>{f.val || '—'}</p>
-            }
-          </div>
-        ))}
-      </div>
-
       {/* Category tabs */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto', paddingBottom: 2 }}>
-        {FAV_CATEGORY_CONFIG.map(cat => (
-          <button key={cat.key} onClick={() => { setActiveTab(cat.key); setShowAdd(false); }} style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 99, border: 'none', background: activeTab === cat.key ? cat.color : 'var(--white)', color: activeTab === cat.key ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: activeTab === cat.key ? `0 4px 12px ${cat.color}40` : '0 1px 4px rgba(0,0,0,0.06)', transition: 'all 0.2s' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+        {state.favCategories.map(cat => (
+          <button key={cat.id} onClick={() => { setActiveTab(cat.id); setShowAdd(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 99, border: 'none', background: activeTab === cat.id ? cat.color : 'var(--white)', color: activeTab === cat.id ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: activeTab === cat.id ? `0 4px 12px ${cat.color}40` : '0 1px 4px rgba(0,0,0,0.06)', transition: 'all 0.2s' }}>
             <Icon emoji={cat.emoji} size={14} />
             <span>{cat.label}</span>
           </button>
         ))}
+        <button onClick={() => setShowAddCategory(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 99, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+          + Mới
+        </button>
       </div>
 
+      {cfg && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, marginBottom: 16 }}>
+          <button onClick={() => openEditCategory(cfg)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}><Icon emoji="✏️" size={12} /> Sửa danh mục</button>
+          <button onClick={() => setConfirmDeleteCategory(cfg)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8524A', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}><Icon emoji="🗑️" size={12} /> Xóa danh mục</button>
+        </div>
+      )}
+
       {/* Place list */}
-      <div key={activeTab} className="screen-transition" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+      <div key={activeTab} className="screen-transition" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
         {list.map((pl, i) => (
-          <div key={pl.id} className="card" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cfg.color}15`, border: `1.5px solid ${cfg.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ fontSize: 16, fontFamily: "'DM Serif Display', serif", color: cfg.color, fontWeight: 700 }}>{i + 1}</span>
-            </div>
+          <div key={pl.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            {pl.image
+              ? <img src={pl.image} alt="" style={{ width: 68, height: 68, borderRadius: 14, objectFit: 'cover', flexShrink: 0 }} />
+              : (
+                <div style={{ width: 68, height: 68, borderRadius: 14, background: `${cfg?.color}15`, border: `1.5px solid ${cfg?.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 24, fontFamily: "'DM Serif Display', serif", color: cfg?.color, fontWeight: 700 }}>{i + 1}</span>
+                </div>
+              )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}</p>
-              {pl.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{pl.note}</p>}
+              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}</p>
+              {pl.note && <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 3 }}>{pl.note}</p>}
             </div>
-            <button onClick={() => removeFavPlace(activeTab, pl.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', opacity: 0.35, padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={14} /></button>
+            <button onClick={() => openEditPlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+            <button onClick={() => setConfirmDeletePlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
           </div>
         ))}
-        {list.length === 0 && (
+        {cfg && list.length === 0 && (
           <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
             <Icon emoji={cfg.emoji} size={36} style={{ display: 'block', marginBottom: 8 }} />
             Chưa có địa điểm nào. Thêm vào nhé!
           </div>
         )}
+        {!cfg && (
+          <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
+            <Icon emoji="💕" size={36} style={{ display: 'block', marginBottom: 8 }} />
+            Chưa có danh mục nào. Bấm "+ Mới" để tạo!
+          </div>
+        )}
       </div>
 
-      {/* Add button */}
-      {!showAdd ? (
+      {/* Add place button */}
+      {cfg && (
         <button onClick={() => setShowAdd(true)} style={{ width: '100%', padding: '13px', borderRadius: 14, border: `1.5px dashed ${cfg.color}`, background: `${cfg.color}08`, color: cfg.color, fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
           + Thêm <Icon emoji={cfg.emoji} size={14} /> {cfg.label}
         </button>
-      ) : (
-        <div className="card" style={{ padding: '16px' }}>
-          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>Thêm <Icon emoji={cfg.emoji} size={14} /> {cfg.label} mới</p>
-          <input className="input-field" placeholder={cfg.placeholder} value={inputName} onChange={e => setInputName(e.target.value)} style={{ marginBottom: 8 }} />
-          <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={inputNote} onChange={e => setInputNote(e.target.value)} style={{ marginBottom: 12 }} />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => { setShowAdd(false); setInputName(''); setInputNote(''); }} style={{ flex: 1, padding: '11px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink-2)', fontWeight: 600, cursor: 'pointer' }}>Hủy</button>
-            <button onClick={handleAdd} style={{ flex: 2, padding: '11px', borderRadius: 12, border: 'none', background: cfg.color, color: 'white', fontWeight: 700, cursor: 'pointer' }}>Thêm</button>
+      )}
+
+      {/* Add place modal */}
+      {showAdd && cfg && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeAdd}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Thêm <Icon emoji={cfg.emoji} size={18} /> {cfg.label} mới</p>
+              <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input className="input-field" placeholder="Tên địa điểm..." value={inputName} onChange={e => setInputName(e.target.value)} autoFocus />
+              <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={inputNote} onChange={e => setInputNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} />
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Ảnh (tùy chọn)</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {inputPreview && (
+                    <div style={{ position: 'relative', width: 64, height: 64, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: `2px solid ${cfg.color}` }}>
+                      <img src={inputPreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: inputUploading ? 0.5 : 1 }} />
+                      {inputUploading && (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-spin 0.7s linear infinite' }} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <button onClick={() => fileInputRef.current?.click()} style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 12, border: `2px dashed ${cfg.color}`, background: `${cfg.color}08`, color: cfg.color, fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{inputPreview ? '↻' : '+'}</button>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={e => { handleAddFile(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
+                </div>
+                <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+              <button onClick={handleAdd} disabled={!inputName.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: inputName.trim() ? 'pointer' : 'default', background: inputName.trim() ? cfg.color : 'var(--border)', color: inputName.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Thêm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit place modal */}
+      {editingPlace && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditPlace}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Sửa địa điểm <Icon emoji="✏️" size={18} /></p>
+              <button onClick={closeEditPlace} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input className="input-field" placeholder="Tên địa điểm..." value={editPlaceName} onChange={e => setEditPlaceName(e.target.value)} autoFocus />
+              <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={editPlaceNote} onChange={e => setEditPlaceNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSavePlace()} />
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Ảnh (tùy chọn)</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {editPlacePreview && (
+                    <div style={{ position: 'relative', width: 64, height: 64, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2px solid var(--sakura-deep)' }}>
+                      <img src={editPlacePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: editPlaceUploading ? 0.5 : 1 }} />
+                      {editPlaceUploading && (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-spin 0.7s linear infinite' }} />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <button onClick={() => editFileInputRef.current?.click()} style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{editPlacePreview ? '↻' : '+'}</button>
+                  <input ref={editFileInputRef} type="file" accept="image/*" onChange={e => { handleEditFile(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
+                </div>
+              </div>
+              <button onClick={handleSavePlace} disabled={!editPlaceName.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editPlaceName.trim() ? 'pointer' : 'default', background: editPlaceName.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editPlaceName.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Lưu thay đổi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete place */}
+      {confirmDeletePlace && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeletePlace(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa "{confirmDeletePlace.name}"?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setConfirmDeletePlace(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
+              <button onClick={() => { removeFavPlace(activeTab, confirmDeletePlace.id); setConfirmDeletePlace(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add category modal */}
+      {showAddCategory && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeAddCategory}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)' }}>Danh mục mới</p>
+              <button onClick={closeAddCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input className="input-field" placeholder="Tên danh mục (VD: Sách, Du lịch...)" value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} autoFocus />
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {CATEGORY_EMOJI_CHOICES.map(e => (
+                    <button key={e} onClick={() => setNewCatEmoji(e)} style={{ width: 36, height: 36, border: newCatEmoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: newCatEmoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={16} /></button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Màu</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {CATEGORY_COLOR_CHOICES.map(c => (
+                    <button key={c} onClick={() => setNewCatColor(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: newCatColor === c ? '3px solid var(--ink)' : '3px solid transparent', cursor: 'pointer' }} />
+                  ))}
+                </div>
+              </div>
+              <button onClick={handleAddCategory} disabled={!newCatLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: newCatLabel.trim() ? 'pointer' : 'default', background: newCatLabel.trim() ? newCatColor : 'var(--border)', color: newCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Tạo danh mục</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit category modal */}
+      {editingCategory && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditCategory}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)' }}>Sửa danh mục</p>
+              <button onClick={closeEditCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input className="input-field" value={editCatLabel} onChange={e => setEditCatLabel(e.target.value)} autoFocus />
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {CATEGORY_EMOJI_CHOICES.map(e => (
+                    <button key={e} onClick={() => setEditCatEmoji(e)} style={{ width: 36, height: 36, border: editCatEmoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: editCatEmoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={16} /></button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Màu</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {CATEGORY_COLOR_CHOICES.map(c => (
+                    <button key={c} onClick={() => setEditCatColor(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: editCatColor === c ? '3px solid var(--ink)' : '3px solid transparent', cursor: 'pointer' }} />
+                  ))}
+                </div>
+              </div>
+              <button onClick={handleSaveCategory} disabled={!editCatLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editCatLabel.trim() ? 'pointer' : 'default', background: editCatLabel.trim() ? editCatColor : 'var(--border)', color: editCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Lưu thay đổi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete category */}
+      {confirmDeleteCategory && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteCategory(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa danh mục "{confirmDeleteCategory.label}"?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Toàn bộ địa điểm trong danh mục này ({(state.favPlaces[confirmDeleteCategory.id] ?? []).length}) sẽ bị xóa theo. Không thể hoàn tác.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setConfirmDeleteCategory(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
+              <button onClick={() => { removeFavCategory(confirmDeleteCategory.id); setConfirmDeleteCategory(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+            </div>
           </div>
         </div>
       )}
@@ -716,55 +874,321 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
 }
 
 /* ─── Playlist screen ─────────────────────────────── */
+interface SongResult { title: string; artist: string; image: string; durationSeconds?: number; releaseDate?: string; previewUrl?: string; }
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function formatReleaseDate(isoDate: string): string {
+  const d = new Date(isoDate);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' });
+}
+
+// iTunes Search — free, no key, CORS-enabled from the browser (same reasoning
+// as Microlink for link previews: no backend of our own to proxy this
+// through). Returns real title/artist/cover art for whatever the user types.
+//
+// entity=song pins results to actual tracks — without it, media=music can
+// rank artist/album entries above songs, which have no trackName and get
+// filtered out below, silently leaving zero results.
+function itunesSearchUrl(query: string): string {
+  return `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=6`;
+}
+
+// Some networks block itunes.apple.com directly (seen with certain ISPs/wifi
+// in Vietnam) — these are tried in order until one works. First choice is
+// our own Supabase Edge Function (backend/supabase/functions/song-search),
+// which calls iTunes from Supabase's servers so it's unaffected by whatever
+// the user's own network blocks — reliable as long as it's deployed. The
+// direct call and two free public CORS proxies are kept as fallbacks in
+// case the function isn't deployed yet or Supabase itself is unreachable;
+// free proxies are themselves flaky (both tried while building this were
+// down at some point), so they're last-resort, not primary.
+function songSearchAttemptUrls(query: string): string[] {
+  const target = itunesSearchUrl(query);
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const urls: string[] = [];
+  if (supabaseUrl) urls.push(`${supabaseUrl}/functions/v1/song-search?term=${encodeURIComponent(query)}`);
+  urls.push(target);
+  urls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`);
+  urls.push(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(target)}`);
+  return urls;
+}
+
+// A free proxy that's down doesn't necessarily fail fast — it can hang the
+// connection with no response at all, and fetch() has no built-in timeout,
+// so without this an unresponsive proxy would stall the whole fallback
+// chain indefinitely instead of moving on to the next candidate.
+async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function searchSongs(query: string): Promise<SongResult[]> {
+  let lastError: unknown;
+  for (const url of songSearchAttemptUrls(query)) {
+    try {
+      const res = await fetchWithTimeout(url, 6000);
+      if (!res.ok) throw new Error(`search failed: ${res.status}`);
+      const json = await res.json();
+      return (json.results ?? []).map((r: { trackName?: string; artistName?: string; artworkUrl100?: string; trackTimeMillis?: number; releaseDate?: string; previewUrl?: string }) => ({
+        title: r.trackName ?? '',
+        artist: r.artistName ?? '',
+        image: r.artworkUrl100 ? r.artworkUrl100.replace('100x100', '300x300') : '',
+        durationSeconds: r.trackTimeMillis ? Math.round(r.trackTimeMillis / 1000) : undefined,
+        releaseDate: r.releaseDate,
+        previewUrl: r.previewUrl,
+      })).filter((r: SongResult) => r.title);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw lastError;
+}
+
+// Shared by the Add and Edit modals — a title field with an explicit search
+// button (only fires on click/Enter, never as-you-type) plus a results
+// dropdown and a small "cover art found" preview once something is picked.
+function SongSearchField({ title, onTitleChange, artist, image, durationSeconds, releaseDate, onPick }: {
+  title: string;
+  onTitleChange: (v: string) => void;
+  artist: string;
+  image: string;
+  durationSeconds?: number;
+  releaseDate?: string;
+  onPick: (r: SongResult) => void;
+}) {
+  const [results, setResults] = useState<SongResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState(false);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const [dropdownRect, setDropdownRect] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const runSearch = async () => {
+    const q = title.trim();
+    if (q.length < 2) return;
+    const el = anchorRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setDropdownRect({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    setShowResults(true);
+    setSearching(true);
+    setHasSearched(false);
+    setSearchError(false);
+    try {
+      setResults(await searchSongs(q));
+    } catch {
+      setResults([]);
+      setSearchError(true);
+    }
+    setSearching(false);
+    setHasSearched(true);
+  };
+
+  return (
+    <div>
+      <div style={{ position: 'relative' }}>
+        <div ref={anchorRef} style={{ display: 'flex', gap: 8 }}>
+          <input
+            className="input-field"
+            placeholder="Tên bài hát"
+            value={title}
+            onChange={e => { onTitleChange(e.target.value); setShowResults(false); setHasSearched(false); setSearchError(false); }}
+            onKeyDown={e => e.key === 'Enter' && runSearch()}
+            style={{ flex: 1 }}
+          />
+          <button onClick={runSearch} style={{ width: 44, flexShrink: 0, borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🔍" size={16} /></button>
+        </div>
+        {/* Portaled to <body> with fixed positioning — the Add/Edit modal
+            scrolls its own content (overflowY: auto), which clips any
+            absolutely-positioned child that overflows it, so a dropdown
+            nested inside would be cut off instead of floating over
+            everything. React still bubbles its click events through the
+            normal component tree despite the DOM move, so the modal's
+            own stopPropagation keeps working. */}
+        {showResults && dropdownRect && (searching || results.length > 0 || hasSearched) && createPortal(
+          <div style={{ position: 'fixed', top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width, background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', zIndex: 500, maxHeight: 400, overflowY: 'auto' }}>
+            {searching && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>Đang tìm...</p>}
+            {!searching && hasSearched && searchError && <p style={{ fontSize: 12, color: '#E8524A', padding: '10px 12px' }}>Không kết nối được tới dịch vụ tìm bài hát — kiểm tra mạng/wifi rồi thử lại.</p>}
+            {!searching && hasSearched && !searchError && results.length === 0 && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>Không tìm thấy bài hát nào, thử tên khác nhé.</p>}
+            {!searching && results.map((r, i) => (
+              <button key={i} onClick={() => { onPick(r); setShowResults(false); setResults([]); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 12px', background: 'none', border: 'none', borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', textAlign: 'left' }}>
+                {r.image
+                  ? <img src={r.image} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                  : <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🎵" size={16} /></div>}
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</p>
+                  <p style={{ fontSize: 11, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {r.artist}{r.releaseDate && ` · ${formatReleaseDate(r.releaseDate)}`}
+                  </p>
+                </div>
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+      </div>
+      {image && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10, background: 'var(--bg)', borderRadius: 12, marginTop: 10 }}>
+          <img src={image} alt="" style={{ width: 52, height: 52, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{artist}</p>
+            {(durationSeconds != null || releaseDate) && (
+              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1 }}>
+                {durationSeconds != null && formatDuration(durationSeconds)}
+                {durationSeconds != null && releaseDate && ' · '}
+                {releaseDate && formatReleaseDate(releaseDate)}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PlaylistScreen({ onBack }: { onBack: () => void }) {
-  const { state, currentUser, addToPlaylist, removeFromPlaylist } = useApp();
+  const { state, currentUser, addToPlaylist, updatePlaylist, removeFromPlaylist } = useApp();
+  const [filter, setFilter] = useState<'all' | 'Alvin' | 'Paoi'>('all');
   const [showAdd, setShowAdd] = useState(false);
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
   const [note, setNote] = useState('');
-  const [emoji, setEmoji] = useState('🎵');
-  const EMOJIS = ['🎵', '🎶', '🎸', '🎹', '🎤', '🎼', '💿', '🎧', '✨', '💕'];
+  const [image, setImage] = useState('');
+  const [duration, setDuration] = useState<number | undefined>(undefined);
+  const [releaseDate, setReleaseDate] = useState<string | undefined>(undefined);
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
+
+  const [editingSong, setEditingSong] = useState<PlaylistItem | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editArtist, setEditArtist] = useState('');
+  const [editNote, setEditNote] = useState('');
+  const [editImage, setEditImage] = useState('');
+  const [editDuration, setEditDuration] = useState<number | undefined>(undefined);
+  const [editReleaseDate, setEditReleaseDate] = useState<string | undefined>(undefined);
+  const [editPreviewUrl, setEditPreviewUrl] = useState<string | undefined>(undefined);
+  const [confirmDeleteSong, setConfirmDeleteSong] = useState<PlaylistItem | null>(null);
+
+  const filtered = filter === 'all' ? state.playlist : state.playlist.filter(p => p.addedBy === filter);
+
+  const closeAdd = () => { setShowAdd(false); setTitle(''); setArtist(''); setNote(''); setImage(''); setDuration(undefined); setReleaseDate(undefined); setPreviewUrl(undefined); };
+  const pickAddResult = (r: SongResult) => { setTitle(r.title); setArtist(r.artist); setImage(r.image); setDuration(r.durationSeconds); setReleaseDate(r.releaseDate); setPreviewUrl(r.previewUrl); };
+  const handleAdd = () => {
+    if (!title.trim()) return;
+    addToPlaylist({ title: title.trim(), artist: artist || title.trim(), emoji: '🎵', image: image || undefined, durationSeconds: duration, releaseDate, previewUrl, note, addedBy: currentUser });
+    closeAdd();
+  };
+
+  const openEditSong = (p: PlaylistItem) => {
+    setEditingSong(p); setEditTitle(p.title); setEditArtist(p.artist); setEditNote(p.note); setEditImage(p.image ?? ''); setEditDuration(p.durationSeconds); setEditReleaseDate(p.releaseDate); setEditPreviewUrl(p.previewUrl);
+  };
+  const closeEditSong = () => setEditingSong(null);
+  const pickEditResult = (r: SongResult) => { setEditTitle(r.title); setEditArtist(r.artist); setEditImage(r.image); setEditDuration(r.durationSeconds); setEditReleaseDate(r.releaseDate); setEditPreviewUrl(r.previewUrl); };
+  const handleSaveSong = () => {
+    if (!editingSong || !editTitle.trim()) return;
+    updatePlaylist(editingSong.id, { title: editTitle.trim(), artist: editArtist || editTitle.trim(), emoji: editingSong.emoji, image: editImage || undefined, durationSeconds: editDuration, releaseDate: editReleaseDate, previewUrl: editPreviewUrl, note: editNote });
+    closeEditSong();
+  };
 
   return (
     <div style={{ paddingBottom: 32 }}>
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Playlist của mình <Icon emoji="🎵" size={20} /></p>
         <button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 12, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Thêm</button>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {state.playlist.map((p, i) => (
-          <div key={p.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, background: 'var(--sakura-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={p.emoji} size={22} /></div>
+
+      {/* Filter tabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {[
+          { k: 'all', label: 'Tất cả', emoji: null as string | null },
+          { k: 'Alvin', label: 'Alvin thêm', emoji: '💙' },
+          { k: 'Paoi', label: 'Paoi thêm', emoji: '💗' },
+        ].map(f => (
+          <button key={f.k} onClick={() => setFilter(f.k as typeof filter)} style={{ padding: '6px 14px', borderRadius: 99, border: filter === f.k ? 'none' : '1.5px solid var(--border)', background: filter === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{f.label}{f.emoji && <Icon emoji={f.emoji} size={12} />}</button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {filtered.map((p, i) => (
+          <div key={p.id} className="card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            {p.image
+              ? <img src={p.image} alt="" style={{ width: 60, height: 60, borderRadius: 14, objectFit: 'cover', flexShrink: 0 }} />
+              : <div style={{ width: 60, height: 60, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={p.emoji} size={26} /></div>}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
-              <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{p.artist}</p>
-              {p.note && <p style={{ fontSize: 11, color: 'var(--sakura-accent)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
+              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
+              {p.releaseDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Phát hành {formatReleaseDate(p.releaseDate)}</p>}
+              {p.note && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
             </div>
-            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-              <p style={{ fontSize: 10, color: 'var(--ink-2)', marginBottom: 4 }}>by {p.addedBy}</p>
-              <button onClick={() => removeFromPlaylist(p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', opacity: 0.4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+              <p style={{ fontSize: 10, color: 'var(--ink-2)' }}>by {p.addedBy}</p>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => openEditSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+                <button onClick={() => setConfirmDeleteSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
+              </div>
             </div>
           </div>
         ))}
-        {state.playlist.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>Chưa có bài hát nào. Thêm bài hát đầu tiên!</div>}
+        {filtered.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>Chưa có bài hát nào. Thêm bài hát đầu tiên!</div>}
       </div>
 
+      {/* Add modal */}
       {showAdd && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out' }}>
-          <div style={{ background: 'var(--white)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 430, animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeAdd}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)' }}>Thêm bài hát</p>
-              <button onClick={() => setShowAdd(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-              {EMOJIS.map(e => <button key={e} onClick={() => setEmoji(e)} style={{ width: 36, height: 36, border: emoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: emoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={18} /></button>)}
+              <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input className="input-field" placeholder="Tên bài hát" value={title} onChange={e => setTitle(e.target.value)} />
-              <input className="input-field" placeholder="Nghệ sĩ" value={artist} onChange={e => setArtist(e.target.value)} />
-              <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={note} onChange={e => setNote(e.target.value)} />
-              <button onClick={() => { if (title && artist) { addToPlaylist({ title, artist, emoji, note, addedBy: currentUser }); setShowAdd(false); setTitle(''); setArtist(''); setNote(''); } }} style={{ padding: '12px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Thêm vào playlist</button>
+              <SongSearchField title={title} onTitleChange={setTitle} artist={artist} image={image} durationSeconds={duration} releaseDate={releaseDate} onPick={pickAddResult} />
+              <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={note} onChange={e => setNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} />
+              <button onClick={handleAdd} disabled={!title.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: title.trim() ? 'pointer' : 'default', background: title.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: title.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Thêm vào playlist</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit modal */}
+      {editingSong && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditSong}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Sửa bài hát <Icon emoji="✏️" size={18} /></p>
+              <button onClick={closeEditSong} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <SongSearchField title={editTitle} onTitleChange={setEditTitle} artist={editArtist} image={editImage} durationSeconds={editDuration} releaseDate={editReleaseDate} onPick={pickEditResult} />
+              <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={editNote} onChange={e => setEditNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSaveSong()} />
+              <button onClick={handleSaveSong} disabled={!editTitle.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editTitle.trim() ? 'pointer' : 'default', background: editTitle.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editTitle.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Lưu thay đổi</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete song */}
+      {confirmDeleteSong && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteSong(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa "{confirmDeleteSong.title}"?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setConfirmDeleteSong(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
+              <button onClick={() => { removeFromPlaylist(confirmDeleteSong.id); setConfirmDeleteSong(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
             </div>
           </div>
         </div>

@@ -169,6 +169,10 @@ export interface PlaylistItem {
   title: string;
   artist: string;
   emoji: string;
+  image?: string;
+  durationSeconds?: number;
+  releaseDate?: string;
+  previewUrl?: string;
   note: string;
   addedBy: User;
 }
@@ -231,9 +235,20 @@ export interface FavPlace {
   id: string;
   name: string;
   note?: string;
+  image?: string;
 }
 
-export type FavCategory = 'food' | 'cafe' | 'bida' | 'gaming';
+// A category id (fav_categories.id) — user-defined and editable, not a
+// fixed set. Kept as a named alias since it's threaded through a lot of
+// signatures (addFavPlace, removeFavPlace, ...).
+export type FavCategory = string;
+
+export interface FavCategoryItem {
+  id: string;
+  label: string;
+  emoji: string;
+  color: string;
+}
 
 export interface Reaction {
   emoji: string;
@@ -281,7 +296,8 @@ export interface AppState {
   dateRequests: DateRequest[];
   postReactions: { [postId: string]: { [emoji: string]: { count: number; reacted: boolean } } };
   darkMode: boolean;
-  favPlaces: { food: FavPlace[]; cafe: FavPlace[]; bida: FavPlace[]; gaming: FavPlace[] };
+  favPlaces: Record<string, FavPlace[]>;
+  favCategories: FavCategoryItem[];
   relationshipStart: string | null;
   streak: number;
 }

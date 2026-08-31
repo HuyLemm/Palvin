@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import { getDaysTogether, getDuration } from '../data';
-import type { FavCategory } from '../types';
+import type { FavCategory, FavPlace } from '../types';
 
 const MOODS_LIST = [
   { emoji: '🥰', label: 'Feeling loved' },
@@ -33,13 +33,6 @@ const THINKING_MESSAGES = [
   '💙 Nghĩ đến em cả ngày~',
 ];
 
-const CATEGORY_CONFIG: { key: FavCategory; emoji: string; question: string; color: string }[] = [
-  { key: 'food',   emoji: '🍜', question: 'Hôm nay ăn gì?',            color: '#E8844A' },
-  { key: 'cafe',   emoji: '☕', question: 'Hôm nay đi cafe ở đâu?',   color: '#C48A52' },
-  { key: 'bida',   emoji: '🎱', question: 'Hôm nay đánh bida ở đâu?', color: '#4A8AE8' },
-  { key: 'gaming', emoji: '🎮', question: 'Hôm nay chơi game gì?',     color: '#8B6FD4' },
-];
-
 function daysUntil(dateStr: string) {
   const diff = new Date(dateStr).getTime() - new Date().setHours(0, 0, 0, 0);
   return Math.ceil(diff / 86400000);
@@ -54,14 +47,19 @@ export default function Home() {
   const relationshipStart = state.relationshipStart ? new Date(state.relationshipStart + 'T00:00:00') : null;
   const [days, setDays] = useState(relationshipStart ? getDaysTogether(relationshipStart) : 0);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
-  const [picks, setPicks] = useState<Partial<Record<FavCategory, string>>>({});
+  const [picks, setPicks] = useState<Partial<Record<FavCategory, FavPlace>>>({});
   const [pickAnim, setPickAnim] = useState<Partial<Record<FavCategory, boolean>>>({});
+  const [selectedFavCat, setSelectedFavCat] = useState<FavCategory>('');
   const [showAddCountdown, setShowAddCountdown] = useState(false);
   const streak = state.streak;
   const [hugAnim, setHugAnim] = useState(false);
   const [thinkAnim, setThinkAnim] = useState(false);
   const [vinylIdx, setVinylIdx] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playlistFilter, setPlaylistFilter] = useState<'all' | 'Alvin' | 'Paoi'>('all');
+  const audioRef = useRef<HTMLAudioElement>(null);
   const dur = relationshipStart ? getDuration(relationshipStart) : { years: 0, months: 0, days: 0 };
+  const playlistPool = playlistFilter === 'all' ? state.playlist : state.playlist.filter(p => p.addedBy === playlistFilter);
 
   useEffect(() => {
     if (!relationshipStart) { setDays(0); return; }
@@ -71,12 +69,61 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.relationshipStart]);
 
-  // Cycle through playlist songs for the vinyl widget
+  // Cycle through playlist songs for the vinyl widget — paused while a
+  // preview is actively playing, and once the user has manually picked a
+  // song via Next (otherwise the auto-tick fires a few seconds later and,
+  // with a short pool, silently swaps away from the song they just chose —
+  // reads as "pressing Next snaps back to the previous song").
+  const [manualNav, setManualNav] = useState(false);
   useEffect(() => {
-    if (state.playlist.length < 2) return;
-    const t = setInterval(() => setVinylIdx(i => (i + 1) % state.playlist.length), 4000);
+    if (playlistPool.length < 2 || isPlaying || manualNav) return;
+    const t = setInterval(() => setVinylIdx(i => (i + 1) % playlistPool.length), 4000);
     return () => clearInterval(t);
-  }, [state.playlist.length]);
+  }, [playlistPool.length, isPlaying, manualNav]);
+
+  // Switching the Alvin/Paoi/Tất cả filter swaps the underlying song list
+  // out from under whatever index was showing — snap back to the start of
+  // the new list instead of landing on an unrelated index, and hand control
+  // back to auto-rotation.
+  useEffect(() => {
+    setVinylIdx(0);
+    setManualNav(false);
+  }, [playlistFilter]);
+
+  // Only a ~30s preview clip is available (iTunes Search's previewUrl) —
+  // full-track streaming needs a paid music API, which this app doesn't
+  // have. Switching songs (rotation, Next, or a manual pick) always stops
+  // whatever's playing rather than silently swapping the audio under it.
+  const togglePlay = (previewUrl: string | undefined) => {
+    const audio = audioRef.current;
+    if (!audio || !previewUrl) return;
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+      return;
+    }
+    if (audio.src !== previewUrl) audio.src = previewUrl;
+    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+  };
+
+  const nextSong = () => {
+    if (playlistPool.length < 2) return;
+    setManualNav(true);
+    setVinylIdx(i => (i + 1) % playlistPool.length);
+  };
+
+  useEffect(() => {
+    audioRef.current?.pause();
+    setIsPlaying(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vinylIdx]);
+
+  // Keep a valid selection as categories load in or get deleted out from
+  // under the current one.
+  useEffect(() => {
+    if (state.favCategories.length === 0) { if (selectedFavCat) setSelectedFavCat(''); return; }
+    if (!state.favCategories.some(c => c.id === selectedFavCat)) setSelectedFavCat(state.favCategories[0].id);
+  }, [state.favCategories, selectedFavCat]);
 
   const upcoming = [...state.events]
     .filter(e => new Date(e.date) >= new Date(new Date().toDateString()))
@@ -86,12 +133,12 @@ export default function Home() {
   const recentMemories = state.memories.slice(0, 5);
 
   const rollPick = (cat: FavCategory) => {
-    const list = state.favPlaces[cat];
+    const list = state.favPlaces[cat] ?? [];
     if (list.length === 0) return;
     setPickAnim(prev => ({ ...prev, [cat]: true }));
     setTimeout(() => {
       const pick = list[Math.floor(Math.random() * list.length)];
-      setPicks(prev => ({ ...prev, [cat]: pick.name }));
+      setPicks(prev => ({ ...prev, [cat]: pick }));
       setPickAnim(prev => ({ ...prev, [cat]: false }));
     }, 220);
   };
@@ -132,7 +179,7 @@ export default function Home() {
     return { date, alvinScore, paoiScore, label };
   });
 
-  const currentSong = state.playlist[vinylIdx % Math.max(state.playlist.length, 1)];
+  const currentSong = playlistPool[vinylIdx % Math.max(playlistPool.length, 1)];
 
   return (
     <div style={{ paddingBottom: 32 }}>
@@ -175,27 +222,70 @@ export default function Home() {
         <p style={{ fontFamily: "'DM Serif Display', serif", fontStyle: 'italic', color: 'var(--ink-2)', marginBottom: 14, fontSize: 15 }}>"Our little story continues."</p>
 
         {/* Spinning Vinyl Disk */}
-        {state.playlist.length > 0 && currentSong && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '10px 14px', border: '1px solid rgba(243,166,185,0.3)' }}>
-            <style>{`@keyframes spin-vinyl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, position: 'relative', animation: 'spin-vinyl 5s linear infinite', boxShadow: '0 3px 12px rgba(0,0,0,0.25)' }}>
-              {/* Vinyl grooves */}
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'conic-gradient(#1a1a1a 0deg, #2d2d2d 2deg, #1a1a1a 4deg, #2a2a2a 6deg, #111 10deg, #222 14deg, #1a1a1a 18deg, #2d2d2d 22deg, #111 30deg, #1a1a1a 40deg, #222 50deg, #111 60deg, #1a1a1a 80deg, #2a2a2a 100deg, #111 130deg, #222 160deg, #1a1a1a 180deg, #2d2d2d 200deg, #111 220deg, #222 240deg, #1a1a1a 260deg, #2a2a2a 280deg, #111 300deg, #222 320deg, #1a1a1a 340deg, #2d2d2d 360deg)' }} />
-              {/* Center label */}
-              <div style={{ position: 'absolute', inset: '28%', borderRadius: '50%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.6)' }} />
-              </div>
-            </div>
-            <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-              <p style={{ fontSize: 10, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="♪" size={10} /> Our Playlist</p>
-              <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.title}</p>
-              <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{currentSong.artist}</p>
-            </div>
-            <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
-              {state.playlist.slice(0, 4).map((_, i) => (
-                <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: i === vinylIdx % state.playlist.length ? 'var(--sakura-accent)' : 'var(--border)', transition: 'background 0.3s' }} />
+        {state.playlist.length > 0 && (
+          <div>
+            {/* Alvin / Paoi / Tất cả — which pool of songs the widget draws from */}
+            <div style={{ display: 'flex', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
+              {[
+                { k: 'all', label: 'Tất cả' },
+                { k: 'Alvin', label: 'Alvin' },
+                { k: 'Paoi', label: 'Paoi' },
+              ].map(f => (
+                <button key={f.k} onClick={() => setPlaylistFilter(f.k as typeof playlistFilter)} style={{ padding: '3px 10px', borderRadius: 99, border: 'none', background: playlistFilter === f.k ? 'var(--sakura-accent)' : 'rgba(255,255,255,0.7)', color: playlistFilter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>{f.label}</button>
               ))}
             </div>
+
+            {currentSong ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '10px 20px', border: isPlaying ? '1px solid rgba(201,95,124,0.5)' : '1px solid rgba(243,166,185,0.3)', boxShadow: isPlaying ? '0 0 0 4px rgba(243,166,185,0.18)' : 'none', transition: 'box-shadow 0.3s, border-color 0.3s' }}>
+                <style>{`
+                  @keyframes spin-vinyl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                  @keyframes vinyl-glow { 0%, 100% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 0 rgba(243,166,185,0.5); } 50% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 8px rgba(243,166,185,0); } }
+                  @keyframes eq-bar-1 { 0%, 100% { height: 4px; } 30% { height: 13px; } 60% { height: 7px; } }
+                  @keyframes eq-bar-2 { 0%, 100% { height: 8px; } 35% { height: 15px; } 70% { height: 5px; } }
+                  @keyframes eq-bar-3 { 0%, 100% { height: 5px; } 40% { height: 12px; } 80% { height: 8px; } }
+                `}</style>
+                <audio ref={audioRef} onEnded={() => setIsPlaying(false)} style={{ display: 'none' }} />
+                {/* Decorative — only the dedicated Play button below is interactive */}
+                <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, position: 'relative', animation: isPlaying ? 'spin-vinyl 3s linear infinite, vinyl-glow 1.6s ease-in-out infinite' : 'none', boxShadow: '0 3px 14px rgba(0,0,0,0.3)' }}>
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'conic-gradient(#1a1a1a 0deg, #2d2d2d 2deg, #1a1a1a 4deg, #2a2a2a 6deg, #111 10deg, #222 14deg, #1a1a1a 18deg, #2d2d2d 22deg, #111 30deg, #1a1a1a 40deg, #222 50deg, #111 60deg, #1a1a1a 80deg, #2a2a2a 100deg, #111 130deg, #222 160deg, #1a1a1a 180deg, #2d2d2d 200deg, #111 220deg, #222 240deg, #1a1a1a 260deg, #2a2a2a 280deg, #111 300deg, #222 320deg, #1a1a1a 340deg, #2d2d2d 360deg)' }} />
+                  <div style={{ position: 'absolute', inset: '28%', borderRadius: '50%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.6)' }} />
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <p style={{ fontSize: 11, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Icon emoji="♪" size={11} /> Our Playlist
+                    {isPlaying && (
+                      <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2, height: 15, marginLeft: 2 }}>
+                        <span style={{ width: 3, borderRadius: 2, background: 'var(--sakura-deep)', animation: 'eq-bar-1 0.9s ease-in-out infinite' }} />
+                        <span style={{ width: 3, borderRadius: 2, background: 'var(--sakura-deep)', animation: 'eq-bar-2 0.9s ease-in-out infinite' }} />
+                        <span style={{ width: 3, borderRadius: 2, background: 'var(--sakura-deep)', animation: 'eq-bar-3 0.9s ease-in-out infinite' }} />
+                      </span>
+                    )}
+                  </p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.title}</p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{currentSong.artist}</p>
+                </div>
+                <button
+                  onClick={nextSong}
+                  disabled={playlistPool.length < 2}
+                  title="Bài tiếp theo"
+                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'var(--white)', color: 'var(--sakura-deep)', cursor: playlistPool.length < 2 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: playlistPool.length < 2 ? 0.4 : 1 }}
+                >
+                  <Icon emoji="⏭️" size={15} />
+                </button>
+                <button
+                  onClick={() => togglePlay(currentSong.previewUrl)}
+                  disabled={!currentSong.previewUrl}
+                  title={currentSong.previewUrl ? 'Nghe thử 30s' : 'Không có bản nghe thử'}
+                  style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: currentSong.previewUrl ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', cursor: currentSong.previewUrl ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >
+                  <Icon emoji={isPlaying ? '⏸️' : '▶️'} size={16} style={{ color: currentSong.previewUrl ? 'white' : 'var(--ink-2)' }} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '10px', color: 'var(--ink-2)', fontSize: 12 }}>Chưa có bài nào trong danh sách này.</div>
+            )}
           </div>
         )}
       </div>
@@ -253,21 +343,30 @@ export default function Home() {
         </button>
       </div>
 
-      {/* Today's question pickers — from Our Favourites */}
-      <div className="card" style={{ padding: '16px 18px', marginBottom: 16 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}>Hôm nay của mình <Icon emoji="🎲" size={14} /></p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {CATEGORY_CONFIG.map(cat => {
-            const list = state.favPlaces[cat.key];
-            const picked = picks[cat.key];
-            const animating = pickAnim[cat.key];
-            return (
-              <div key={cat.key} style={{ background: 'var(--bg)', borderRadius: 14, padding: '12px 14px' }}>
+      {/* Today's question picker — from Our Favourites */}
+      {state.favCategories.length > 0 && (() => {
+        const cat = state.favCategories.find(c => c.id === selectedFavCat);
+        const list = cat ? (state.favPlaces[cat.id] ?? []) : [];
+        const picked = cat ? picks[cat.id] : undefined;
+        const animating = cat ? pickAnim[cat.id] : false;
+        return (
+          <div className="card" style={{ padding: '16px 18px', marginBottom: 16 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>Hôm nay của mình <Icon emoji="🎲" size={14} /></p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {state.favCategories.map(c => (
+                <button key={c.id} onClick={() => setSelectedFavCat(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 99, border: 'none', background: selectedFavCat === c.id ? c.color : 'var(--bg)', color: selectedFavCat === c.id ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <Icon emoji={c.emoji} size={13} />
+                  <span>{c.label}</span>
+                </button>
+              ))}
+            </div>
+            {cat && (
+              <div style={{ background: 'var(--bg)', borderRadius: 14, padding: '12px 14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Icon emoji={cat.emoji} size={20} />
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2 }}>{cat.question}</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2 }}>{cat.label} hôm nay?</p>
                       {list.length === 0 && (
                         <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>Chưa có địa điểm nào</p>
                       )}
@@ -275,7 +374,7 @@ export default function Home() {
                   </div>
                   {list.length > 0 && (
                     <button
-                      onClick={() => rollPick(cat.key)}
+                      onClick={() => rollPick(cat.id)}
                       style={{ background: `${cat.color}20`, border: `1.5px solid ${cat.color}40`, borderRadius: 10, padding: '6px 12px', color: cat.color, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
                     >
                       {picked ? <Icon emoji="🔀" size={14} /> : <><Icon emoji="✨" size={14} /> Gợi ý</>}
@@ -283,15 +382,21 @@ export default function Home() {
                   )}
                 </div>
                 {picked && (
-                  <div style={{ marginTop: 8, background: `${cat.color}10`, border: `1px solid ${cat.color}25`, borderRadius: 10, padding: '8px 12px', opacity: animating ? 0 : 1, transition: 'opacity 0.2s' }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: cat.color }}>{picked}</p>
+                  <div style={{ marginTop: 8, background: `${cat.color}10`, border: `1px solid ${cat.color}25`, borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, opacity: animating ? 0 : 1, transition: 'opacity 0.2s' }}>
+                    {picked.image
+                      ? <img src={picked.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                      : <div style={{ width: 44, height: 44, borderRadius: 10, background: `${cat.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={cat.emoji} size={20} /></div>}
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: cat.color }}>{picked.name}</p>
+                      {picked.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{picked.note}</p>}
+                    </div>
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
-      </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* This day last year */}
       {lastYearMems.length > 0 && (

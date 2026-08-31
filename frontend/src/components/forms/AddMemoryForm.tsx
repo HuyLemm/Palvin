@@ -7,7 +7,10 @@ import Icon from '../Icon';
 export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
   const { addMemory, currentUser, myProfile } = useApp();
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');

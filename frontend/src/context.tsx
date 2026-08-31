@@ -5,7 +5,7 @@ if (import.meta.hot) {
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { initialState } from './data';
-import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, Mood, Bill, Trip, Capsule, Countdown, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, Place, DateIdea } from './types';
+import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, Mood, Bill, Trip, Capsule, Countdown, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea } from './types';
 import { supabase } from './lib/supabaseClient';
 import {
   updatePhoto as authUpdatePhoto, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
@@ -39,13 +39,14 @@ import {
 } from './futureUs';
 import {
   fetchCoupleSettings, updateFavoriteField, updateDarkMode, updateRelationshipStart,
-  fetchFavPlaces, createFavPlace, deleteFavPlace,
+  fetchFavPlaces, createFavPlace, updateFavPlaceRow, deleteFavPlace,
+  fetchFavCategories, createFavCategory, updateFavCategoryRow, deleteFavCategoryRow,
 } from './favourites';
 import {
   fetchPlaces, createPlace, deletePlaceRow,
 } from './places';
 import {
-  fetchPlaylist, createPlaylistItem, deletePlaylistItemRow,
+  fetchPlaylist, createPlaylistItem, updatePlaylistItemRow, deletePlaylistItemRow,
 } from './playlist';
 import {
   fetchTrips, createTrip as createTripRow, updateTripRow, deleteTripRow,
@@ -105,6 +106,13 @@ interface AppContextType {
   selectedId: string | null;
   navigate: (s: string, id?: string) => void;
   goBack: () => void;
+  // Bumped on every navigate() (push) — lets a screen with its own internal
+  // sub-navigation (e.g. Us) detect "the user re-tapped my tab while I was
+  // already open" and reset to its default view, distinct from goBack()
+  // (pop) landing back on the same screen, which should restore whatever
+  // sub-view was showing before the deeper navigation.
+  navSeq: number;
+  lastNavWasPop: boolean;
 
   // Toast
   toasts: ToastItem[];
@@ -189,6 +197,7 @@ interface AppContextType {
 
   // Playlist
   addToPlaylist: (p: Omit<PlaylistItem, 'id'>) => void;
+  updatePlaylist: (id: string, p: { title: string; artist: string; emoji: string; image?: string; durationSeconds?: number; releaseDate?: string; previewUrl?: string; note?: string }) => void;
   removeFromPlaylist: (id: string) => void;
 
   // Wishes
@@ -228,7 +237,11 @@ interface AppContextType {
 
   // Fav places
   addFavPlace: (cat: FavCategory, place: Omit<FavPlace, 'id'>) => void;
+  updateFavPlace: (cat: FavCategory, id: string, place: { name: string; note?: string; image?: string }) => void;
   removeFavPlace: (cat: FavCategory, id: string) => void;
+  addFavCategory: (cat: { label: string; emoji: string; color: string }) => void;
+  updateFavCategory: (id: string, cat: { label: string; emoji: string; color: string }) => void;
+  removeFavCategory: (id: string) => void;
 
   // Places
   addPlace: (p: { name: string; flag?: string; image: string }) => void;
@@ -264,6 +277,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [sentInvite, setSentInvite] = useState<PendingInvite | null>(null);
   const [profilePhotos, setProfilePhotos] = useState<Record<string, string>>({});
   const [stack, setStack] = useState<{ screen: string; id?: string }[]>([{ screen: 'home' }]);
+  const [navSeq, setNavSeq] = useState(0);
+  const [lastNavWasPop, setLastNavWasPop] = useState(false);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [createModal, setCreateModal] = useState(false);
   const [createStep, setCreateStep] = useState<string | null>(null);
@@ -277,10 +292,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const navigate = useCallback((s: string, id?: string) => {
     setStack(prev => [...prev, { screen: s, id }]);
+    setNavSeq(n => n + 1);
+    setLastNavWasPop(false);
   }, []);
 
   const goBack = useCallback(() => {
     setStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
+    setLastNavWasPop(true);
   }, []);
 
   const toast = useCallback((msg: string, emoji = '🌸') => {
@@ -677,10 +695,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Playlist — backed by Supabase
   const addToPlaylist = async (p: Omit<PlaylistItem, 'id'>) => {
     if (!myProfile) return;
-    const { error } = await createPlaylistItem(myProfile.id, { title: p.title, artist: p.artist, emoji: p.emoji, note: p.note });
+    const { error } = await createPlaylistItem(myProfile.id, { title: p.title, artist: p.artist, emoji: p.emoji, image: p.image, durationSeconds: p.durationSeconds, releaseDate: p.releaseDate, previewUrl: p.previewUrl, note: p.note });
     if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
     await refreshPlaylist();
     toast('Added to playlist! 🎵');
+  };
+  const updatePlaylist = async (id: string, p: { title: string; artist: string; emoji: string; image?: string; durationSeconds?: number; releaseDate?: string; previewUrl?: string; note?: string }) => {
+    setState(s => ({ ...s, playlist: s.playlist.map(x => x.id === id ? { ...x, ...p } : x) }));
+    const { error } = await updatePlaylistItemRow(id, p);
+    if (error) refreshPlaylist();
   };
   const removeFromPlaylist = async (id: string) => {
     setState(s => ({ ...s, playlist: s.playlist.filter(p => p.id !== id) }));
@@ -871,9 +894,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await refreshFavorites();
     toast('Đã thêm!', '✨');
   };
+  const updateFavPlace = async (cat: FavCategory, id: string, place: { name: string; note?: string; image?: string }) => {
+    setState(s => ({ ...s, favPlaces: { ...s.favPlaces, [cat]: (s.favPlaces[cat] ?? []).map(p => p.id === id ? { ...p, ...place } : p) } }));
+    const { error } = await updateFavPlaceRow(id, place);
+    if (error) refreshFavorites();
+  };
   const removeFavPlace = async (cat: FavCategory, id: string) => {
-    setState(s => ({ ...s, favPlaces: { ...s.favPlaces, [cat]: s.favPlaces[cat].filter(p => p.id !== id) } }));
+    setState(s => ({ ...s, favPlaces: { ...s.favPlaces, [cat]: (s.favPlaces[cat] ?? []).filter(p => p.id !== id) } }));
     const { error } = await deleteFavPlace(id);
+    if (error) refreshFavorites();
+  };
+
+  const addFavCategory = async (cat: { label: string; emoji: string; color: string }) => {
+    const { data, error } = await createFavCategory(cat);
+    if (error || !data) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    setState(s => ({ ...s, favCategories: [...s.favCategories, data as FavCategoryItem] }));
+  };
+  const updateFavCategory = async (id: string, cat: { label: string; emoji: string; color: string }) => {
+    setState(s => ({ ...s, favCategories: s.favCategories.map(c => c.id === id ? { ...c, ...cat } : c) }));
+    const { error } = await updateFavCategoryRow(id, cat);
+    if (error) refreshFavorites();
+  };
+  const removeFavCategory = async (id: string) => {
+    setState(s => {
+      const { [id]: _removed, ...restPlaces } = s.favPlaces;
+      return { ...s, favCategories: s.favCategories.filter(c => c.id !== id), favPlaces: restPlaces };
+    });
+    const { error } = await deleteFavCategoryRow(id);
     if (error) refreshFavorites();
   };
 
@@ -1035,7 +1082,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshFavorites = useCallback(async () => {
     if (!myProfile?.coupleId) return;
-    const [settings, favPlaces] = await Promise.all([fetchCoupleSettings(myProfile.coupleId), fetchFavPlaces()]);
+    const [settings, favPlaces, favCategories] = await Promise.all([
+      fetchCoupleSettings(myProfile.coupleId), fetchFavPlaces(), fetchFavCategories(),
+    ]);
     if (settings?.darkMode) {
       document.documentElement.setAttribute('data-theme', 'dark');
       document.body.setAttribute('data-theme', 'dark');
@@ -1049,6 +1098,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       darkMode: settings?.darkMode ?? s.darkMode,
       relationshipStart: settings?.relationshipStart ?? s.relationshipStart,
       favPlaces,
+      favCategories,
     }));
   }, [myProfile?.coupleId]);
 
@@ -1315,7 +1365,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       state, currentUser,
       authed, authLoading, profileLoaded, isLinked, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
       pendingInvite, sentInvite, invitePartner, acceptInvite, rejectInvite, cancelSentInvite,
-      screen, selectedId, navigate, goBack,
+      screen, selectedId, navigate, goBack, navSeq, lastNavWasPop,
       toasts, toast,
       createModal, createStep, openCreate, closeCreate, celebration,
       toggleLike, toggleSave, addComment, addPost, editPost, deletePost,
@@ -1332,7 +1382,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addTrip, updateTrip, deleteTrip, toggleTripCheck,
       addCapsule, openCapsule,
       addCountdown, deleteCountdown,
-      addToPlaylist, removeFromPlaylist,
+      addToPlaylist, updatePlaylist, removeFromPlaylist,
       addWish, updateWish, drawWish, removeWish,
       addDateIdea, updateDateIdea, removeDateIdea, updateDateIdeaPreset, removeDateIdeaPreset, drawDateIdea,
       addLoveLetter, deleteLoveLetter,
@@ -1345,7 +1395,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updateGratitude,
       deleteGratitude,
       addReaction,
-      addFavPlace, removeFavPlace,
+      addFavPlace, updateFavPlace, removeFavPlace, addFavCategory, updateFavCategory, removeFavCategory,
       addPlace, deletePlace,
       toggleDarkMode,
       setRelationshipStart,

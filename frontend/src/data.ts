@@ -89,7 +89,8 @@ export const initialState: AppState = {
   postReactions: {},
   // Loaded from Supabase (see context.tsx's refreshFavorites) once the couple is linked.
   darkMode: false,
-  favPlaces: { food: [], cafe: [], bida: [], gaming: [] },
+  favPlaces: {},
+  favCategories: [],
 
   // Loaded from Supabase (see context.tsx's refreshFavorites) once the couple is linked.
   relationshipStart: null,
