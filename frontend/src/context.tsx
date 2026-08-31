@@ -35,7 +35,7 @@ import {
   fetchSecretNotes, createSecretNote,
 } from './loveNotes';
 import {
-  fetchGoals, createGoal, setGoalCompleted, deleteGoalRow,
+  fetchGoals, createGoal, setGoalCompleted, setGoalCurrent, updateGoalRow, deleteGoalRow,
 } from './futureUs';
 import {
   fetchCoupleSettings, updateFavoriteField, updateDarkMode, updateRelationshipStart,
@@ -52,7 +52,7 @@ import {
   fetchTrips, createTrip as createTripRow, updateTripRow, deleteTripRow,
 } from './trips';
 import {
-  fetchCapsules, createCapsule, openCapsuleRow,
+  fetchCapsules, createCapsule, openCapsuleRow, updateCapsuleRow, deleteCapsuleRow,
 } from './capsules';
 import {
   fetchWishes, createWish, updateWishRow, setWishDrawnRow, deleteWishRow,
@@ -159,9 +159,11 @@ interface AppContextType {
   deleteEvent: (id: string) => void;
 
   // Goals
-  addGoal: (g: Omit<Goal, 'id' | 'completed'>) => void;
+  addGoal: (g: Omit<Goal, 'id' | 'completed' | 'current'>) => void;
+  updateGoal: (id: string, g: Omit<Goal, 'id' | 'completed' | 'current' | 'completedDate'>) => void;
   toggleGoal: (id: string) => void;
   deleteGoal: (id: string) => void;
+  contributeToGoal: (id: string, amount: number) => void;
 
   // Mood
   setMood: (user: User, mood: Mood) => void;
@@ -190,6 +192,8 @@ interface AppContextType {
   // Capsules
   addCapsule: (c: Omit<Capsule, 'id'>) => void;
   openCapsule: (id: string) => void;
+  updateCapsule: (c: Capsule) => void;
+  deleteCapsule: (id: string) => void;
 
   // Countdowns
   addCountdown: (c: Omit<Countdown, 'id'>) => void;
@@ -526,11 +530,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Goals
-  const addGoal = async (g: Omit<Goal, 'id' | 'completed'>) => {
-    const { error } = await createGoal(g);
+  const addGoal = async (g: Omit<Goal, 'id' | 'completed' | 'current'>) => {
+    const ownerId = g.owner === 'both' ? null : resolveProfileId(g.owner);
+    const { error } = await createGoal({ title: g.title, emoji: g.emoji, target: g.target, deadline: g.deadline, ownerId });
     if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
     await refreshGoals();
     toast('Goal added ✨');
+  };
+
+  const updateGoal = async (id: string, g: Omit<Goal, 'id' | 'completed' | 'current' | 'completedDate'>) => {
+    const ownerId = g.owner === 'both' ? null : resolveProfileId(g.owner);
+    setState(s => ({ ...s, goals: s.goals.map(x => x.id === id ? { ...x, title: g.title, emoji: g.emoji, owner: g.owner, target: g.target, deadline: g.deadline } : x) }));
+    const { error } = await updateGoalRow(id, { title: g.title, emoji: g.emoji, target: g.target, deadline: g.deadline, ownerId });
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshGoals(); return; }
+    toast('Đã cập nhật mục tiêu ✏️');
+  };
+
+  // Contributing enough to reach the target auto-completes the goal — the
+  // same celebration path as manually checking it off — since hitting the
+  // savings number IS the goal for this kind, not a separate step.
+  const contributeToGoal = async (id: string, amount: number) => {
+    const goal = state.goals.find(g => g.id === id);
+    if (!goal || goal.target == null || amount <= 0) return;
+    const nextCurrent = Math.min((goal.current ?? 0) + amount, goal.target);
+    if (nextCurrent === goal.current) return;
+    const reachedTarget = nextCurrent >= goal.target && !goal.completed;
+    const completedDate = reachedTarget ? new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : goal.completedDate ?? null;
+    setState(s => ({ ...s, goals: s.goals.map(g => g.id === id ? { ...g, current: nextCurrent, completed: reachedTarget ? true : g.completed, completedDate: reachedTarget ? completedDate ?? undefined : g.completedDate } : g) }));
+    if (reachedTarget) {
+      setCelebration(true);
+      setTimeout(() => setCelebration(false), 2000);
+      toast('Goal completed! ❤️', '🎉');
+    } else {
+      toast('Đã góp vào mục tiêu 💪');
+    }
+    const { error } = await setGoalCurrent(id, nextCurrent);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshGoals(); return; }
+    if (reachedTarget) {
+      const { error: err2 } = await setGoalCompleted(id, true, completedDate);
+      if (err2) refreshGoals();
+    }
   };
 
   const toggleGoal = async (id: string) => {
@@ -668,7 +707,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const fromId = resolveProfileId(c.from);
     const toId = c.to === 'both' ? null : resolveProfileId(c.to);
     if (!fromId) return;
-    const { error } = await createCapsule(fromId, toId, c.message, c.unlockDate);
+    const { error } = await createCapsule(fromId, toId, c.title, c.occasion, c.message, c.unlockDate);
     if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
     await refreshCapsules();
     toast('Capsule sealed! 💌');
@@ -676,6 +715,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const openCapsule = async (id: string) => {
     setState(s => ({ ...s, capsules: s.capsules.map(c => c.id === id ? { ...c, opened: true } : c) }));
     const { error } = await openCapsuleRow(id);
+    if (error) refreshCapsules();
+  };
+  const updateCapsule = async (c: Capsule) => {
+    setState(s => ({ ...s, capsules: s.capsules.map(x => x.id === c.id ? c : x) }));
+    const toId = c.to === 'both' ? null : resolveProfileId(c.to);
+    const { error } = await updateCapsuleRow(c.id, toId, c.title, c.occasion, c.message, c.unlockDate);
+    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshCapsules(); }
+  };
+  const deleteCapsule = async (id: string) => {
+    setState(s => ({ ...s, capsules: s.capsules.filter(c => c.id !== id) }));
+    const { error } = await deleteCapsuleRow(id);
     if (error) refreshCapsules();
   };
 
@@ -1072,13 +1122,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [isLinked, myProfile, partnerProfile, refreshLoveStuff]);
 
   const refreshGoals = useCallback(async () => {
-    const goals = await fetchGoals();
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    const goals = await fetchGoals(names);
     setState(s => ({ ...s, goals }));
-  }, []);
+  }, [myProfile, partnerProfile]);
 
   useEffect(() => {
-    if (isLinked) refreshGoals();
-  }, [isLinked, refreshGoals]);
+    if (isLinked && myProfile) refreshGoals();
+  }, [isLinked, myProfile, refreshGoals]);
 
   const refreshFavorites = useCallback(async () => {
     if (!myProfile?.coupleId) return;
@@ -1374,13 +1428,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addSavingsGoal, updateSavingsGoal, deleteSavingsGoal, addToGoal, withdrawFromGoal,
       addLoveNote, markNoteRead, addSecretNote,
       addEvent, deleteEvent,
-      addGoal, toggleGoal, deleteGoal,
+      addGoal, updateGoal, toggleGoal, deleteGoal, contributeToGoal,
       setMood,
       updateFavorite,
       markNotifRead, markAllRead, deleteNotification, updateNotifyPrefs,
       addBill, updateBill, toggleBillPaid, deleteBill,
       addTrip, updateTrip, deleteTrip, toggleTripCheck,
-      addCapsule, openCapsule,
+      addCapsule, openCapsule, updateCapsule, deleteCapsule,
       addCountdown, deleteCountdown,
       addToPlaylist, updatePlaylist, removeFromPlaylist,
       addWish, updateWish, drawWish, removeWish,

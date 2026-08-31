@@ -144,7 +144,7 @@ export default function Us() {
   else if (sub === 'favorites') content = <OurFavouritesScreen onBack={() => setSub('main')} />;
   else if (sub === 'future')   content = <div style={{ paddingBottom: 0 }}><Back /><FutureUs /></div>;
   else if (sub === 'calendar') content = <div style={{ paddingBottom: 0 }}><Back /><Calendar /></div>;
-  else if (sub === 'trips')    content = <div style={{ paddingBottom: 0 }}><Back /><TripPlanner /></div>;
+  else if (sub === 'trips')    content = <TripPlanner onBack={() => setSub('main')} />;
   else if (sub === 'capsule')  content = <div style={{ paddingBottom: 0 }}><Back /><TimeCapsule /></div>;
   else if (sub === 'playlist') content = <PlaylistScreen onBack={() => setSub('main')} />;
   else if (sub === 'collage')  content = <PhotoCollage onBack={() => setSub('main')} />;
@@ -1198,15 +1198,25 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
 }
 
 /* ─── Photo Collage ───────────────────────────────── */
-function PhotoCollage({ onBack }: { onBack: () => void }) {
-  const { state } = useApp();
+// One grid cell per post — its first image stands in as the thumbnail so
+// the collage stays a quick one-post-per-slot index instead of exploding
+// into every photo of a multi-image post.
+interface CollagePost {
+  postId: string;
+  image: string;
+  count: number;
+}
 
-  const byMonth: Record<string, typeof state.memories> = {};
-  for (const m of state.memories) {
-    const d = new Date(m.date);
+function PhotoCollage({ onBack }: { onBack: () => void }) {
+  const { state, navigate } = useApp();
+
+  const byMonth: Record<string, CollagePost[]> = {};
+  for (const p of state.posts) {
+    if (p.images.length === 0) continue;
+    const d = new Date(p.date);
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     if (!byMonth[key]) byMonth[key] = [];
-    byMonth[key].push(m);
+    byMonth[key].push({ postId: p.id, image: p.images[0], count: p.images.length });
   }
   const months = Object.keys(byMonth).sort((a, b) => b.localeCompare(a));
 
@@ -1219,30 +1229,35 @@ function PhotoCollage({ onBack }: { onBack: () => void }) {
     <div style={{ paddingBottom: 32 }}>
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
       <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Photo Collage <Icon emoji="🖼️" size={20} /></p>
-      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Memories tổng hợp theo tháng.</p>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Mỗi post một ảnh đại diện, tổng hợp theo tháng — bấm vào để xem lại bài đăng.</p>
 
       {months.map(key => {
-        const mems = byMonth[key];
-        const grid4 = mems.slice(0, 4);
-        const rest = mems.length - 4;
+        const posts = byMonth[key];
+        const grid4 = posts.slice(0, 4);
+        const rest = posts.length - 4;
         return (
           <div key={key} style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{formatMonth(key)}</p>
-              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{mems.length} memory</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{posts.length} bài đăng</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {grid4.map((m, i) => (
-                <div key={m.id} style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', aspectRatio: '1', background: 'var(--sakura-light)' }}>
-                  <img src={m.image} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+              {grid4.map((post, i) => (
+                <button key={post.postId} onClick={() => navigate('post-detail', post.postId)} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '1', background: 'var(--sakura-light)', border: 'none', padding: 0, cursor: 'pointer' }}>
+                  <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {post.count > 1 && (
+                    <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 9, fontWeight: 700, color: 'white', background: 'rgba(0,0,0,0.5)', padding: '1px 5px', borderRadius: 99 }}>1/{post.count}</span>
+                  )}
                   {i === 3 && rest > 0 && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(51,42,45,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, color: 'white' }}>+{rest}</p>
+                      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'white' }}>+{rest}</p>
                     </div>
                   )}
-                </div>
+                </button>
               ))}
-              {grid4.length < 2 && <div style={{ borderRadius: 14, background: 'var(--bg)', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🌸" size={32} /></div>}
+              {Array.from({ length: Math.max(0, 4 - grid4.length) }).map((_, i) => (
+                <div key={`ph-${i}`} style={{ borderRadius: 12, background: 'var(--bg)', aspectRatio: '1' }} />
+              ))}
             </div>
           </div>
         );
@@ -1251,7 +1266,7 @@ function PhotoCollage({ onBack }: { onBack: () => void }) {
       {months.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 20px' }}>
           <Icon emoji="🖼️" size={48} style={{ marginBottom: 12 }} />
-          <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>Chưa có memories nào. Thêm memories để tạo collage!</p>
+          <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>Chưa có ảnh nào. Đăng post có ảnh để tạo collage!</p>
         </div>
       )}
     </div>

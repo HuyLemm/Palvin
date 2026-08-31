@@ -103,6 +103,14 @@ export interface Goal {
   emoji: string;
   completed: boolean;
   completedDate?: string;
+  // Big life goals (a wedding, a down payment) can carry a savings target —
+  // separate from Money's SavingsGoal, which tracks everyday budget funds.
+  // A goal with no target is just a plain checklist item.
+  target?: number;
+  current?: number;
+  deadline?: string;
+  // Whose dream this is — 'both' for shared goals, or one person's own.
+  owner: 'Alvin' | 'Paoi' | 'both';
 }
 
 export interface AppNotification {
@@ -132,16 +140,44 @@ export interface Place {
   memoryIds: string[];
 }
 
+export interface TripPlace {
+  id: string;
+  name: string;
+  location?: string;
+  activity?: string;
+  costMin?: number;
+  costMax?: number;
+}
+
+export interface TripDay {
+  id: string;
+  day: number;
+  date?: string;
+  places: TripPlace[];
+}
+
+export interface TripLodging {
+  id: string;
+  name: string;
+  address?: string;
+  checkIn?: string;
+  checkOut?: string;
+  note?: string;
+}
+
 export interface Trip {
   id: string;
   title: string;
   emoji: string;
   destination: string;
-  startDate: string;
-  endDate: string;
+  // Optional — a trip can start life knowing only a rough day count, before
+  // exact dates are picked.
+  startDate?: string;
+  endDate?: string;
   budget: number;
-  spent: number;
   checklist: { id: string; text: string; done: boolean }[];
+  itinerary: TripDay[];
+  lodging: TripLodging[];
   notes: string;
   status: 'planning' | 'upcoming' | 'completed';
 }
@@ -150,6 +186,8 @@ export interface Capsule {
   id: string;
   from: User;
   to: 'Alvin' | 'Paoi' | 'both';
+  title: string;
+  occasion?: string;
   message: string;
   unlockDate: string;
   opened: boolean;

@@ -12,7 +12,7 @@ import {
   FolderOpen, MailOpen, MailX, Music2, ScrollText, Lightbulb, Bookmark, Hand,
   Unlock, Globe, Mountain, Building2, Ship, Landmark, Map, Link2, Disc,
   Headphones, Ticket, Umbrella, DollarSign, TrendingDown, Hourglass, Cat, PawPrint,
-  Undo2, Play, Pause, SkipForward,
+  Undo2, Play, Pause, SkipForward, Hotel,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -96,6 +96,7 @@ export const EMOJI_ICON_MAP: Record<string, LucideIcon> = {
   '🗺️': Map, '🗺': Map,
   '🔗': Link2,
   '💿': Disc,
+  '🏨': Hotel,
   '🎧': Headphones,
   '🎟️': Ticket, '🎟': Ticket,
   '☂️': Umbrella, '☂': Umbrella,
