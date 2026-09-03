@@ -119,6 +119,7 @@ const SCREEN_TITLES: Record<string, string> = {
   memories: 'Memories', 'love-notes': 'For You', calendar: 'Our Calendar',
   'future-us': 'Future Us', search: 'Search', notifications: 'Notifications',
   settings: 'Settings', stats: 'Spending', bills: 'Bills', goals: 'Savings Goals',
+  wishlist: 'Gift Wishlist',
   'post-detail': 'Post', 'memory-detail': 'Memory', 'saved-posts': 'Saved',
 };
 
@@ -127,7 +128,7 @@ const SCREEN_TITLES: Record<string, string> = {
 // rendered explicitly next to it.
 const SCREEN_TITLE_EMOJI: Record<string, string> = {
   money: '💰', us: '🌸', memories: '🌸', 'love-notes': '💌', stats: '📊',
-  bills: '🧾', goals: '💰',
+  bills: '🧾', goals: '💰', wishlist: '🎁',
 };
 
 // Stay open even before the couple is linked: Settings hosts the invite/accept
@@ -196,8 +197,13 @@ function ScreenRouter() {
   // screen (same component, different starting tab) — normalized to the same
   // key as 'money' so they share one kept-alive instance instead of each
   // minting a second, independent <Money/> that always opens on the
-  // Expenses tab regardless of which entry point was used.
-  const normalizedScreen = (screen === 'stats' || screen === 'bills' || screen === 'goals') ? 'money' : screen;
+  // Expenses tab regardless of which entry point was used. 'wishlist' is the
+  // same trick for Us's internal Gift Wishlist sub-screen (see Us.tsx's own
+  // `sub` state, which reads the live `screen`/`selectedId` to land on the
+  // right sub-screen and highlight the specific wish a notification pointed at).
+  const normalizedScreen = (screen === 'stats' || screen === 'bills' || screen === 'goals') ? 'money'
+    : screen === 'wishlist' ? 'us'
+    : screen;
   const key = screen === 'chat' ? null : (selectedId ? `${normalizedScreen}:${selectedId}` : normalizedScreen);
 
   const [keptKeys, setKeptKeys] = useState<string[]>(key ? [key] : []);

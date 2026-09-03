@@ -63,6 +63,7 @@ export default function Us() {
   // tap on the Us tab is always a push, so it falls through to 'main'.
   const [sub, setSub] = useState<SubScreen>(() => {
     if (screen === 'us' && selectedId) return 'permit';
+    if (screen === 'wishlist' && selectedId) return 'wishjar';
     if (screen === 'us' && lastNavWasPop) return lastUsSub;
     return 'main';
   });
@@ -80,6 +81,7 @@ export default function Us() {
   // notification tap arrives while the user is already sitting on this screen.
   useEffect(() => {
     if (screen === 'us' && selectedId) setSub('permit');
+    if (screen === 'wishlist' && selectedId) setSub('wishjar');
   }, [screen, selectedId]);
 
   // Re-tapping the Us tab while already sitting inside it doesn't remount
@@ -122,7 +124,7 @@ export default function Us() {
   // mechanism before since it's local state, not a `screen` change.
   let content: ReactNode;
 
-  if (sub === 'wishjar')  content = <GiftWishlistScreen onBack={() => setSub('main')} />;
+  if (sub === 'wishjar')  content = <GiftWishlistScreen onBack={() => setSub('main')} initialWishId={selectedId ?? undefined} />;
   else if (sub === 'dateidea') content = <DateIdeaJar onBack={() => setSub('main')} />;
   else if (sub === 'gratitude') content = <GratitudeJournal onBack={() => setSub('main')} />;
   else if (sub === 'permit')   content = <DatePermit onBack={() => setSub('main')} initialRequestId={selectedId ?? undefined} />;
@@ -628,13 +630,20 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
 /* ─── Gift Wishlist ───────────────────────────────── */
 type LinkPreview = { title?: string; image?: string; description?: string };
 
-function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
+function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; initialWishId?: string }) {
   const { state, currentUser, isAdmin, partnerProfile, addWish, updateWish, removeWish, drawWish } = useApp();
   const [showAdd, setShowAdd] = useState(false);
   const [wishText, setWishText] = useState('');
   const [wishLink, setWishLink] = useState('');
   const [wishPrice, setWishPrice] = useState('');
-  const [filter, setFilter] = useState<string>('all');
+  // A wishlist notification tap lands on whichever filter tab actually shows
+  // that wish — "bought" if it's already been marked bought, "all" (which
+  // already includes both people's not-yet-bought wishes) otherwise.
+  const [filter, setFilter] = useState<string>(() => {
+    const target = initialWishId ? state.wishes.find(w => w.id === initialWishId) : null;
+    return target?.drawn ? 'bought' : 'all';
+  });
+  const [highlightId, setHighlightId] = useState(initialWishId);
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -656,6 +665,17 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
     if (filter === 'all') return true;
     return w.from === filter;
   });
+
+  // Scrolls to and briefly glows the wish a notification tap pointed at,
+  // once it's actually rendered in the (now correctly filtered) list.
+  useEffect(() => {
+    if (!highlightId) return;
+    const el = document.querySelector(`[data-wish-id="${highlightId}"]`);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const timer = setTimeout(() => setHighlightId(undefined), 2400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightId, filtered.length]);
 
   const closeAdd = () => {
     setShowAdd(false); setWishText(''); setWishLink(''); setWishPrice(''); setLinkPreview(null);
@@ -746,8 +766,14 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
     const isOwner = w.from === currentUser;
     const canEdit = isOwner || isAdmin;
     const isBought = w.drawn;
+    const isHighlighted = w.id === highlightId;
     return (
-      <div key={w.id} className="card wish-card" style={{ padding: '14px 16px', opacity: isBought ? 0.6 : 1, animation: `wishCardIn 0.3s cubic-bezier(0.32,0.72,0,1) both`, animationDelay: `${Math.min(index, 6) * 30}ms` }}>
+      <div key={w.id} data-wish-id={w.id} className="card wish-card" style={{
+        padding: '14px 16px', opacity: isBought ? 0.6 : 1,
+        animation: `wishCardIn 0.3s cubic-bezier(0.32,0.72,0,1) both${isHighlighted ? ', wishHighlight 1.2s ease 2' : ''}`,
+        animationDelay: isHighlighted ? '0s, 0s' : `${Math.min(index, 6) * 30}ms`,
+        boxShadow: isHighlighted ? '0 0 0 2.5px var(--sakura-accent)' : undefined,
+      }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ width: 40, height: 40, borderRadius: 12, background: isBought ? 'var(--bg)' : (isOwner ? '#E4ECFF' : '#FFE4EC'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s ease' }}>
             <Icon emoji={isBought ? '✅' : (isOwner ? '💙' : '💗')} size={20} />
@@ -791,6 +817,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
     <div style={{ paddingBottom: 32 }}>
       <style>{`
         @keyframes wishCardIn { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes wishHighlight { 0%, 100% { background: var(--white); } 50% { background: var(--sakura-light); } }
         .wish-tab-btn { transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.12s ease; }
         .wish-tab-btn:active { transform: scale(0.95); }
         .wish-action-btn { transition: background 0.2s ease, color 0.2s ease, transform 0.12s ease, opacity 0.2s ease; }
