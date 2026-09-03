@@ -63,7 +63,12 @@ export default function Us() {
   // tap on the Us tab is always a push, so it falls through to 'main'.
   const [sub, setSub] = useState<SubScreen>(() => {
     if (screen === 'us' && selectedId) return 'permit';
-    if (screen === 'wishlist' && selectedId) return 'wishjar';
+    // Unlike 'us' (the generic hub, reached many ways — selectedId is what
+    // disambiguates a date-permit notification tap from a plain tab visit),
+    // 'wishlist' is ONLY ever set by a wish notification, so the screen
+    // value alone is enough — a "wish deleted" notification, or any old one
+    // from before target_id existed, still has no selectedId at all.
+    if (screen === 'wishlist') return 'wishjar';
     if (screen === 'us' && lastNavWasPop) return lastUsSub;
     return 'main';
   });
@@ -81,7 +86,7 @@ export default function Us() {
   // notification tap arrives while the user is already sitting on this screen.
   useEffect(() => {
     if (screen === 'us' && selectedId) setSub('permit');
-    if (screen === 'wishlist' && selectedId) setSub('wishjar');
+    if (screen === 'wishlist') setSub('wishjar');
   }, [screen, selectedId]);
 
   // Re-tapping the Us tab while already sitting inside it doesn't remount
