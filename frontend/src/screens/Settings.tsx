@@ -6,6 +6,7 @@ import type { User } from '../types';
 import type { NotifyPrefs } from '../auth';
 import { fetchActivityStatuses } from '../auth';
 import { fetchActivityLog, type ActivityLogEntry } from '../activityLog';
+import { isPushSupported, isPushSubscribed, subscribeToPush, unsubscribeFromPush } from '../push';
 
 const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true };
 
@@ -59,6 +60,28 @@ export default function Settings() {
   const notifyPrefs = myProfile?.notifyPrefs ?? DEFAULT_NOTIFY_PREFS;
   const darkMode = state.darkMode;
   const [showLogout, setShowLogout] = useState(false);
+
+  // Push notifications — a real system notification even with Palvin fully
+  // closed (chat messages only, for now). Off by default everywhere: only a
+  // deliberate tap on this toggle ever prompts for permission.
+  const [pushOn, setPushOn] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  useEffect(() => {
+    if (isPushSupported()) isPushSubscribed().then(setPushOn);
+  }, []);
+  const togglePush = async () => {
+    if (!myProfile || pushBusy) return;
+    setPushBusy(true);
+    if (pushOn) {
+      await unsubscribeFromPush();
+      setPushOn(false);
+    } else {
+      const res = await subscribeToPush(myProfile.id);
+      if (res.ok) setPushOn(true);
+      else toast(res.error || 'Could not enable notifications', '⚠️');
+    }
+    setPushBusy(false);
+  };
 
   // Private admin-only panel (see isAdmin below) — live activity monitor +
   // an edit/delete audit log. Polls on an interval only while this screen is
@@ -313,6 +336,9 @@ export default function Settings() {
 
       {/* Notifications */}
       <Section title="Notifications">
+        {isPushSupported() && (
+          <ToggleRow emoji="🔔" label="Push notifications for chat" value={pushOn} onToggle={togglePush} />
+        )}
         <ToggleRow emoji="💌" label="Love notes" value={notifyPrefs.love} onToggle={() => toggleNotif('love')} />
         <ToggleRow emoji="🌸" label="New memories" value={notifyPrefs.memories} onToggle={() => toggleNotif('memories')} />
         <ToggleRow emoji="💰" label="Expenses" value={notifyPrefs.expenses} onToggle={() => toggleNotif('expenses')} />

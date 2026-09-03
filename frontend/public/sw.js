@@ -36,3 +36,41 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Web Push — shows a real system notification even with Palvin fully closed
+// (installed to the home screen). The send-push edge function posts a plain
+// JSON payload ({ title, body, url }); the DB trigger that calls it only
+// fires for a chat message from the *other* profile, so there's no "your
+// own message notified you" case to filter out here.
+self.addEventListener('push', (event) => {
+  let data = { title: 'Palvin', body: '', url: '/' };
+  try { data = { ...data, ...event.data.json() }; } catch {}
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: data.url },
+      tag: 'palvin-chat',
+      vibrate: [200, 100, 200], // Android only — iOS Safari ignores this
+      // `silent` is deliberately left unset (defaults to false) so the
+      // OS's normal notification sound plays, same as any other app.
+    })
+  );
+});
+
+// Focuses an already-open Palvin tab/window instead of always opening a new
+// one, so tapping the notification doesn't leave duplicate tabs behind.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ('focus' in client) return client.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
+});
