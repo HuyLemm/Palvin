@@ -7,10 +7,19 @@ const CATEGORIES: CalendarEvent['category'][] = ['anniversary', 'birthday', 'tri
 const CAT_EMOJIS: Record<string, string> = { anniversary: '💕', birthday: '🎂', trip: '✈️', date: '❤️', reminder: '📅' };
 const RECURRENCE_OPTIONS: { key: CalendarEvent['recurrence']; label: string }[] = [
   { key: 'none', label: 'Just once' },
-  { key: 'weekly', label: 'Every week' },
-  { key: 'monthly', label: 'Every month' },
   { key: 'yearly', label: 'Every year' },
 ];
+
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+// A fixed leap year, purely so the day picker always offers Feb 29 — this
+// is a "which day of which month" picker for a recurring date, not a real
+// calendar date, so the actual year backing it is irrelevant to matching
+// (see calendarRecurrence.ts's eventOccursOn, which ignores the anchor's
+// year entirely for a yearly-recurring event).
+function daysInMonth(month: number): number {
+  return new Date(2024, month, 0).getDate();
+}
 
 // Local calendar date (not UTC) so "today" matches what the user's clock
 // actually shows, regardless of timezone.
@@ -31,6 +40,17 @@ export default function AddEventForm({ onClose, existing }: { onClose: () => voi
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // `date` stays the single full YYYY-MM-DD source of truth throughout —
+  // the year is simply ignored by matching logic for a yearly-recurring
+  // event, never actually stripped from storage, so switching back to
+  // "Just once" always has a real year to show again.
+  const [, dMonth, dDay] = date.split('-').map(Number);
+  const setMonthDay = (month: number, day: number) => {
+    const y = date.split('-')[0] || String(new Date().getFullYear());
+    const clampedDay = Math.min(day, daysInMonth(month));
+    setDate(`${y}-${String(month).padStart(2, '0')}-${String(clampedDay).padStart(2, '0')}`);
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) { setError('Please enter a title.'); return; }
     if (!date)         { setError('Please select a date.'); return; }
@@ -50,7 +70,18 @@ export default function AddEventForm({ onClose, existing }: { onClose: () => voi
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <input className="input-field" placeholder="Event title..." value={title} onChange={e => setTitle(e.target.value)} />
-          <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+          {recurrence === 'yearly' ? (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select className="input-field" value={dMonth} onChange={e => setMonthDay(+e.target.value, dDay)} style={{ width: 'auto' }}>
+                {MONTH_NAMES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+              </select>
+              <select className="input-field" value={dDay} onChange={e => setMonthDay(dMonth, +e.target.value)} style={{ width: 'auto' }}>
+                {Array.from({ length: daysInMonth(dMonth) }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+            </div>
+          ) : (
+            <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+          )}
           <div>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Category</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -70,8 +101,8 @@ export default function AddEventForm({ onClose, existing }: { onClose: () => voi
                 </button>
               ))}
             </div>
-            {recurrence !== 'none' && (
-              <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 6 }}>Repeats {recurrence} starting from the date above.</p>
+            {recurrence === 'yearly' && (
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 6 }}>Repeats every year on this day.</p>
             )}
           </div>
           <input className="input-field" placeholder="Location (optional)" value={location} onChange={e => setLocation(e.target.value)} />
