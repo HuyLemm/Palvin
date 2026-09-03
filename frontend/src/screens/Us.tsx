@@ -651,6 +651,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   const [highlightId, setHighlightId] = useState(initialWishId);
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewFailed, setPreviewFailed] = useState(false);
 
   const [editingWish, setEditingWish] = useState<WishItem | null>(null);
   const [editText, setEditText] = useState('');
@@ -659,6 +660,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   const [editOriginalLink, setEditOriginalLink] = useState('');
   const [editLinkPreview, setEditLinkPreview] = useState<LinkPreview | null>(null);
   const [editPreviewLoading, setEditPreviewLoading] = useState(false);
+  const [editPreviewFailed, setEditPreviewFailed] = useState(false);
   const [confirmDeleteWish, setConfirmDeleteWish] = useState<string | null>(null);
   const [addingWish, setAddingWish] = useState(false);
 
@@ -693,30 +695,47 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   // keystroke. Note: it can't extract a price — that's rendered by JS on
   // most shop pages, not present in static page metadata — so price stays
   // a manual field.
+  //
+  // Several big Vietnamese shopping sites actively block automated fetches:
+  // Shopee serves a generic "unavailable" shell (whose scraped "logo" is
+  // some unrelated CDN/cert-authority icon, not Shopee's own — showing that
+  // as the preview picture would be actively misleading, hence no `logo`
+  // fallback below), while Lazada/TikTok Shop don't respond at all and the
+  // request hangs until Microlink's own 30s server-side timeout — an
+  // AbortController here fails fast instead of leaving the field stuck on
+  // "Fetching info..." for half a minute. Either way there's no reliable
+  // client-side-only workaround for a site that blocks scrapers outright;
+  // the wish can still be saved with the link and no preview.
   async function fetchLinkPreview(url: string): Promise<LinkPreview | null> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
     try {
       const apiKey = import.meta.env.VITE_MICROLINK_API_KEY as string | undefined;
-      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=false${apiKey ? `&apiKey=${apiKey}` : ''}`);
+      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=false${apiKey ? `&apiKey=${apiKey}` : ''}`, { signal: controller.signal });
       const json = await res.json();
-      if (json.status === 'success') {
-        return {
-          title: json.data?.title ?? undefined,
-          image: json.data?.image?.url ?? json.data?.logo?.url ?? undefined,
-          description: json.data?.description ?? undefined,
-        };
-      }
-      return null;
+      if (json.status !== 'success') return null;
+      const title: string | undefined = json.data?.title ?? undefined;
+      const image: string | undefined = json.data?.image?.url ?? undefined;
+      const description: string | undefined = json.data?.description ?? undefined;
+      const looksBlocked = !image && (!title || /page (not found|unavailable)/i.test(title));
+      if (looksBlocked) return null;
+      return { title, image, description };
     } catch {
       return null;
+    } finally {
+      clearTimeout(timer);
     }
   }
 
   useEffect(() => {
     const url = wishLink.trim();
-    if (!/^https?:\/\/.+/i.test(url)) { setLinkPreview(null); setPreviewLoading(false); return; }
+    if (!/^https?:\/\/.+/i.test(url)) { setLinkPreview(null); setPreviewLoading(false); setPreviewFailed(false); return; }
     setPreviewLoading(true);
+    setPreviewFailed(false);
     const timer = setTimeout(async () => {
-      setLinkPreview(await fetchLinkPreview(url));
+      const preview = await fetchLinkPreview(url);
+      setLinkPreview(preview);
+      setPreviewFailed(!preview);
       setPreviewLoading(false);
     }, 700);
     return () => clearTimeout(timer);
@@ -731,7 +750,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     setEditLinkPreview((w.linkImage || w.linkTitle || w.linkDescription) ? { image: w.linkImage, title: w.linkTitle, description: w.linkDescription } : null);
   }
   function closeEditWish() {
-    setEditingWish(null); setEditText(''); setEditPrice(''); setEditLink(''); setEditOriginalLink(''); setEditLinkPreview(null); setEditPreviewLoading(false);
+    setEditingWish(null); setEditText(''); setEditPrice(''); setEditLink(''); setEditOriginalLink(''); setEditLinkPreview(null); setEditPreviewLoading(false); setEditPreviewFailed(false);
   }
 
   // Re-fetch the preview only when the link actually changed, or when the
@@ -744,10 +763,13 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     const url = editLink.trim();
     const unchanged = url === editOriginalLink.trim();
     if (unchanged && editLinkPreview) { setEditPreviewLoading(false); return; }
-    if (!/^https?:\/\/.+/i.test(url)) { if (!unchanged) setEditLinkPreview(null); setEditPreviewLoading(false); return; }
+    if (!/^https?:\/\/.+/i.test(url)) { if (!unchanged) setEditLinkPreview(null); setEditPreviewLoading(false); setEditPreviewFailed(false); return; }
     setEditPreviewLoading(true);
+    setEditPreviewFailed(false);
     const timer = setTimeout(async () => {
-      setEditLinkPreview(await fetchLinkPreview(url));
+      const preview = await fetchLinkPreview(url);
+      setEditLinkPreview(preview);
+      setEditPreviewFailed(!preview);
       setEditPreviewLoading(false);
     }, unchanged ? 0 : 700);
     return () => clearTimeout(timer);
@@ -884,6 +906,9 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                 <AmountInput placeholder="Estimated price (VND, optional)" value={wishPrice} onChange={setWishPrice} />
                 <input className="input-field" placeholder="Product link (optional)" value={wishLink} onChange={e => setWishLink(e.target.value)} />
                 {previewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
+                {!previewLoading && previewFailed && (
+                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still add the item without one.</p>
+                )}
                 {!previewLoading && linkPreview && (linkPreview.image || linkPreview.title) && (
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
                     {linkPreview.image
@@ -935,6 +960,9 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
               <AmountInput placeholder="Estimated price (VND, optional)" value={editPrice} onChange={setEditPrice} />
               <input className="input-field" placeholder="Product link (optional)" value={editLink} onChange={e => setEditLink(e.target.value)} />
               {editPreviewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
+              {!editPreviewLoading && editPreviewFailed && (
+                <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still keep the link without one.</p>
+              )}
               {!editPreviewLoading && editLinkPreview && (editLinkPreview.image || editLinkPreview.title) && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
                   {editLinkPreview.image
