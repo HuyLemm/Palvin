@@ -155,9 +155,9 @@ function Card({ children, style }: { children: React.ReactNode; style?: React.CS
 }
 
 /* ── Field component ── */
-function Field({ label, placeholder, value, onChange, type = 'text', delay = '0s' }: {
+function Field({ label, placeholder, value, onChange, type = 'text', delay = '0s', autoComplete }: {
   label: string; placeholder: string; value: string;
-  onChange: (v: string) => void; type?: string; delay?: string;
+  onChange: (v: string) => void; type?: string; delay?: string; autoComplete?: string;
 }) {
   return (
     <div className="auth-fade-up" style={{ marginBottom: 16, animationDelay: delay }}>
@@ -177,6 +177,7 @@ function Field({ label, placeholder, value, onChange, type = 'text', delay = '0s
         value={value}
         onChange={e => onChange(e.target.value)}
         autoCapitalize="none"
+        autoComplete={autoComplete}
       />
     </div>
   );
@@ -217,6 +218,17 @@ export default function AuthScreen() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Login and register share this one component instance (switching flow
+  // never unmounts it), so without this, a password typed on one screen was
+  // still sitting in state — and still shown in the field — after switching
+  // to the other.
+  function changeFlow(next: Flow) {
+    setFlow(next);
+    setPassword('');
+    setConfirmPass('');
+    setError('');
+  }
+
   async function handleRegister() {
     setError('');
     if (!email.trim() || !email.includes('@')) return setError('Enter a valid email.');
@@ -227,6 +239,8 @@ export default function AuthScreen() {
     const res = await register(email.trim(), password, name.trim());
     setLoading(false);
     if (!res.ok) return setError(res.error!);
+    setPassword('');
+    setConfirmPass('');
     setFlow('check-email');
   }
 
@@ -256,7 +270,7 @@ export default function AuthScreen() {
             </p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <button className="btn-ghost" onClick={() => { setFlow('welcome'); setError(''); }}>
+            <button className="btn-ghost" onClick={() => { changeFlow('welcome'); }}>
               Back to home
             </button>
           </div>
@@ -270,7 +284,7 @@ export default function AuthScreen() {
     return (
       <AuthBg>
         <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 20px 100px' }}>
-          <BackBtn onClick={() => { setFlow('welcome'); setError(''); }} />
+          <BackBtn onClick={() => { changeFlow('welcome'); }} />
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ marginBottom: 28 }}>
@@ -281,10 +295,10 @@ export default function AuthScreen() {
             </div>
 
             <Card>
-              <Field label="Email" placeholder="you@email.com" value={email} onChange={v => { setEmail(v); setError(''); }} type="email" delay="0.03s" />
-              <Field label="Username" placeholder="Your username" value={name} onChange={v => { setName(v); setError(''); }} delay="0.06s" />
-              <Field label="Password" placeholder="At least 6 characters" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
-              <Field label="Confirm password" placeholder="Confirm your password" value={confirmPass} onChange={v => { setConfirmPass(v); setError(''); }} type="password" delay="0.15s" />
+              <Field label="Email" placeholder="you@email.com" value={email} onChange={v => { setEmail(v); setError(''); }} type="email" delay="0.03s" autoComplete="email" />
+              <Field label="Username" placeholder="Your username" value={name} onChange={v => { setName(v); setError(''); }} delay="0.06s" autoComplete="username" />
+              <Field label="Password" placeholder="At least 6 characters" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" autoComplete="new-password" />
+              <Field label="Confirm password" placeholder="Confirm your password" value={confirmPass} onChange={v => { setConfirmPass(v); setError(''); }} type="password" delay="0.15s" autoComplete="new-password" />
 
               {error && <ErrorBox message={error} />}
             </Card>
@@ -305,7 +319,7 @@ export default function AuthScreen() {
     return (
       <AuthBg>
         <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '50px 20px 100px' }}>
-          <BackBtn onClick={() => { setFlow('welcome'); setError(''); }} />
+          <BackBtn onClick={() => { changeFlow('welcome'); }} />
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ marginBottom: 28 }}>
@@ -316,8 +330,8 @@ export default function AuthScreen() {
             </div>
 
             <Card>
-              <Field label="Username" placeholder="Your username" value={loginUsername} onChange={v => { setLoginUsername(v); setError(''); }} delay="0.05s" />
-              <Field label="Password" placeholder="Password" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
+              <Field label="Username" placeholder="Your username" value={loginUsername} onChange={v => { setLoginUsername(v); setError(''); }} delay="0.05s" autoComplete="username" />
+              <Field label="Password" placeholder="Password" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" autoComplete="current-password" />
 
               {error && <ErrorBox message={error} />}
             </Card>
@@ -326,7 +340,7 @@ export default function AuthScreen() {
               <button className="btn-sakura" onClick={handleLogin} disabled={loading}>
                 {loading ? 'Processing...' : 'Log in'}
               </button>
-              <button className="btn-ghost" onClick={() => { setFlow('register'); setError(''); }}>
+              <button className="btn-ghost" onClick={() => { changeFlow('register'); }}>
                 Don't have an account? Sign up
               </button>
             </div>
@@ -377,10 +391,10 @@ export default function AuthScreen() {
         <div className="auth-fade-up" style={{ width: '100%', animationDelay: '0.15s' }}>
           <Card style={{ padding: '24px 22px', marginBottom: 16 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button className="btn-sakura" onClick={() => { setFlow('login'); setError(''); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <button className="btn-sakura" onClick={() => { changeFlow('login'); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <Icon emoji="✦" size={16} /> Log in
               </button>
-              <button className="btn-ghost" onClick={() => { setFlow('register'); setError(''); }}>
+              <button className="btn-ghost" onClick={() => { changeFlow('register'); }}>
                 Create new account
               </button>
             </div>

@@ -31,7 +31,7 @@ export default function CoupleLocked() {
           Not linked with your partner yet
         </p>
         <p style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.7, marginBottom: 20 }}>
-          This feature unlocks once you're both linked up. Invite your partner in Settings to get started <Icon emoji="💕" size={13} style={{ verticalAlign: -2 }} />
+          This feature unlocks once you're both linked up. Invite your partner in Settings to get started 💓
         </p>
         <button
           onClick={() => navigate('settings')}
