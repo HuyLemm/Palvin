@@ -689,24 +689,53 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   };
 
   // Fetch a compact title/image/description preview for whatever link the
-  // user pastes, via a client-side link-unfurling API — the app has no
-  // backend of its own to do this CORS-safe fetch server-side, so it goes
-  // straight from the browser. Debounced so it doesn't fire on every
-  // keystroke. Note: it can't extract a price — that's rendered by JS on
-  // most shop pages, not present in static page metadata — so price stays
-  // a manual field.
+  // user pastes. Debounced so it doesn't fire on every keystroke. Note: it
+  // can't extract a price — that's rendered by JS on most shop pages, not
+  // present in static page metadata — so price stays a manual field.
   //
-  // Several big Vietnamese shopping sites actively block automated fetches:
-  // Shopee serves a generic "unavailable" shell (whose scraped "logo" is
-  // some unrelated CDN/cert-authority icon, not Shopee's own — showing that
-  // as the preview picture would be actively misleading, hence no `logo`
-  // fallback below), while Lazada/TikTok Shop don't respond at all and the
-  // request hangs until Microlink's own 30s server-side timeout — an
-  // AbortController here fails fast instead of leaving the field stuck on
-  // "Fetching info..." for half a minute. Either way there's no reliable
-  // client-side-only workaround for a site that blocks scrapers outright;
-  // the wish can still be saved with the link and no preview.
-  async function fetchLinkPreview(url: string): Promise<LinkPreview | null> {
+  // Tries our own Supabase Edge Function first (backend/supabase/functions/
+  // link-preview — fetches the page server-side and reads its own <meta>
+  // tags directly), falling back to the public Microlink API only if that
+  // fails (not deployed, cold-start error, etc.). Doing this ourselves
+  // means no shared daily quota: Microlink's free (keyless) tier is capped
+  // at 25 requests/DAY PER IP ADDRESS, shared by every wish either partner
+  // adds that day — trivially used up.
+  //
+  // Neither approach fixes sites that actively block automated fetches
+  // outright: Shopee serves a generic "unavailable" shell (whose scraped
+  // "logo" is some unrelated CDN/cert-authority icon, not Shopee's own —
+  // showing that as the preview picture would be actively misleading,
+  // hence no `logo` fallback below), while Lazada/TikTok Shop don't respond
+  // at all. There's no reliable client-side-only (or even server-side,
+  // without a paid headless-browser/residential-proxy service) workaround
+  // for a site that blocks scrapers this deliberately; the wish can still
+  // be saved with the link and no preview.
+  function looksBlockedPreview(title: string | undefined, image: string | undefined): boolean {
+    return !image && (!title || /page (not found|unavailable)/i.test(title));
+  }
+
+  async function fetchFromOurProxy(url: string): Promise<LinkPreview | null> {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    if (!supabaseUrl) return null;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/link-preview?url=${encodeURIComponent(url)}`, { signal: controller.signal });
+      const json = await res.json();
+      if (json.status !== 'success') return null;
+      const title: string | undefined = json.data?.title ?? undefined;
+      const image: string | undefined = json.data?.image ?? undefined;
+      const description: string | undefined = json.data?.description ?? undefined;
+      if (looksBlockedPreview(title, image)) return null;
+      return { title, image, description };
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function fetchFromMicrolink(url: string): Promise<LinkPreview | null> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 8000);
     try {
@@ -717,14 +746,17 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
       const title: string | undefined = json.data?.title ?? undefined;
       const image: string | undefined = json.data?.image?.url ?? undefined;
       const description: string | undefined = json.data?.description ?? undefined;
-      const looksBlocked = !image && (!title || /page (not found|unavailable)/i.test(title));
-      if (looksBlocked) return null;
+      if (looksBlockedPreview(title, image)) return null;
       return { title, image, description };
     } catch {
       return null;
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  async function fetchLinkPreview(url: string): Promise<LinkPreview | null> {
+    return (await fetchFromOurProxy(url)) ?? (await fetchFromMicrolink(url));
   }
 
   // Tracks whichever fetch the debounce below currently has in flight, so
