@@ -1690,10 +1690,27 @@ const refreshMoods = useCallback(async () => {
             return { ...s, notifications: [notif, ...s.notifications] };
           });
           toast(row.message, row.emoji ?? '🔔', { passive: true });
+          // Most domains (expenses, wishes, memories, events, ...) have no
+          // realtime subscription of their own — without this, the partner's
+          // change was invisible in an already-open session (whether sitting
+          // on the relevant screen already, or landing there via tapping this
+          // very notification) until a full app reload re-ran every fetch
+          // from scratch. A real notification row only exists because
+          // something actually changed, so treat every one (chat/date-requests
+          // excluded — they already have their own realtime) as "go refetch
+          // everything" instead of maintaining a per-category map that a new
+          // notify_* function could silently fall through.
+          refreshPosts(); refreshMemories(); refreshEvents(); refreshCycleLogs();
+          refreshStoryQuotes(); refreshDebts(); refreshMoney(); refreshLoveStuff();
+          refreshGoals(); refreshFavorites(); refreshPlaces(); refreshPlaylist();
+          refreshTrips(); refreshCapsules(); refreshWishes(); refreshDateIdeas();
+          refreshDateIdeaPresets(); refreshDateIdeaHistory(); refreshGratitude();
+          refreshMoods(); refreshStreak();
         }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLinked, myProfile, partnerProfile, refreshNotifications]);
 
   // Realtime: date_requests has no notification row for deletes (only
