@@ -8,6 +8,7 @@ import { initialState } from './data';
 import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage } from './types';
 import { fetchChatMessages, sendChatMessageRow, markChatReadFrom, fetchUnreadChatCount, uploadChatFile } from './chat';
 import type { NewChatMessage } from './chat';
+import { readBootCache, writeBootCache, clearBootCache } from './bootCache';
 import { supabase } from './lib/supabaseClient';
 import {
   updatePhoto as authUpdatePhoto, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
@@ -98,6 +99,8 @@ interface AppContextType {
   profileLoaded: boolean;   // true once refreshAuthProfile() has resolved at least once — gates isLinked from flashing false
   isLinked: boolean;
   dataReady: boolean;       // true once the couple's initial data fetches have settled (or timed out) — see BOOT_DOMAIN_COUNT below
+  imagesReady: boolean;     // true once every image referenced by that data has finished downloading (or timed out)
+  hydratedFromCache: boolean; // true when this render was seeded from last session's cached snapshot — lets App.tsx skip the loading screen
   myProfile: AuthProfile | null;
   partnerProfile: AuthProfile | null;
   refreshAuthProfile: () => Promise<void>;
@@ -295,15 +298,64 @@ export const useApp = () => useContext(Ctx);
 let idCounter = 1000;
 const uid = () => String(++idCounter);
 
+// Every image URL that could show up anywhere in the app, gathered once the
+// couple's data has finished loading — see the imagesReady effect below.
+// Deduped via a Set since e.g. the same avatar URL appears on every post.
+function collectImageUrls(state: AppState, profilePhotos: Record<string, string>): string[] {
+  const urls = new Set<string>();
+  for (const p of state.posts) for (const u of p.images) if (u) urls.add(u);
+  for (const m of state.memories) if (m.image) urls.add(m.image);
+  for (const pl of state.places) for (const u of pl.images) if (u) urls.add(u);
+  for (const list of Object.values(state.favPlaces)) for (const f of list) if (f.image) urls.add(f.image);
+  for (const p of state.playlist) if (p.image) urls.add(p.image);
+  for (const w of state.wishes) if (w.linkImage) urls.add(w.linkImage);
+  for (const m of state.chatMessages) if (m.imageUrl) urls.add(m.imageUrl);
+  for (const url of Object.values(profilePhotos)) if (url) urls.add(url);
+  return Array.from(urls);
+}
+
+// Never rejects — one broken/slow image URL shouldn't hang the whole batch
+// (and by extension the loading screen) forever.
+function preloadImage(url: string): Promise<void> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = url;
+  });
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<AppState>(initialState);
-  const [currentUser, setCurrentUser] = useState<User>('');
-  const [authed, setAuthed] = useState(false);
+  // Seeds the very first render from last session's snapshot (if any) so a
+  // warm reopen shows real content immediately instead of the loading
+  // screen — see bootCache.ts. Wrong-account safety needs no extra code:
+  // refreshProfiles() below always overwrites myProfile/partnerProfile/
+  // currentUser/isLinked with the real fetch, and every refreshX() effect
+  // re-fires whenever those change, so a mismatched cache self-heals the
+  // instant the real check resolves.
+  const [bootCache] = useState(() => readBootCache());
+  // A real useState (not a plain derived const) specifically so logout()
+  // can reset it — otherwise, once true, it stays true for the rest of the
+  // tab's life, and stillResolvingSession's `!hydratedFromCache && ...`
+  // guard in App.tsx would keep skipping the loading screen forever even
+  // after signing out and into a *different* account in the same tab,
+  // showing that account's screens flash by half-loaded instead of behind
+  // the loading screen the way a genuine cold boot would.
+  const [hydratedFromCache, setHydratedFromCache] = useState(() => !!bootCache);
+
+  const [state, setState] = useState<AppState>(() => bootCache?.state ?? initialState);
+  const [currentUser, setCurrentUser] = useState<User>(() => bootCache?.currentUser ?? '');
+  // Optimistically true when hydrated — otherwise the real getSession()
+  // check (which takes a beat) would leave `authed` false for a moment and
+  // flash the AuthScreen overlay before the loading screen would have
+  // covered it. Self-corrects the instant getSession()/onAuthStateChange
+  // resolves if the cached account is no longer actually signed in.
+  const [authed, setAuthed] = useState(() => hydratedFromCache);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoaded, setProfileLoaded] = useState(false);
-  const [isLinked, setIsLinked] = useState(false);
-  const [myProfile, setMyProfile] = useState<AuthProfile | null>(null);
-  const [partnerProfile, setPartnerProfile] = useState<AuthProfile | null>(null);
+  const [isLinked, setIsLinked] = useState(() => bootCache?.isLinked ?? false);
+  const [myProfile, setMyProfile] = useState<AuthProfile | null>(() => bootCache?.myProfile ?? null);
+  const [partnerProfile, setPartnerProfile] = useState<AuthProfile | null>(() => bootCache?.partnerProfile ?? null);
   const [pendingInvite, setPendingInvite] = useState<PendingInvite | null>(null);
   const [sentInvite, setSentInvite] = useState<PendingInvite | null>(null);
   const [profilePhotos, setProfilePhotos] = useState<Record<string, string>>({});
@@ -1130,8 +1182,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshProfiles = useCallback(async () => {
     const me = await getCurrentProfile();
     if (!me) {
+      clearBootCache();
+      setHydratedFromCache(false);
       setMyProfile(null); setPartnerProfile(null); setProfilePhotos({}); setIsLinked(false);
       setProfileLoaded(true);
+      // getCurrentProfile() calls auth.getUser() (server-validated, unlike
+      // getSession()'s local-only check), so landing here means either the
+      // account itself is gone (e.g. an admin wipe) or there was never a
+      // real session — either way `authed` must not stay true from a stale
+      // locally-cached session, or the app falls through to "waiting to
+      // link a partner" instead of the login screen. signOut() clears the
+      // stale token and fires onAuthStateChange(null), which sets authed
+      // false correctly; it's a harmless no-op if there was no session.
+      supabase.auth.signOut();
       return;
     }
     const partner = await getPartnerProfile();
@@ -1155,7 +1218,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setAuthed(!!session);
       if (session) { setProfileLoaded(false); refreshProfiles(); }
-      else { setMyProfile(null); setPartnerProfile(null); setProfilePhotos({}); setIsLinked(false); setProfileLoaded(true); }
+      else { clearBootCache(); setHydratedFromCache(false); setMyProfile(null); setPartnerProfile(null); setProfilePhotos({}); setIsLinked(false); setProfileLoaded(true); }
     });
     return () => sub.subscription.unsubscribe();
   }, [refreshProfiles]);
@@ -1191,6 +1254,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(t);
   }, [isLinked]);
   const dataReady = !isLinked || dataTimedOut || loadedDomains.size >= BOOT_DOMAIN_COUNT;
+
+  // Holds the loading screen up until every image the couple's data
+  // references has actually finished downloading — chosen deliberately over
+  // the faster "show the app, load images in the background" tradeoff: a
+  // longer first load, but zero shimmer/placeholder flicker navigating
+  // anywhere afterward. Skipped on a warm reopen (hydratedFromCache) same as
+  // dataReady — those images are almost certainly still in the browser's own
+  // HTTP cache from last time, so blocking on them again would be wasted time.
+  const [imagesReady, setImagesReady] = useState(false);
+  useEffect(() => {
+    if (!dataReady) { setImagesReady(false); return; }
+    if (!isLinked) { setImagesReady(true); return; }
+    let cancelled = false;
+    const urls = collectImageUrls(state, profilePhotos);
+    Promise.race([
+      Promise.all(urls.map(preloadImage)),
+      new Promise<void>(resolve => setTimeout(resolve, 10000)),
+    ]).then(() => { if (!cancelled) setImagesReady(true); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataReady, isLinked]);
+
+  // Keeps bootCache warm for the *next* reopen — debounced so a burst of
+  // realtime updates (e.g. a flurry of chat messages) writes once, not once
+  // per message. Only saves once actually linked, so a not-yet-linked
+  // account never seeds a future session with an empty/half-set-up cache.
+  const cacheWriteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    if (!isLinked || !myProfile) return;
+    if (cacheWriteTimer.current) clearTimeout(cacheWriteTimer.current);
+    cacheWriteTimer.current = setTimeout(() => {
+      writeBootCache({ userId: myProfile.id, currentUser, myProfile, partnerProfile, isLinked, state });
+    }, 800);
+    return () => clearTimeout(cacheWriteTimer.current);
+  }, [isLinked, myProfile, partnerProfile, currentUser, state]);
 
   const refreshPosts = useCallback(async () => {
     if (!myProfile) return;
@@ -1590,18 +1688,21 @@ const refreshMoods = useCallback(async () => {
         (payload) => {
           const row = payload.new as { id: string; sender_profile_id: string; text: string | null; image_url: string | null; audio_url: string | null; audio_duration: number | null; created_at: string; read_at: string | null };
           const mine = row.sender_profile_id === myId;
+          // Own messages are already shown optimistically (and reconciled to
+          // this same real id) by sendChatMessage the moment it's sent — an
+          // unconditional add here could race ahead of that reconciliation
+          // and insert a visible duplicate bubble under the same id/key.
+          if (mine) return;
           const onChatScreen = screenRef.current === 'chat';
           setState(s => {
             if (s.chatMessages.some(m => m.id === row.id)) return s;
-            const msg: ChatMessage = { id: row.id, senderId: row.sender_profile_id, sender: mine ? myProfile.displayName : partnerName, mine, text: row.text, imageUrl: row.image_url, audioUrl: row.audio_url, audioDuration: row.audio_duration, createdAt: row.created_at, read: !!row.read_at };
-            return { ...s, chatMessages: [...s.chatMessages, msg], unreadChatCount: !mine && !onChatScreen ? s.unreadChatCount + 1 : s.unreadChatCount };
+            const msg: ChatMessage = { id: row.id, senderId: row.sender_profile_id, sender: partnerName, mine: false, text: row.text, imageUrl: row.image_url, audioUrl: row.audio_url, audioDuration: row.audio_duration, createdAt: row.created_at, read: !!row.read_at };
+            return { ...s, chatMessages: [...s.chatMessages, msg], unreadChatCount: !onChatScreen ? s.unreadChatCount + 1 : s.unreadChatCount };
           });
-          if (!mine) {
-            if (onChatScreen) markChatReadFrom(partnerId);
-            else {
-              const preview = row.image_url ? '📷 Sent a photo' : row.audio_url ? '🎤 Sent a voice message' : (row.text ?? '').length > 60 ? row.text!.slice(0, 60) + '…' : (row.text ?? '');
-              toast(`${partnerName}: ${preview}`, '💬', { passive: true });
-            }
+          if (onChatScreen) markChatReadFrom(partnerId);
+          else {
+            const preview = row.image_url ? '📷 Sent a photo' : row.audio_url ? '🎤 Sent a voice message' : (row.text ?? '').length > 60 ? row.text!.slice(0, 60) + '…' : (row.text ?? '');
+            toast(`${partnerName}: ${preview}`, '💬', { passive: true });
           }
         }
       )
@@ -1617,11 +1718,43 @@ const refreshMoods = useCallback(async () => {
     return () => { supabase.removeChannel(channel); };
   }, [isLinked, myProfile, partnerProfile, refreshChat]);
 
+  // Optimistic send: the bubble appears the instant you hit send, marked
+  // "Sending..." — otherwise it only showed up once Realtime echoed the
+  // insert back (a second or more later), which read as "did that even
+  // send?" until it suddenly popped in.
   const sendChatMessage = async (msg: NewChatMessage) => {
     if (!myProfile) return;
-    if (!msg.text?.trim() && !msg.imageUrl && !msg.audioUrl) return;
-    const { error } = await sendChatMessageRow(myProfile.id, { ...msg, text: msg.text?.trim() });
-    if (error) toast('Something went wrong', '⚠️');
+    const text = msg.text?.trim();
+    if (!text && !msg.imageUrl && !msg.audioUrl) return;
+    const tempId = `temp-${uid()}`;
+    const optimistic: ChatMessage = {
+      id: tempId,
+      senderId: myProfile.id,
+      sender: myProfile.displayName,
+      mine: true,
+      text: text ?? null,
+      imageUrl: msg.imageUrl ?? null,
+      audioUrl: msg.audioUrl ?? null,
+      audioDuration: msg.audioDuration ?? null,
+      createdAt: new Date().toISOString(),
+      read: false,
+      pending: true,
+      clientKey: tempId,
+    };
+    setState(s => ({ ...s, chatMessages: [...s.chatMessages, optimistic] }));
+    const { data, error } = await sendChatMessageRow(myProfile.id, { ...msg, text });
+    if (error || !data) {
+      toast('Something went wrong', '⚠️');
+      setState(s => ({ ...s, chatMessages: s.chatMessages.map(m => m.id === tempId ? { ...m, pending: false, failed: true } : m) }));
+      return;
+    }
+    const row = data as { id: string; created_at: string; read_at: string | null };
+    setState(s => ({
+      ...s,
+      chatMessages: s.chatMessages.map(m => m.id === tempId
+        ? { ...m, id: row.id, createdAt: row.created_at, read: !!row.read_at, pending: false }
+        : m),
+    }));
   };
 
   const uploadChatMedia = async (file: File | Blob, ext: string): Promise<string | null> => {
@@ -1696,13 +1829,15 @@ const refreshMoods = useCallback(async () => {
   };
 
   const logout = useCallback(() => {
+    clearBootCache();
+    setHydratedFromCache(false);
     authLogout();
   }, []);
 
   return (
     <Ctx.Provider value={{
       state, currentUser,
-      authed, authLoading, profileLoaded, isLinked, dataReady, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
+      authed, authLoading, profileLoaded, isLinked, dataReady, imagesReady, hydratedFromCache, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
       pendingInvite, sentInvite, invitePartner, acceptInvite, rejectInvite, cancelSentInvite,
       screen, selectedId, navigate, goBack, navSeq, lastNavWasPop,
       toasts, toast,

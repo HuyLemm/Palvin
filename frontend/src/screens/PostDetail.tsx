@@ -11,9 +11,9 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
   );
 }
 
-export default function PostDetail() {
+export default function PostDetail({ id }: { id?: string } = {}) {
   const { state, selectedId, goBack, toggleLike, toggleSave, addComment, currentUser } = useApp();
-  const post = state.posts.find(p => p.id === selectedId);
+  const post = state.posts.find(p => p.id === (id ?? selectedId));
   const [text, setText] = useState('');
   const [imgIndex, setImgIndex] = useState(0);
 

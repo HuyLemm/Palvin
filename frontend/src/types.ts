@@ -336,6 +336,16 @@ export interface ChatMessage {
   audioDuration: number | null;
   createdAt: string;
   read: boolean;
+  // Optimistic-send state — set the instant the user hits send, before the
+  // network round trip confirms it, so the bubble appears immediately
+  // instead of only once realtime delivers it back a moment later.
+  pending?: boolean;
+  failed?: boolean;
+  // Stable React key across the optimistic → confirmed swap (where `id`
+  // itself changes from a temp client id to the real row id) — keeps the
+  // same DOM node instead of unmounting/remounting it, so the "just sent"
+  // fade-in animation doesn't replay a second time the moment it confirms.
+  clientKey?: string;
 }
 
 export interface AppState {

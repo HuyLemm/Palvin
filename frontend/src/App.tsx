@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from 'react';
+import { lazy, Suspense, useEffect, useState, type JSX } from 'react';
 import { useApp } from './context';
 import Toast from './components/Toast';
 import CreateModal from './components/CreateModal';
@@ -7,21 +7,30 @@ import CoupleLocked from './components/CoupleLocked';
 import Avatar from './components/Avatar';
 import Icon from './components/Icon';
 
+// Home (the very first thing a linked user sees on cold boot) loads eagerly,
+// same as AuthScreen (the very first thing a logged-out user sees) above —
+// lazy-loading either would just trade an already-loaded main chunk for a
+// guaranteed extra network round trip on the one screen everyone always
+// hits first. Every other screen is fetched on first visit instead of
+// upfront, shrinking the initial bundle (see main chunk size warning from
+// `vite build`) — by the time any of them actually renders, dataReady/
+// imagesReady have already finished, so the only wait left is this small
+// JS chunk, not data or images.
 import Home from './screens/Home';
-import Feed from './screens/Feed';
-import Money from './screens/Money';
-import Us from './screens/Us';
-import Memories from './screens/Memories';
-import LoveNotes from './screens/LoveNotes';
-import Calendar from './screens/Calendar';
-import FutureUs from './screens/FutureUs';
-import Search from './screens/Search';
-import Notifications from './screens/Notifications';
-import Settings from './screens/Settings';
-import PostDetail from './screens/PostDetail';
-import SavedPosts from './screens/SavedPosts';
-import MemoryDetail from './screens/MemoryDetail';
-import Chat from './screens/Chat';
+const Feed = lazy(() => import('./screens/Feed'));
+const Money = lazy(() => import('./screens/Money'));
+const Us = lazy(() => import('./screens/Us'));
+const Memories = lazy(() => import('./screens/Memories'));
+const LoveNotes = lazy(() => import('./screens/LoveNotes'));
+const Calendar = lazy(() => import('./screens/Calendar'));
+const FutureUs = lazy(() => import('./screens/FutureUs'));
+const Search = lazy(() => import('./screens/Search'));
+const Notifications = lazy(() => import('./screens/Notifications'));
+const Settings = lazy(() => import('./screens/Settings'));
+const PostDetail = lazy(() => import('./screens/PostDetail'));
+const SavedPosts = lazy(() => import('./screens/SavedPosts'));
+const MemoryDetail = lazy(() => import('./screens/MemoryDetail'));
+const Chat = lazy(() => import('./screens/Chat'));
 
 type Tab = 'home' | 'feed' | 'stats' | 'us' | 'settings';
 
@@ -124,11 +133,24 @@ const SCREEN_TITLE_EMOJI: Record<string, string> = {
 // flow, and Notifications is where an incoming invite also surfaces.
 const UNLOCKED_BEFORE_LINK = ['settings', 'notifications'];
 
-function ScreenRouter() {
-  const { screen, isLinked } = useApp();
+// Screens with no per-instance id — one shared, always-current view driven
+// entirely by the live global `screen`/`selectedId` from context, so keeping
+// them all mounted forever (just hidden via CSS) after their first visit is
+// risk-free: revisiting one shows it exactly as it was, images and scroll
+// position intact, instead of re-mounting from scratch and re-loading every
+// image again. Bounded by construction — this is a fixed list, it can't grow.
+const KEEP_ALIVE_SCREENS = new Set([
+  'home', 'feed', 'money', 'us', 'settings',
+  'memories', 'love-notes', 'calendar', 'future-us', 'search', 'notifications', 'saved-posts',
+]);
+// post-detail/memory-detail carry a per-instance id (which post/memory), so
+// each distinct id needs its own frozen `id` prop rather than reading the
+// live global selectedId — otherwise every kept-alive instance would jump to
+// whatever post is *currently* selected. Bounded to the last few distinct
+// ones visited so browsing many different posts in one session can't leak.
+const MAX_DETAIL_INSTANCES = 4;
 
-  if (!isLinked && !UNLOCKED_BEFORE_LINK.includes(screen)) return <CoupleLocked />;
-
+function renderScreen(screen: string, id: string | undefined): JSX.Element {
   switch (screen) {
     case 'home':          return <Home />;
     case 'feed':          return <Feed />;
@@ -141,23 +163,90 @@ function ScreenRouter() {
     case 'search':        return <Search />;
     case 'notifications': return <Notifications />;
     case 'settings':      return <Settings />;
-    case 'stats':         return <Money />;
-    case 'post-detail':   return <PostDetail />;
+    case 'post-detail':   return <PostDetail id={id} />;
     case 'saved-posts':   return <SavedPosts />;
-    case 'memory-detail': return <MemoryDetail />;
+    case 'memory-detail': return <MemoryDetail id={id} />;
     default:              return <Home />;
   }
+}
+
+function ScreenRouter() {
+  const { screen, selectedId, isLinked } = useApp();
+  // Chat is its own always-mounted overlay in App.tsx, entirely separate
+  // from this router — while it's open, `key` is null so nothing here
+  // matches for display, leaving whatever screen was showing underneath
+  // exactly as it was (hidden behind the opaque overlay) instead of
+  // ScreenRouter trying to track/mount a 'chat' entry of its own (which
+  // has no case in renderScreen and would fall through to a second, wasted
+  // <Home/> instance, plus wrongly occupy one of the bounded detail slots).
+  // 'stats' is just an alternate entry point into the Money screen (same
+  // component, different starting tab) — normalized to the same key as
+  // 'money' so they share one kept-alive instance instead of the Stats nav
+  // button minting a second, independent <Money/> that always opens on the
+  // Expenses tab regardless of which button was tapped.
+  const normalizedScreen = screen === 'stats' ? 'money' : screen;
+  const key = screen === 'chat' ? null : (selectedId ? `${normalizedScreen}:${selectedId}` : normalizedScreen);
+
+  const [keptKeys, setKeptKeys] = useState<string[]>(key ? [key] : []);
+  useEffect(() => {
+    if (key === null) return;
+    setKeptKeys(prev => {
+      if (prev.includes(key)) return prev;
+      let next = [...prev, key];
+      const detailKeys = next.filter(k => !KEEP_ALIVE_SCREENS.has(k.split(':')[0]));
+      if (detailKeys.length > MAX_DETAIL_INSTANCES) {
+        const drop = new Set(detailKeys.slice(0, detailKeys.length - MAX_DETAIL_INSTANCES));
+        next = next.filter(k => !drop.has(k));
+      }
+      return next;
+    });
+  }, [key]);
+
+  if (!isLinked && !UNLOCKED_BEFORE_LINK.includes(screen)) return <CoupleLocked />;
+
+  return (
+    <>
+      {keptKeys.map(k => {
+        const sepIdx = k.indexOf(':');
+        const scr = sepIdx === -1 ? k : k.slice(0, sepIdx);
+        const id = sepIdx === -1 ? undefined : k.slice(sepIdx + 1);
+        // className lives on this per-key div (never remounted once created)
+        // rather than a key={screen} wrapper in App.tsx — that would defeat
+        // the whole point by forcing a fresh ScreenRouter (and everything
+        // kept alive inside it) on every single navigation. The fade/slide-in
+        // still plays the first time a screen is ever visited (a real mount),
+        // it just doesn't replay on later revisits — same tradeoff a native
+        // tab bar makes.
+        return (
+          <div key={k} className="screen-transition" style={{ display: k === key ? 'block' : 'none' }}>
+            <Suspense fallback={null}>{renderScreen(scr, id)}</Suspense>
+          </div>
+        );
+      })}
+    </>
+  );
 }
 
 const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 
 export default function App() {
-  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, partnerProfile, authed, authLoading, profileLoaded, isLinked, dataReady, pendingInvite, toast } = useApp();
-  // Also holds the loading screen up until the couple's own data has actually
-  // loaded — otherwise it used to hand off to the real screens the instant
-  // the session/profile resolved, flashing ~0.5s of "has UI, but no data yet"
-  // before each section's fetch caught up.
-  const stillResolvingSession = authLoading || (authed && !profileLoaded) || (authed && isLinked && !dataReady);
+  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, partnerProfile, authed, authLoading, profileLoaded, isLinked, dataReady, imagesReady, hydratedFromCache, pendingInvite, toast } = useApp();
+  // Also holds the loading screen up until the couple's own data — and every
+  // image that data references — has actually loaded, so navigating
+  // anywhere right after the loading screen shows real content and real
+  // images immediately, with zero shimmer/placeholder flicker. Skipped
+  // entirely on a warm reopen (hydratedFromCache) — last session's snapshot
+  // renders immediately (images almost certainly still in the browser's own
+  // HTTP cache) while the same fetches quietly refresh it in the background,
+  // so re-launching the home-screen icon after the OS killed the tab no
+  // longer means sitting through the full boot sequence again every reopen.
+  const stillResolvingSession = !hydratedFromCache && (authLoading || (authed && !profileLoaded) || (authed && isLinked && (!dataReady || !imagesReady)));
+
+  // Keeps Chat mounted (just hidden) once opened, same reasoning as
+  // ScreenRouter's KEEP_ALIVE_SCREENS — reopening it shouldn't re-fetch or
+  // re-fade-in every image in the thread from scratch.
+  const [hasOpenedChat, setHasOpenedChat] = useState(false);
+  useEffect(() => { if (screen === 'chat') setHasOpenedChat(true); }, [screen]);
 
   // A simulated fill (no real multi-step progress exists to measure) that
   // eases toward ~90% while we wait, then snaps to 100% and holds briefly
@@ -415,11 +504,11 @@ export default function App() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button onClick={() => handleTabClick('search')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <button onClick={() => handleTabClick('search')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 </button>
-                <button onClick={() => handleTabClick('notifications')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+                <button onClick={() => handleTabClick('notifications')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
                   {unreadNotifs > 0 && (
                     <div key={unreadNotifs} className="animate-heart-pop" style={{
                       position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, padding: '0 3px',
@@ -430,8 +519,8 @@ export default function App() {
                     </div>
                   )}
                 </button>
-                <button onClick={() => handleTabClick('chat')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                <button onClick={() => handleTabClick('chat')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
                   {state.unreadChatCount > 0 && (
                     <div key={state.unreadChatCount} className="animate-heart-pop" style={{
                       position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, padding: '0 3px',
@@ -447,11 +536,11 @@ export default function App() {
 
             {/* Scroll area */}
             <main style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 80px' }}>
-              {/* key={screen} remounts this on every navigation so the
-                  fade/slide-in animation replays each time. */}
-              <div key={screen} className="screen-transition">
-                <ScreenRouter />
-              </div>
+              {/* ScreenRouter keeps every visited screen mounted (just
+                  hidden) internally — see its own per-key .screen-transition
+                  wrapper — so this can't have a key={screen} of its own
+                  without unmounting that whole kept-alive tree on every nav. */}
+              <ScreenRouter />
             </main>
 
             {/* Bottom Nav */}
@@ -512,10 +601,28 @@ export default function App() {
             </nav>
 
             {/* Chat — full-screen overlay (own header + input bar), like an
-                Instagram DM thread replacing the tab bar while it's open. */}
-            {screen === 'chat' && (
-              <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'var(--bg)' }}>
-                <Chat onBack={goBack} />
+                Instagram DM thread replacing the tab bar while it's open.
+                Stays mounted after the first open (see hasOpenedChat above)
+                so leaving and coming back doesn't reload every photo/voice
+                message in the thread again. */}
+            {hasOpenedChat && (
+              // Always technically "displayed" (never display:none) once
+              // opened once — transform/opacity animate it in and out
+              // instead, which display:none can't do, while pointerEvents
+              // keeps it non-interactive and out of the way when hidden.
+              // Chat itself never unmounts either way, so this is purely
+              // the entrance/exit motion, not what keeps images from
+              // reloading (that's the persistent mount itself).
+              <div style={{
+                position: 'absolute', inset: 0, zIndex: 50, background: 'var(--bg)',
+                transform: screen === 'chat' ? 'translateY(0)' : 'translateY(100%)',
+                opacity: screen === 'chat' ? 1 : 0,
+                transition: 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.22s ease',
+                pointerEvents: screen === 'chat' ? 'auto' : 'none',
+              }}>
+                <Suspense fallback={null}>
+                  <Chat onBack={goBack} />
+                </Suspense>
               </div>
             )}
           </div>

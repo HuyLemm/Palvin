@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type MouseEventHandler } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties, type MouseEventHandler } from 'react';
 
 // Drop-in replacement for a plain <img>: shows a shimmering placeholder
 // (instead of a blank hole) until the image actually finishes loading, then
@@ -13,6 +13,16 @@ export default function FadeImage({ src, alt = '', style, className, onClick }: 
   onClick?: MouseEventHandler<HTMLDivElement>;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  // context.tsx preloads every image up front before the app even opens —
+  // for one already sitting in the browser's HTTP cache, `complete` is
+  // already true the instant this mounts. Catching that synchronously
+  // before paint (useLayoutEffect) skips the shimmer-then-fade entirely
+  // instead of still playing a 300ms fade-in for an image that was never
+  // actually waiting on anything.
+  useLayoutEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true);
+  }, [src]);
   const { objectFit, position, ...rest } = style ?? {};
   return (
     <div
@@ -28,9 +38,9 @@ export default function FadeImage({ src, alt = '', style, className, onClick }: 
         }} />
       )}
       <img
+        ref={imgRef}
         src={src}
         alt={alt}
-        loading="lazy"
         onLoad={() => setLoaded(true)}
         style={{ width: '100%', height: '100%', objectFit: objectFit ?? 'cover', display: 'block', position: 'relative', opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
       />

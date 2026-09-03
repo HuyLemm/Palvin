@@ -3,9 +3,9 @@ import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
 
-export default function MemoryDetail() {
+export default function MemoryDetail({ id }: { id?: string } = {}) {
   const { state, selectedId, goBack, toggleFavorite } = useApp();
-  const memory = state.memories.find(m => m.id === selectedId);
+  const memory = state.memories.find(m => m.id === (id ?? selectedId));
 
   if (!memory) return null;
 

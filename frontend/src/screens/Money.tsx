@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../context';
 import AddExpenseForm from '../components/forms/AddExpenseForm';
 import AddIncomeForm from '../components/forms/AddIncomeForm';
@@ -49,10 +49,18 @@ function frequencyLabel(n: number): string {
 }
 
 export default function Money() {
-  const { state, addToGoal, withdrawFromGoal, addBill, toggleBillPaid } = useApp();
+  const { state, screen, addToGoal, withdrawFromGoal, addBill, toggleBillPaid } = useApp();
   const [tab, setTab] = useState<Tab>('expenses');
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddIncome, setShowAddIncome] = useState(false);
+
+  // The bottom-nav's dedicated Stats button and the Money tab both land on
+  // this same kept-alive screen (see App.tsx's ScreenRouter) — this is the
+  // only way to tell them apart post-mount, since a repeat tap on either
+  // doesn't remount the component.
+  useEffect(() => {
+    if (screen === 'stats') setTab('stats');
+  }, [screen]);
 
   return (
     <div style={{ paddingBottom: 32 }}>
