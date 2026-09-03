@@ -9,10 +9,12 @@ export default function EditPostForm({ post, onClose }: { post: Post; onClose: (
   const [caption, setCaption] = useState(post.caption);
   const [location, setLocation] = useState(post.location ?? '');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!caption.trim()) { setError('Please write a caption.'); return; }
-    editPost(post.id, { caption, location: location || undefined });
+    setSaving(true);
+    await editPost(post.id, { caption, location: location || undefined });
     onClose();
   };
 
@@ -52,8 +54,8 @@ export default function EditPostForm({ post, onClose }: { post: Post; onClose: (
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
 
           <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-            <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2 }}>Save</button>
+            <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
+            <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : 'Save'}</button>
           </div>
         </div>
       </div>

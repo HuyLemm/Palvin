@@ -16,6 +16,7 @@ export default function DateIdeaJar({ onBack }: Props) {
   const [editingIdea, setEditingIdea] = useState<EditableIdea | null>(null);
   const [editIdeaText, setEditIdeaText] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; source: 'preset' | 'custom' } | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const presetIdeas = state.dateIdeaPresets;
   const customIdeas = state.dateIdeas;
@@ -49,11 +50,13 @@ export default function DateIdeaJar({ onBack }: Props) {
     }, 120);
   }
 
-  function addCustom() {
+  async function addCustom() {
     if (!newIdea.trim()) return;
-    addDateIdea({ emoji: '✨', text: newIdea.trim() });
+    setAdding(true);
+    await addDateIdea({ emoji: '✨', text: newIdea.trim() });
     setNewIdea('');
     setShowAdd(false);
+    setAdding(false);
   }
 
   function saveEditIdea() {
@@ -133,8 +136,9 @@ export default function DateIdeaJar({ onBack }: Props) {
               onKeyDown={e => e.key === 'Enter' && addCustom()}
               style={{ flex: 1, padding: '10px 14px', fontSize: 14 }}
               autoFocus
+              disabled={adding}
             />
-            <button onClick={addCustom} style={{ padding: '10px 16px', background: 'var(--sakura-deep)', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✓" size={16} /></button>
+            <button onClick={addCustom} disabled={adding} style={{ padding: '10px 16px', background: 'var(--sakura-deep)', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: adding ? 0.7 : 1 }}><Icon emoji={adding ? '…' : '✓'} size={16} /></button>
           </div>
         )}
       </div>

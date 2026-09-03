@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState, type JSX } from 'react';
 import { useApp } from './context';
 import Toast from './components/Toast';
 import CreateModal from './components/CreateModal';
-import AuthScreen from './screens/AuthScreen';
+import AuthScreen, { ResetPasswordScreen } from './screens/AuthScreen';
 import CoupleLocked from './components/CoupleLocked';
 import Avatar from './components/Avatar';
 import Icon from './components/Icon';
@@ -118,7 +118,7 @@ const SCREEN_TITLES: Record<string, string> = {
   home: 'PALVIN', feed: 'Feed', money: 'Our Money', us: 'Us',
   memories: 'Memories', 'love-notes': 'For You', calendar: 'Our Calendar',
   'future-us': 'Future Us', search: 'Search', notifications: 'Notifications',
-  settings: 'Settings', stats: 'Spending',
+  settings: 'Settings', stats: 'Spending', bills: 'Bills', goals: 'Savings Goals',
   'post-detail': 'Post', 'memory-detail': 'Memory', 'saved-posts': 'Saved',
 };
 
@@ -127,6 +127,7 @@ const SCREEN_TITLES: Record<string, string> = {
 // rendered explicitly next to it.
 const SCREEN_TITLE_EMOJI: Record<string, string> = {
   money: '💰', us: '🌸', memories: '🌸', 'love-notes': '💌', stats: '📊',
+  bills: '🧾', goals: '💰',
 };
 
 // Stay open even before the couple is linked: Settings hosts the invite/accept
@@ -149,6 +150,18 @@ const KEEP_ALIVE_SCREENS = new Set([
 // whatever post is *currently* selected. Bounded to the last few distinct
 // ones visited so browsing many different posts in one session can't leak.
 const MAX_DETAIL_INSTANCES = 4;
+
+// Shown for the brief moment a lazy-loaded screen's chunk is still being
+// fetched (first visit only — every later visit hits the module cache and
+// resolves synchronously) so navigating there never shows a blank screen.
+function ScreenLoadingFallback() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ width: 30, height: 30, borderRadius: '50%', border: '3px solid var(--border)', borderTopColor: 'var(--sakura-accent)', animation: 'palvin-spin 0.7s linear infinite' }} />
+      <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 function renderScreen(screen: string, id: string | undefined): JSX.Element {
   switch (screen) {
@@ -179,12 +192,12 @@ function ScreenRouter() {
   // ScreenRouter trying to track/mount a 'chat' entry of its own (which
   // has no case in renderScreen and would fall through to a second, wasted
   // <Home/> instance, plus wrongly occupy one of the bounded detail slots).
-  // 'stats' is just an alternate entry point into the Money screen (same
-  // component, different starting tab) — normalized to the same key as
-  // 'money' so they share one kept-alive instance instead of the Stats nav
-  // button minting a second, independent <Money/> that always opens on the
-  // Expenses tab regardless of which button was tapped.
-  const normalizedScreen = screen === 'stats' ? 'money' : screen;
+  // 'stats'/'bills'/'goals' are just alternate entry points into the Money
+  // screen (same component, different starting tab) — normalized to the same
+  // key as 'money' so they share one kept-alive instance instead of each
+  // minting a second, independent <Money/> that always opens on the
+  // Expenses tab regardless of which entry point was used.
+  const normalizedScreen = (screen === 'stats' || screen === 'bills' || screen === 'goals') ? 'money' : screen;
   const key = screen === 'chat' ? null : (selectedId ? `${normalizedScreen}:${selectedId}` : normalizedScreen);
 
   const [keptKeys, setKeptKeys] = useState<string[]>(key ? [key] : []);
@@ -219,7 +232,7 @@ function ScreenRouter() {
         // tab bar makes.
         return (
           <div key={k} className="screen-transition" style={{ display: k === key ? 'block' : 'none' }}>
-            <Suspense fallback={null}>{renderScreen(scr, id)}</Suspense>
+            <Suspense fallback={<ScreenLoadingFallback />}>{renderScreen(scr, id)}</Suspense>
           </div>
         );
       })}
@@ -230,7 +243,7 @@ function ScreenRouter() {
 const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 
 export default function App() {
-  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, partnerProfile, authed, authLoading, profileLoaded, isLinked, dataReady, imagesReady, hydratedFromCache, pendingInvite, toast } = useApp();
+  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, partnerProfile, authed, authLoading, profileLoaded, isLinked, isLinkedSettled, dataReady, imagesReady, hydratedFromCache, passwordRecovery, pendingInvite, toast } = useApp();
   // Also holds the loading screen up until the couple's own data — and every
   // image that data references — has actually loaded, so navigating
   // anywhere right after the loading screen shows real content and real
@@ -240,7 +253,7 @@ export default function App() {
   // HTTP cache) while the same fetches quietly refresh it in the background,
   // so re-launching the home-screen icon after the OS killed the tab no
   // longer means sitting through the full boot sequence again every reopen.
-  const stillResolvingSession = !hydratedFromCache && (authLoading || (authed && !profileLoaded) || (authed && isLinked && (!dataReady || !imagesReady)));
+  const stillResolvingSession = !hydratedFromCache && (authLoading || (authed && !profileLoaded) || (authed && !isLinkedSettled) || (authed && isLinked && (!dataReady || !imagesReady)));
 
   // Keeps Chat mounted (just hidden) once opened, same reasoning as
   // ScreenRouter's KEEP_ALIVE_SCREENS — reopening it shouldn't re-fetch or
@@ -360,6 +373,21 @@ export default function App() {
 
   const title = SCREEN_TITLES[screen] || 'PALVIN';
   const isSubScreen = !MAIN_TABS.includes(screen as Tab) && screen !== 'home';
+
+  // A "forgot password" email link lands here with a temporary recovery
+  // session — show the reset form instead of dropping straight into the
+  // app (or the normal login screen) until a new password is set.
+  if (passwordRecovery) {
+    return (
+      <div className="app-viewport" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="phone-shell">
+          <div className="phone-screen" style={{ display: 'flex', flexDirection: 'column' }}>
+            <ResetPasswordScreen />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app-viewport" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -620,7 +648,7 @@ export default function App() {
                 transition: 'transform 0.28s cubic-bezier(0.32,0.72,0,1), opacity 0.22s ease',
                 pointerEvents: screen === 'chat' ? 'auto' : 'none',
               }}>
-                <Suspense fallback={null}>
+                <Suspense fallback={<ScreenLoadingFallback />}>
                   <Chat onBack={goBack} />
                 </Suspense>
               </div>

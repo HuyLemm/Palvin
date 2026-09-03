@@ -103,14 +103,43 @@ function ChatImage({ src, pending }: { src: string; pending?: boolean }) {
   );
 }
 
+// Large emoji rendered with no bubble chrome, Messenger/WhatsApp-sticker
+// style — no image assets or storage needed, just a distinct message kind.
+const STICKERS = ['❤️', '😍', '🥰', '😘', '🎉', '😂', '😭', '👍', '🙏', '🔥', '🥳', '😴', '🌸', '💐', '🍰', '☕'];
+
+// Chat wallpaper is a personal display preference (like WhatsApp's per-chat
+// wallpaper), not couple data — kept in localStorage per profile so picking
+// one never affects what the partner sees on their own device.
+const CHAT_THEMES: { key: string; label: string; background: string }[] = [
+  { key: 'default',  label: 'Default',  background: 'var(--bg)' },
+  { key: 'sakura',   label: 'Sakura',   background: 'linear-gradient(160deg, #FFF0F5, #FCE4EF)' },
+  { key: 'sky',      label: 'Sky',      background: 'linear-gradient(160deg, #EAF4FF, #DCEBFC)' },
+  { key: 'mint',     label: 'Mint',     background: 'linear-gradient(160deg, #EAFBF3, #DBF3E8)' },
+  { key: 'lavender', label: 'Lavender', background: 'linear-gradient(160deg, #F3EEFC, #E8DFF7)' },
+  { key: 'night',    label: 'Night',    background: 'linear-gradient(160deg, #232030, #2E2A3E)' },
+];
+function chatThemeKey(profileId: string) { return `palvin_chat_theme_${profileId}`; }
+
 interface Props { onBack: () => void; }
 
 export default function Chat({ onBack }: Props) {
-  const { state, screen, partnerProfile, sendChatMessage, markChatRead, uploadChatMedia } = useApp();
+  const { state, screen, myProfile, partnerProfile, sendChatMessage, markChatRead, uploadChatMedia } = useApp();
   const messages = state.chatMessages;
   const partnerName = partnerProfile?.displayName ?? 'Partner';
   const [text, setText] = useState('');
   const [sendingMedia, setSendingMedia] = useState(false);
+  const [showStickers, setShowStickers] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
+  const [chatThemeKeyValue, setChatThemeKeyValue] = useState(() => {
+    if (!myProfile?.id) return 'default';
+    try { return localStorage.getItem(chatThemeKey(myProfile.id)) ?? 'default'; } catch { return 'default'; }
+  });
+  const chatBackground = CHAT_THEMES.find(t => t.key === chatThemeKeyValue)?.background ?? 'var(--bg)';
+  function pickChatTheme(key: string) {
+    setChatThemeKeyValue(key);
+    setShowThemePicker(false);
+    if (myProfile?.id) { try { localStorage.setItem(chatThemeKey(myProfile.id), key); } catch { /* ignore */ } }
+  }
   // Only while the keyboard is actually up (input focused) does the input
   // bar use its own tunable .chat-input-bar padding — closed, it behaves
   // exactly like the shared .app-bottom-nav everywhere else in the app.
@@ -179,6 +208,11 @@ export default function Chat({ onBack }: Props) {
   };
 
   const sendHeart = () => sendChatMessage({ text: '❤️' });
+
+  const handleSendSticker = (emoji: string) => {
+    sendChatMessage({ sticker: emoji });
+    setShowStickers(false);
+  };
 
   const handleFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -277,10 +311,13 @@ export default function Chat({ onBack }: Props) {
           <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{partnerName}</p>
           <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatPresence(partnerProfile?.lastActiveAt)}</p>
         </div>
+        <button onClick={() => setShowThemePicker(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--ink-2)', flexShrink: 0 }} title="Chat theme">
+          <Icon emoji="🎨" size={19} />
+        </button>
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '14px 14px', display: 'flex', flexDirection: 'column' }}>
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '14px 14px', display: 'flex', flexDirection: 'column', background: chatBackground, transition: 'background 0.2s ease' }}>
         {messages.length === 0 ? (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, textAlign: 'center', padding: '0 30px' }}>
             <Avatar user={partnerName} size={64} ring />
@@ -294,7 +331,7 @@ export default function Chat({ onBack }: Props) {
             const newDay = !prev || dayLabel(prev.createdAt) !== dayLabel(m.createdAt);
             const startOfGroup = newDay || !prev || prev.mine !== m.mine;
             const endOfGroup = !next || next.mine !== m.mine || dayLabel(next.createdAt) !== dayLabel(m.createdAt);
-            const isMedia = !!m.imageUrl;
+            const isMedia = !!m.imageUrl || !!m.sticker;
             const msgKey = m.clientKey ?? m.id;
             const isNew = !settledKeysRef.current!.has(msgKey);
             if (isNew) settledKeysRef.current!.add(msgKey);
@@ -314,7 +351,11 @@ export default function Chat({ onBack }: Props) {
                       {endOfGroup && <Avatar user={partnerName} size={24} />}
                     </div>
                   )}
-                  {m.imageUrl ? (
+                  {m.sticker ? (
+                    <div onClick={() => setExpandedId(id => id === msgKey ? null : msgKey)} style={{ cursor: 'pointer', lineHeight: 1, opacity: m.pending ? 0.6 : 1, transition: 'opacity 0.25s ease' }}>
+                      <Icon emoji={m.sticker} size={72} />
+                    </div>
+                  ) : m.imageUrl ? (
                     <div onClick={() => setExpandedId(id => id === msgKey ? null : msgKey)} style={{ cursor: 'pointer', maxWidth: '65%', minWidth: 0 }}>
                       <ChatImage src={m.imageUrl} pending={m.pending} />
                     </div>
@@ -347,6 +388,41 @@ export default function Chat({ onBack }: Props) {
         )}
       </div>
 
+      {/* Sticker panel */}
+      {showStickers && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4, padding: '10px 10px', borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0 }}>
+          {STICKERS.map(s => (
+            <button key={s} onClick={() => handleSendSticker(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+              <Icon emoji={s} size={26} />
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Chat theme picker */}
+      {showThemePicker && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setShowThemePicker(false)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🎨" size={17} /> Chat theme</p>
+              <button onClick={() => setShowThemePicker(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 14 }}>Only changes how chat looks on this device.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+              {CHAT_THEMES.map(t => (
+                <button key={t.key} onClick={() => pickChatTheme(t.key)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                  <div style={{
+                    width: '100%', aspectRatio: '1', borderRadius: 14, background: t.background,
+                    border: chatThemeKeyValue === t.key ? '2.5px solid var(--sakura-accent)' : '1.5px solid var(--border)',
+                  }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink-2)' }}>{t.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Input bar — while the text field is focused (keyboard up), this uses
           .chat-input-bar's own tunable real-device padding-bottom (index.css)
           instead of the shared .app-bottom-nav's, so it can sit right above
@@ -377,6 +453,9 @@ export default function Chat({ onBack }: Props) {
             </button>
             <button className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={() => cameraInputRef.current?.click()} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon emoji="📷" size={20} />
+            </button>
+            <button className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={() => setShowStickers(v => !v)} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: showStickers ? 'var(--sakura-light)' : 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon emoji="😊" size={20} />
             </button>
             <input
               ref={inputRef}

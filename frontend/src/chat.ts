@@ -7,11 +7,12 @@ export interface ChatMessageRow {
   image_url: string | null;
   audio_url: string | null;
   audio_duration: number | null;
+  sticker: string | null;
   created_at: string;
   read_at: string | null;
 }
 
-const SELECT = 'id, sender_profile_id, text, image_url, audio_url, audio_duration, created_at, read_at';
+const SELECT = 'id, sender_profile_id, text, image_url, audio_url, audio_duration, sticker, created_at, read_at';
 
 export async function fetchChatMessages(limit = 300): Promise<ChatMessageRow[]> {
   const { data, error } = await supabase
@@ -28,6 +29,7 @@ export interface NewChatMessage {
   imageUrl?: string;
   audioUrl?: string;
   audioDuration?: number;
+  sticker?: string;
 }
 
 export async function sendChatMessageRow(senderProfileId: string, msg: NewChatMessage) {
@@ -37,6 +39,7 @@ export async function sendChatMessageRow(senderProfileId: string, msg: NewChatMe
     image_url: msg.imageUrl ?? null,
     audio_url: msg.audioUrl ?? null,
     audio_duration: msg.audioDuration ?? null,
+    sticker: msg.sticker ?? null,
   }).select(SELECT).single();
 }
 

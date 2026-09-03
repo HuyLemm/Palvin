@@ -17,8 +17,10 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
   const { addPost, currentUser, myProfile } = useApp();
   const [caption, setCaption] = useState('');
   const [location, setLocation] = useState('');
+  const [postDate, setPostDate] = useState('');
   const [images, setImages] = useState<PendingImage[]>([]);
   const [error, setError] = useState('');
+  const [posting, setPosting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isUploading = images.some(im => im.uploading);
@@ -42,13 +44,15 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
     setImages(prev => prev.filter(im => im.id !== id));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!caption.trim()) { setError('Please write a caption.'); return; }
     if (readyUrls.length === 0) { setError('Please add at least one photo.'); return; }
     const now = new Date();
-    addPost({
+    setPosting(true);
+    await addPost({
       author: currentUser,
       date: now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+      postDate: postDate || undefined,
       images: readyUrls,
       caption,
       location: location || undefined,
@@ -113,11 +117,22 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
           onChange={e => setLocation(e.target.value)}
         />
 
+        <div>
+          <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Date (optional — defaults to today)</p>
+          <input
+            className="input-field"
+            type="date"
+            value={postDate}
+            onChange={e => setPostDate(e.target.value)}
+            style={{ width: 'auto', maxWidth: 170 }}
+          />
+        </div>
+
         {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
 
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn-primary" onClick={handleSubmit} disabled={isUploading} style={{ flex: 2, opacity: isUploading ? 0.6 : 1 }}>{isUploading ? 'Uploading...' : 'Post'}</button>
+          <button className="btn-ghost" onClick={onClose} disabled={posting} style={{ flex: 1 }}>Cancel</button>
+          <button className="btn-primary" onClick={handleSubmit} disabled={isUploading || posting} style={{ flex: 2, opacity: (isUploading || posting) ? 0.6 : 1 }}>{isUploading ? 'Uploading...' : posting ? 'Posting...' : 'Post'}</button>
         </div>
       </div>
     </BottomSheet>

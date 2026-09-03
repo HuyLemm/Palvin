@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { useApp } from '../context';
@@ -32,6 +32,26 @@ let lastUsSub: SubScreen = 'main';
 // not a fixed set, so these are just reasonable starting options.
 const CATEGORY_EMOJI_CHOICES = ['📍', '🍜', '☕', '🎱', '🎮', '🎬', '🎵', '✈️', '🏋️', '📚', '🛍️', '🎨', '🍕', '🍺'];
 const CATEGORY_COLOR_CHOICES = ['var(--sakura-deep)', '#E8844A', '#C48A52', '#4A8AE8', '#8B6FD4', '#5AC26A', '#DC2626', '#E85C97'];
+
+// A place's photos gallery — natural aspect ratio (not cropped to a fixed
+// box like FadeImage assumes), so this fades in on load instead of reusing
+// that component directly.
+function ViewingImage({ src }: { src: string }) {
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  useLayoutEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true);
+  }, [src]);
+  return (
+    <img
+      ref={imgRef}
+      src={src}
+      alt=""
+      onLoad={() => setLoaded(true)}
+      style={{ width: '100%', borderRadius: 12, objectFit: 'cover', display: 'block', background: 'var(--bg)', opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+    />
+  );
+}
 
 export default function Us() {
   const { state, navigate, screen, selectedId, navSeq, lastNavWasPop, currentUser, partnerProfile, addToPlaylist, removeFromPlaylist, addWish, removeWish, addFavPlace, removeFavPlace, openCreate } = useApp();
@@ -316,6 +336,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
   const cfg = state.favCategories.find(c => c.id === activeTab);
   const list = cfg ? (state.favPlaces[activeTab] ?? []) : [];
 
+  const [addingPlace, setAddingPlace] = useState(false);
   const closeAdd = () => { setShowAdd(false); setInputName(''); setInputNote(''); setInputPreview(''); setInputImage(''); };
   const handleAddFile = (fileList: FileList | null) => {
     const file = fileList?.[0];
@@ -328,9 +349,11 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
       if (url) setInputImage(url);
     });
   };
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!inputName.trim() || !cfg) return;
-    addFavPlace(activeTab, { name: inputName.trim(), note: inputNote.trim() || undefined, image: inputImage || undefined });
+    setAddingPlace(true);
+    await addFavPlace(activeTab, { name: inputName.trim(), note: inputNote.trim() || undefined, image: inputImage || undefined });
+    setAddingPlace(false);
     closeAdd();
   };
 
@@ -467,7 +490,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
                 </div>
                 <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
               </div>
-              <button onClick={handleAdd} disabled={!inputName.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: inputName.trim() ? 'pointer' : 'default', background: inputName.trim() ? cfg.color : 'var(--border)', color: inputName.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Add</button>
+              <button onClick={handleAdd} disabled={!inputName.trim() || addingPlace} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: (inputName.trim() && !addingPlace) ? 'pointer' : 'default', background: (inputName.trim() && !addingPlace) ? cfg.color : 'var(--border)', color: (inputName.trim() && !addingPlace) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>{addingPlace ? 'Adding...' : 'Add'}</button>
             </div>
           </div>
         </div>
@@ -606,7 +629,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
 type LinkPreview = { title?: string; image?: string; description?: string };
 
 function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
-  const { state, currentUser, partnerProfile, addWish, updateWish, removeWish, drawWish } = useApp();
+  const { state, currentUser, isAdmin, partnerProfile, addWish, updateWish, removeWish, drawWish } = useApp();
   const [showAdd, setShowAdd] = useState(false);
   const [wishText, setWishText] = useState('');
   const [wishLink, setWishLink] = useState('');
@@ -623,6 +646,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
   const [editLinkPreview, setEditLinkPreview] = useState<LinkPreview | null>(null);
   const [editPreviewLoading, setEditPreviewLoading] = useState(false);
   const [confirmDeleteWish, setConfirmDeleteWish] = useState<string | null>(null);
+  const [addingWish, setAddingWish] = useState(false);
 
   const other = partnerProfile?.displayName ?? currentUser;
 
@@ -720,6 +744,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
 
   function renderWishCard(w: WishItem, index: number) {
     const isOwner = w.from === currentUser;
+    const canEdit = isOwner || isAdmin;
     const isBought = w.drawn;
     return (
       <div key={w.id} className="card wish-card" style={{ padding: '14px 16px', opacity: isBought ? 0.6 : 1, animation: `wishCardIn 0.3s cubic-bezier(0.32,0.72,0,1) both`, animationDelay: `${Math.min(index, 6) * 30}ms` }}>
@@ -739,7 +764,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
             {isBought && (
               <button className="wish-action-btn" onClick={() => drawWish(w.id, false)} style={{ background: 'var(--bg)', color: 'var(--ink-2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Undo <Icon emoji="↩️" size={12} /></button>
             )}
-            {isOwner && (
+            {canEdit && (
               <>
                 <button className="wish-action-btn" onClick={() => openEditWish(w)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
                 <button className="wish-action-btn" onClick={() => setConfirmDeleteWish(w.id)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={12} /></button>
@@ -839,9 +864,10 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
                   </div>
                 )}
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (wishText.trim()) {
-                      addWish({
+                      setAddingWish(true);
+                      await addWish({
                         from: currentUser,
                         wish: wishText.trim(),
                         date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
@@ -851,11 +877,13 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
                         ...(linkPreview?.title ? { linkTitle: linkPreview.title } : {}),
                         ...(linkPreview?.description ? { linkDescription: linkPreview.description } : {}),
                       });
+                      setAddingWish(false);
                       closeAdd();
                     }
                   }}
-                  style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >Add to wishlist<Icon emoji="🎁" size={15} /></button>
+                  disabled={addingWish}
+                  style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: addingWish ? 0.7 : 1 }}
+                >{addingWish ? 'Adding...' : <>Add to wishlist<Icon emoji="🎁" size={15} /></>}</button>
               </div>
             </div>
           </div>
@@ -973,26 +1001,43 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
   }
 }
 
+async function fetchSongResults(url: string): Promise<SongResult[]> {
+  const res = await fetchWithTimeout(url, 7000);
+  if (!res.ok) throw new Error(`search failed: ${res.status}`);
+  const json = await res.json();
+  return (json.results ?? []).map((r: { trackName?: string; artistName?: string; artworkUrl100?: string; trackTimeMillis?: number; releaseDate?: string; previewUrl?: string }) => ({
+    title: r.trackName ?? '',
+    artist: r.artistName ?? '',
+    image: r.artworkUrl100 ? r.artworkUrl100.replace('100x100', '300x300') : '',
+    durationSeconds: r.trackTimeMillis ? Math.round(r.trackTimeMillis / 1000) : undefined,
+    releaseDate: r.releaseDate,
+    previewUrl: r.previewUrl,
+  })).filter((r: SongResult) => r.title);
+}
+
+// Races every candidate (Supabase edge function, direct iTunes, two public
+// proxies) at once instead of trying them one at a time — whichever network
+// path is actually open on this connection (5G, wifi, a restrictive ISP...)
+// wins immediately, instead of first sitting through a timeout on whichever
+// path happens to be blocked here. A path that's blocked usually fails fast
+// anyway (connection reset, or a captive-portal page that isn't valid JSON),
+// so this doesn't cost extra time on a fully-open connection. Implemented by
+// hand (rather than Promise.any) since this project's TS lib target predates
+// it — first settled success wins; if every candidate rejects, the last
+// rejection to arrive is what's thrown.
 async function searchSongs(query: string): Promise<SongResult[]> {
-  let lastError: unknown;
-  for (const url of songSearchAttemptUrls(query)) {
-    try {
-      const res = await fetchWithTimeout(url, 6000);
-      if (!res.ok) throw new Error(`search failed: ${res.status}`);
-      const json = await res.json();
-      return (json.results ?? []).map((r: { trackName?: string; artistName?: string; artworkUrl100?: string; trackTimeMillis?: number; releaseDate?: string; previewUrl?: string }) => ({
-        title: r.trackName ?? '',
-        artist: r.artistName ?? '',
-        image: r.artworkUrl100 ? r.artworkUrl100.replace('100x100', '300x300') : '',
-        durationSeconds: r.trackTimeMillis ? Math.round(r.trackTimeMillis / 1000) : undefined,
-        releaseDate: r.releaseDate,
-        previewUrl: r.previewUrl,
-      })).filter((r: SongResult) => r.title);
-    } catch (err) {
-      lastError = err;
-    }
-  }
-  throw lastError;
+  const urls = songSearchAttemptUrls(query);
+  return new Promise((resolve, reject) => {
+    let remaining = urls.length;
+    let lastError: unknown;
+    urls.forEach(url => {
+      fetchSongResults(url).then(resolve, err => {
+        lastError = err;
+        remaining--;
+        if (remaining === 0) reject(lastError);
+      });
+    });
+  });
 }
 
 // Shared by the Add and Edit modals — a title field with an explicit search
@@ -1124,14 +1169,17 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
   const [editPreviewUrl, setEditPreviewUrl] = useState<string | undefined>(undefined);
   const [editAddedBy, setEditAddedBy] = useState(currentUser);
   const [confirmDeleteSong, setConfirmDeleteSong] = useState<PlaylistItem | null>(null);
+  const [addingSong, setAddingSong] = useState(false);
 
   const filtered = filter === 'all' ? state.playlist : state.playlist.filter(p => p.addedBy === filter);
 
   const closeAdd = () => { setShowAdd(false); setTitle(''); setArtist(''); setNote(''); setImage(''); setDuration(undefined); setReleaseDate(undefined); setPreviewUrl(undefined); setAddedByChoice(currentUser); };
   const pickAddResult = (r: SongResult) => { setTitle(r.title); setArtist(r.artist); setImage(r.image); setDuration(r.durationSeconds); setReleaseDate(r.releaseDate); setPreviewUrl(r.previewUrl); };
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!title.trim()) return;
-    addToPlaylist({ title: title.trim(), artist: artist || title.trim(), emoji: '🎵', image: image || undefined, durationSeconds: duration, releaseDate, previewUrl, note, addedBy: addedByChoice });
+    setAddingSong(true);
+    await addToPlaylist({ title: title.trim(), artist: artist || title.trim(), emoji: '🎵', image: image || undefined, durationSeconds: duration, releaseDate, previewUrl, note, addedBy: addedByChoice });
+    setAddingSong(false);
     closeAdd();
   };
 
@@ -1208,7 +1256,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
                   ))}
                 </div>
               </div>
-              <button onClick={handleAdd} disabled={!title.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: title.trim() ? 'pointer' : 'default', background: title.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: title.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Add to playlist</button>
+              <button onClick={handleAdd} disabled={!title.trim() || addingSong} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: (title.trim() && !addingSong) ? 'pointer' : 'default', background: (title.trim() && !addingSong) ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: (title.trim() && !addingSong) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>{addingSong ? 'Adding...' : 'Add to playlist'}</button>
             </div>
           </div>
         </div>
@@ -1343,15 +1391,18 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
   const [editing, setEditing] = useState<StoryQuote | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const openAdd = () => { setText(''); setShowAdd(true); };
   const openEdit = (q: StoryQuote) => { setText(q.text); setEditing(q); };
   const closeForm = () => { setShowAdd(false); setEditing(null); setText(''); };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!text.trim()) return;
-    if (editing) updateStoryQuote(editing.id, text.trim());
-    else addStoryQuote(text.trim());
+    setSaving(true);
+    if (editing) await updateStoryQuote(editing.id, text.trim());
+    else await addStoryQuote(text.trim());
+    setSaving(false);
     closeForm();
   };
 
@@ -1395,7 +1446,7 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
               <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <textarea className="input-field" placeholder="VD: Our little story continues." value={text} onChange={e => setText(e.target.value)} rows={3} style={{ resize: 'none', marginBottom: 14 }} autoFocus />
-            <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Add quote'}</button>
+            <button onClick={handleSubmit} disabled={saving} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : (editing ? 'Save changes' : 'Add quote')}</button>
           </div>
         </div>
       )}
@@ -1766,9 +1817,7 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
             </div>
             {viewing.visitedDate && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 12 }}>Visited on {formatShortDate(viewing.visitedDate)}</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-              {viewing.images.map((url, i) => (
-                <img key={i} src={url} alt="" style={{ width: '100%', borderRadius: 12, objectFit: 'cover', display: 'block' }} />
-              ))}
+              {viewing.images.map((url, i) => <ViewingImage key={i} src={url} />)}
             </div>
           </div>
         </div>

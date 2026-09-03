@@ -35,6 +35,7 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
   const [error, setError] = useState('');
   const [confirmSave, setConfirmSave] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const handleSubmit = () => {
     if (!title.trim())     { setError(isIncome ? 'Please enter the income source.' : 'Please enter a title.'); return; }
@@ -42,8 +43,9 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
     setConfirmSave(true);
   };
 
-  const confirmSubmit = () => {
-    updateExpense(expense.id, {
+  const confirmSubmit = async () => {
+    setBusy(true);
+    await updateExpense(expense.id, {
       title, category: category.label, categoryEmoji: category.emoji, amount: parseFloat(amount),
       paidBy, date, note, type: expense.type,
     });
@@ -51,8 +53,9 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
     onClose();
   };
 
-  const confirmDeleteNow = () => {
-    deleteExpense(expense.id);
+  const confirmDeleteNow = async () => {
+    setBusy(true);
+    await deleteExpense(expense.id);
     setConfirmDelete(false);
     onClose();
   };
@@ -103,8 +106,8 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
             <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Save these changes?</p>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This transaction's info will be updated.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmSave(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={confirmSubmit} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${accent}, ${accentDeep})`, color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Save</button>
+              <button onClick={() => setConfirmSave(false)} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={confirmSubmit} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${accent}, ${accentDeep})`, color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         </div>
@@ -117,8 +120,8 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
             <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Delete this transaction?</p>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This can't be undone once deleted.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={confirmDeleteNow} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
+              <button onClick={() => setConfirmDelete(false)} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={confirmDeleteNow} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Deleting...' : 'Delete'}</button>
             </div>
           </div>
         </div>

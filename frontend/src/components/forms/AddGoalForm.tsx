@@ -12,11 +12,13 @@ export default function AddGoalForm({ onClose }: { onClose: () => void }) {
   const [target, setTarget] = useState('');
   const [deadline, setDeadline] = useState(new Date().toISOString().split('T')[0]);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim())      { setError('Please enter a fund name.'); return; }
     if (!target || isNaN(+target) || +target <= 0) { setError('Please enter a valid target.'); return; }
-    addSavingsGoal({ title, emoji, current: 0, target: parseFloat(target), deadline });
+    setSaving(true);
+    await addSavingsGoal({ title, emoji, current: 0, target: parseFloat(target), deadline });
     onClose();
   };
 
@@ -46,8 +48,8 @@ export default function AddGoalForm({ onClose }: { onClose: () => void }) {
           <input className="input-field" type="date" value={deadline} onChange={e => setDeadline(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-            <button onClick={handleSubmit} style={{ flex: 2, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Create Fund</button>
+            <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
+            <button onClick={handleSubmit} disabled={saving} style={{ flex: 2, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : 'Create Fund'}</button>
           </div>
         </div>
       </div>

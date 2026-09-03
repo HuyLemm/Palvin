@@ -52,13 +52,13 @@ function StatusDot({ online }: { online: boolean }) {
 
 export default function Settings() {
   const {
-    currentUser, toast, updateProfilePhoto, state, toggleDarkMode, logout,
-    isLinked, myProfile, partnerProfile, sentInvite, invitePartner, cancelSentInvite, pendingInvite, acceptInvite, rejectInvite,
+    currentUser, toast, updateProfilePhoto, state, screen, toggleDarkMode, logout,
+    isLinked, isAdmin, myProfile, partnerProfile, sentInvite, invitePartner, cancelSentInvite, pendingInvite, acceptInvite, rejectInvite,
     updateNotifyPrefs, setRelationshipStart, updateDisplayName, changePassword,
   } = useApp();
   const [responding, setResponding] = useState(false);
   const notifyPrefs = myProfile?.notifyPrefs ?? DEFAULT_NOTIFY_PREFS;
-  const darkMode = state.darkMode;
+  const darkMode = myProfile?.darkMode ?? false;
   const [showLogout, setShowLogout] = useState(false);
 
   // Push notifications — a real system notification even with Palvin fully
@@ -83,10 +83,9 @@ export default function Settings() {
     setPushBusy(false);
   };
 
-  // Private admin-only panel (see isAdmin below) — live activity monitor +
-  // an edit/delete audit log. Polls on an interval only while this screen is
-  // mounted, not globally, since it's a niche view.
-  const isAdmin = myProfile?.displayName.toLowerCase() === 'alvinnni';
+  // Private admin-only panel (isAdmin comes from context) — live activity
+  // monitor + an edit/delete audit log. Polls on an interval only while this
+  // screen is mounted, not globally, since it's a niche view.
   const [activityStatuses, setActivityStatuses] = useState<{ id: string; displayName: string; lastActiveAt: string | null }[]>([]);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
   const [showLogModal, setShowLogModal] = useState(false);
@@ -106,8 +105,13 @@ export default function Settings() {
     );
   }
 
+  // Settings stays mounted in the background once visited (App.tsx's
+  // keep-alive ScreenRouter) — the `screen === 'settings'` guard stops these
+  // three polling intervals once the user's actually looked away, instead of
+  // three timers competing with whatever tab IS active for the rest of the
+  // session.
   useEffect(() => {
-    if (!isAdmin || !myProfile?.coupleId) return;
+    if (!isAdmin || !myProfile?.coupleId || screen !== 'settings') return;
     const coupleId = myProfile.coupleId;
     const names: Record<string, string> = {};
     if (myProfile) names[myProfile.id] = myProfile.displayName;
@@ -122,7 +126,7 @@ export default function Settings() {
     const tickTimer = setInterval(() => setTick(t => t + 1), 15000);
     return () => { clearInterval(statusTimer); clearInterval(logTimer); clearInterval(tickTimer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, myProfile?.coupleId]);
+  }, [isAdmin, myProfile?.coupleId, screen]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [editingAnniversary, setEditingAnniversary] = useState(false);

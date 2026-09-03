@@ -14,6 +14,7 @@ export interface Post {
   id: string;
   author: User;
   date: string;
+  postDate: string; // raw 'YYYY-MM-DD', for sorting/month filtering — `date` above is the pretty display string
   images: string[];
   caption: string;
   likes: number;
@@ -90,6 +91,8 @@ export interface SecretNote {
   unlockDate: string;
 }
 
+export type EventRecurrence = 'none' | 'weekly' | 'monthly' | 'yearly';
+
 export interface CalendarEvent {
   id: string;
   title: string;
@@ -98,6 +101,11 @@ export interface CalendarEvent {
   category: 'anniversary' | 'birthday' | 'trip' | 'date' | 'reminder';
   location: string;
   notes: string;
+  // 'none' = a fixed one-off date (the original, only behavior). Anything
+  // else repeats forever forward from `date`, which stays the anchor/first
+  // occurrence — see calendarRecurrence.ts for how a given day/upcoming-list
+  // entry gets matched against it.
+  recurrence: EventRecurrence;
 }
 
 export interface Goal {
@@ -334,6 +342,7 @@ export interface ChatMessage {
   imageUrl: string | null;
   audioUrl: string | null;
   audioDuration: number | null;
+  sticker: string | null;
   createdAt: string;
   read: boolean;
   // Optimistic-send state — set the instant the user hits send, before the

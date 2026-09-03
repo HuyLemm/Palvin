@@ -20,11 +20,13 @@ export default function AddExpenseForm({ onClose }: { onClose: () => void }) {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim())     { setError('Please enter a title.'); return; }
     if (!amount || isNaN(+amount)) { setError('Please enter a valid amount.'); return; }
-    addExpense({ title, category: category.label, categoryEmoji: category.emoji, amount: parseFloat(amount), paidBy, date, note, type: 'expense' });
+    setSaving(true);
+    await addExpense({ title, category: category.label, categoryEmoji: category.emoji, amount: parseFloat(amount), paidBy, date, note, type: 'expense' });
     onClose();
   };
 
@@ -61,8 +63,8 @@ export default function AddExpenseForm({ onClose }: { onClose: () => void }) {
           <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-            <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2 }}>Save Expense</button>
+            <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
+            <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : 'Save Expense'}</button>
           </div>
         </div>
       </div>

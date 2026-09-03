@@ -1,21 +1,20 @@
 import { supabase } from './lib/supabaseClient';
 import type { FavCategory, FavCategoryItem, FavPlace } from './types';
 
-export async function fetchCoupleSettings(coupleId: string): Promise<{ darkMode: boolean; relationshipStart: string | null } | null> {
+// Dark mode used to live here too (couples.dark_mode), but that meant
+// toggling it for one partner silently flipped it for the other — moved to
+// profiles.dark_mode (see auth.ts's updateDarkModePref), so this only
+// carries the couple-level anniversary date now.
+export async function fetchCoupleSettings(coupleId: string): Promise<{ relationshipStart: string | null } | null> {
   const { data, error } = await supabase
     .from('couples')
-    .select('dark_mode, relationship_start')
+    .select('relationship_start')
     .eq('id', coupleId)
     .maybeSingle();
   if (error || !data) return null;
   return {
-    darkMode: !!data.dark_mode,
     relationshipStart: data.relationship_start ?? null,
   };
-}
-
-export async function updateDarkMode(coupleId: string, darkMode: boolean) {
-  return supabase.from('couples').update({ dark_mode: darkMode }).eq('id', coupleId);
 }
 
 export async function updateRelationshipStart(coupleId: string, date: string) {

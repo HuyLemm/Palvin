@@ -17,6 +17,7 @@ export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
   const [remoteUrl, setRemoteUrl] = useState('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (fileList: FileList | null) => {
@@ -33,13 +34,14 @@ export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!title.trim())  { setError('Please add a title.'); return; }
     if (!date)          { setError('Please select a date.'); return; }
     if (!remoteUrl)     { setError(uploading ? 'Please wait for the photo to finish uploading.' : 'Please choose a photo.'); return; }
     const d = new Date(date);
     const formatted = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-    addMemory({
+    setSaving(true);
+    await addMemory({
       title, date: formatted, year: d.getFullYear(),
       location: location || 'Unknown', description, image: remoteUrl,
       people: partnerProfile ? [currentUser, partnerProfile.displayName] : [currentUser]
@@ -83,8 +85,8 @@ export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
         </div>
         {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn-primary" onClick={handleSubmit} disabled={uploading} style={{ flex: 2, opacity: uploading ? 0.6 : 1 }}>{uploading ? 'Uploading...' : 'Save Memory'}</button>
+          <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
+          <button className="btn-primary" onClick={handleSubmit} disabled={uploading || saving} style={{ flex: 2, opacity: (uploading || saving) ? 0.6 : 1 }}>{uploading ? 'Uploading...' : saving ? 'Saving...' : 'Save Memory'}</button>
         </div>
       </div>
     </BottomSheet>

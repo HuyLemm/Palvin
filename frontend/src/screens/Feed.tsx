@@ -4,10 +4,26 @@ import Avatar from '../components/Avatar';
 import PostCard from '../components/PostCard';
 import Icon from '../components/Icon';
 
+function monthLabel(m: string): string {
+  const [y, mo] = m.split('-').map(Number);
+  return new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+
 export default function Feed() {
   const { state, navigate, currentUser, partnerProfile, openCreate } = useApp();
   const [showPartnerInfo, setShowPartnerInfo] = useState<string | null>(null);
+  const [monthFilter, setMonthFilter] = useState<string>('all');
   const partnerUser = partnerProfile?.displayName;
+
+  // Posts already arrive newest-first (post_date desc, then created_at desc)
+  // — the months list below just needs to preserve that same order, not
+  // re-sort anything.
+  const months: string[] = [];
+  for (const p of state.posts) {
+    const m = p.postDate.slice(0, 7);
+    if (!months.includes(m)) months.push(m);
+  }
+  const visiblePosts = monthFilter === 'all' ? state.posts : state.posts.filter(p => p.postDate.slice(0, 7) === monthFilter);
 
   return (
     <div style={{ paddingBottom: 24 }}>
@@ -56,9 +72,21 @@ export default function Feed() {
         </button>
       </div>
 
+      {/* Month filter */}
+      {months.length > 1 && (
+        <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 16 }}>
+          <button onClick={() => setMonthFilter('all')} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 99, border: monthFilter === 'all' ? 'none' : '1.5px solid var(--border)', background: monthFilter === 'all' ? 'var(--sakura-accent)' : 'var(--white)', color: monthFilter === 'all' ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>All</button>
+          {months.map(m => (
+            <button key={m} onClick={() => setMonthFilter(m)} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 99, border: monthFilter === m ? 'none' : '1.5px solid var(--border)', background: monthFilter === m ? 'var(--sakura-accent)' : 'var(--white)', color: monthFilter === m ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>{monthLabel(m)}</button>
+          ))}
+        </div>
+      )}
+
       {/* Posts */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {state.posts.map(post => (
+        {visiblePosts.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>No posts this month.</div>
+        ) : visiblePosts.map(post => (
           <PostCard key={post.id} post={post} reactions={state.postReactions[post.id] ?? {}} />
         ))}
       </div>

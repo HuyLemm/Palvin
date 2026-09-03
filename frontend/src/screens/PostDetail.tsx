@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
+import FadeImage from '../components/FadeImage';
 
 function BookmarkIcon({ filled }: { filled: boolean }) {
   return (
@@ -43,7 +44,9 @@ export default function PostDetail({ id }: { id?: string } = {}) {
             style={{ display: 'flex', overflowX: post.images.length > 1 ? 'auto' : 'hidden', scrollSnapType: 'x mandatory' }}
           >
             {post.images.map((img, i) => (
-              <img key={i} src={img} alt={post.caption} style={{ flex: '0 0 100%', scrollSnapAlign: 'start', width: '100%', display: 'block', maxHeight: 400, objectFit: 'cover' }} />
+              <div key={i} style={{ flex: '0 0 100%', scrollSnapAlign: 'start', height: 400 }}>
+                <FadeImage src={img} alt={post.caption} style={{ width: '100%', height: '100%' }} />
+              </div>
             ))}
           </div>
           {post.images.length > 1 && (

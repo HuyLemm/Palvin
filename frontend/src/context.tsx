@@ -13,7 +13,7 @@ import { supabase } from './lib/supabaseClient';
 import {
   updatePhoto as authUpdatePhoto, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
   sendInvite as apiSendInvite, respondInvite as apiRespondInvite, cancelInvite as apiCancelInvite, getMyInvites,
-  updateDisplayName as authUpdateDisplayName, changePassword as authChangePassword, touchLastActive,
+  updateDisplayName as authUpdateDisplayName, changePassword as authChangePassword, touchLastActive, setForegroundState, updateDarkModePref,
   type PendingInvite, type AuthProfile, type NotifyPrefs,
 } from './auth';
 import {
@@ -51,7 +51,7 @@ import {
   fetchGoals, createGoal, setGoalCompleted, setGoalCurrent, updateGoalRow, deleteGoalRow,
 } from './futureUs';
 import {
-  fetchCoupleSettings, updateDarkMode, updateRelationshipStart,
+  fetchCoupleSettings, updateRelationshipStart,
   fetchFavPlaces, createFavPlace, updateFavPlaceRow, deleteFavPlace,
   fetchFavCategories, createFavCategory, updateFavCategoryRow, deleteFavCategoryRow,
 } from './favourites';
@@ -98,9 +98,13 @@ interface AppContextType {
   authLoading: boolean;
   profileLoaded: boolean;   // true once refreshAuthProfile() has resolved at least once — gates isLinked from flashing false
   isLinked: boolean;
+  isLinkedSettled: boolean; // true once isLinked's value can be trusted as final — see the state declaration for why this can lag isLinked itself briefly
+  isAdmin: boolean; // the app-owner's own account — can edit/delete either partner's stuff everywhere, not just their own
   dataReady: boolean;       // true once the couple's initial data fetches have settled (or timed out) — see BOOT_DOMAIN_COUNT below
   imagesReady: boolean;     // true once every image referenced by that data has finished downloading (or timed out)
   hydratedFromCache: boolean; // true when this render was seeded from last session's cached snapshot — lets App.tsx skip the loading screen
+  passwordRecovery: boolean; // true once the user landed here via a "forgot password" email link — App.tsx shows the reset-password screen instead of the normal app until this clears
+  completePasswordRecovery: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   myProfile: AuthProfile | null;
   partnerProfile: AuthProfile | null;
   refreshAuthProfile: () => Promise<void>;
@@ -142,7 +146,7 @@ interface AppContextType {
   toggleLike: (id: string) => void;
   toggleSave: (id: string) => void;
   addComment: (postId: string, text: string) => void;
-  addPost: (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments'>) => void;
+  addPost: (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments' | 'postDate'> & { postDate?: string }) => void;
   editPost: (id: string, data: { caption: string; location?: string }) => void;
   deletePost: (id: string) => void;
 
@@ -354,8 +358,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [isLinked, setIsLinked] = useState(() => bootCache?.isLinked ?? false);
+  // True once we're actually SURE whether the couple is linked or not — not
+  // just once the first refreshProfiles() call has resolved. Supabase fires
+  // both an INITIAL_SESSION auth event and a separate getSession() call at
+  // boot, each independently triggering refreshProfiles(); on rare timing,
+  // one can resolve (briefly, correctly or not) before the other lands. Until
+  // this is true, App.tsx keeps showing the loading screen instead of ever
+  // flashing CoupleLocked for a couple that turns out to be linked a moment
+  // later. See refreshProfiles() below.
+  const [isLinkedSettled, setIsLinkedSettled] = useState(() => hydratedFromCache);
+  const isLinkedSettledRef = useRef(hydratedFromCache);
+  const unsettleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [myProfile, setMyProfile] = useState<AuthProfile | null>(() => bootCache?.myProfile ?? null);
   const [partnerProfile, setPartnerProfile] = useState<AuthProfile | null>(() => bootCache?.partnerProfile ?? null);
+  // The app owner's own account — can edit/delete either partner's stuff
+  // everywhere (posts, gratitude entries, wishlist items, ...), not just
+  // their own. Name-based rather than a DB flag since there are exactly two
+  // accounts on this whole app and it'll never need to scale past that.
+  const isAdmin = myProfile?.displayName.toLowerCase() === 'alvinne';
   const [pendingInvite, setPendingInvite] = useState<PendingInvite | null>(null);
   const [sentInvite, setSentInvite] = useState<PendingInvite | null>(null);
   const [profilePhotos, setProfilePhotos] = useState<Record<string, string>>({});
@@ -453,9 +474,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     refreshPosts();
   };
 
-  const addPost = async (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments'>) => {
+  const addPost = async (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments' | 'postDate'> & { postDate?: string }) => {
     if (!myProfile) return;
-    const { error } = await createPost(myProfile.id, { images: p.images, caption: p.caption, location: p.location });
+    const { error } = await createPost(myProfile.id, { images: p.images, caption: p.caption, location: p.location, postDate: p.postDate });
     if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshPosts();
     // No manual success toast here — the realtime `notifications` subscription
@@ -1153,9 +1174,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) refreshPlaces();
   };
 
-  // Dark mode — persisted per couple so it survives reload/relogin
+  // Dark mode — persisted per ACCOUNT (profiles.dark_mode), not per couple,
+  // so switching it never affects what the partner sees on their device.
   const toggleDarkMode = async () => {
-    const next = !state.darkMode;
+    if (!myProfile) return;
+    const next = !myProfile.darkMode;
     if (next) {
       document.documentElement.setAttribute('data-theme', 'dark');
       document.body.setAttribute('data-theme', 'dark');
@@ -1164,10 +1187,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       document.body.removeAttribute('data-theme');
     }
     setState(s => ({ ...s, darkMode: next }));
-    if (myProfile?.coupleId) {
-      const { error } = await updateDarkMode(myProfile.coupleId, next);
-      if (error) toast('Something went wrong', '⚠️');
-    }
+    setMyProfile(p => p ? { ...p, darkMode: next } : p);
+    const res = await updateDarkModePref(myProfile.id, next);
+    if (!res.ok) toast('Something went wrong', '⚠️');
   };
 
   // Anniversary date — either partner can set/edit it, persisted per couple.
@@ -1186,6 +1208,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setHydratedFromCache(false);
       setMyProfile(null); setPartnerProfile(null); setProfilePhotos({}); setIsLinked(false);
       setProfileLoaded(true);
+      setIsLinkedSettled(true); isLinkedSettledRef.current = true;
       // getCurrentProfile() calls auth.getUser() (server-validated, unlike
       // getSession()'s local-only check), so landing here means either the
       // account itself is gone (e.g. an admin wipe) or there was never a
@@ -1200,7 +1223,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const partner = await getPartnerProfile();
     setMyProfile(me);
     setPartnerProfile(partner);
-    setIsLinked(!!partner);
+    if (partner) {
+      if (unsettleTimerRef.current) { clearTimeout(unsettleTimerRef.current); unsettleTimerRef.current = null; }
+      setIsLinked(true);
+      setIsLinkedSettled(true); isLinkedSettledRef.current = true;
+    } else {
+      setIsLinked(false);
+      // Don't trust "not linked" as final on the very first read — give the
+      // other concurrent boot call (see isLinkedSettled's comment above) a
+      // beat to land first in case it finds the real partner.
+      if (!isLinkedSettledRef.current && !unsettleTimerRef.current) {
+        unsettleTimerRef.current = setTimeout(() => {
+          setIsLinkedSettled(true); isLinkedSettledRef.current = true;
+          unsettleTimerRef.current = null;
+        }, 1200);
+      }
+    }
     const photos: Record<string, string> = {};
     if (me.photoUrl) photos[me.displayName] = me.photoUrl;
     if (partner?.photoUrl) photos[partner.displayName] = partner.photoUrl;
@@ -1210,17 +1248,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Neither getSession() nor refreshProfiles() had a timeout of their own —
+    // on a slow/flaky connection this whole chain could hang well past a
+    // minute with nothing else able to step in, since dataTimedOut/imagesReady
+    // (further down) only start their own clocks once isLinked is already
+    // true. This forces the loading screen to give up waiting on THIS step
+    // specifically after 8s; the real calls keep running and still correct
+    // everything the instant they do resolve, same as the other timeouts.
+    let settled = false;
+    const bootTimeout = setTimeout(() => {
+      if (settled) return;
+      setAuthLoading(false);
+      setProfileLoaded(true);
+    }, 8000);
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      settled = true;
+      clearTimeout(bootTimeout);
       setAuthed(!!session);
       setAuthLoading(false);
       if (session) refreshProfiles(); else setProfileLoaded(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (_event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
       setAuthed(!!session);
       if (session) { setProfileLoaded(false); refreshProfiles(); }
       else { clearBootCache(); setHydratedFromCache(false); setMyProfile(null); setPartnerProfile(null); setProfilePhotos({}); setIsLinked(false); setProfileLoaded(true); }
     });
-    return () => sub.subscription.unsubscribe();
+    return () => { clearTimeout(bootTimeout); sub.subscription.unsubscribe(); };
   }, [refreshProfiles]);
 
   const refreshInvites = useCallback(async () => {
@@ -1270,7 +1325,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const urls = collectImageUrls(state, profilePhotos);
     Promise.race([
       Promise.all(urls.map(preloadImage)),
-      new Promise<void>(resolve => setTimeout(resolve, 10000)),
+      new Promise<void>(resolve => setTimeout(resolve, 6000)),
     ]).then(() => { if (!cancelled) setImagesReady(true); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1411,22 +1466,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [settings, favPlaces, favCategories] = await Promise.all([
       fetchCoupleSettings(myProfile.coupleId), fetchFavPlaces(), fetchFavCategories(),
     ]);
-    if (settings?.darkMode) {
-      document.documentElement.setAttribute('data-theme', 'dark');
-      document.body.setAttribute('data-theme', 'dark');
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-      document.body.removeAttribute('data-theme');
-    }
     setState(s => ({
       ...s,
-      darkMode: settings?.darkMode ?? s.darkMode,
       relationshipStart: settings?.relationshipStart ?? s.relationshipStart,
       favPlaces,
       favCategories,
     }));
     markLoaded('favorites');
   }, [myProfile?.coupleId, markLoaded]);
+
+  // Applies dark mode from the ACCOUNT that's actually signed in on this
+  // device — runs whenever myProfile (re)loads, e.g. right after login or a
+  // token refresh, so the correct account's own preference always wins over
+  // whatever the previous session left the DOM attribute set to.
+  useEffect(() => {
+    if (!myProfile) return;
+    if (myProfile.darkMode) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      document.body.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      document.body.removeAttribute('data-theme');
+    }
+    setState(s => (s.darkMode === myProfile.darkMode ? s : { ...s, darkMode: myProfile.darkMode }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myProfile?.darkMode]);
 
   useEffect(() => {
     if (isLinked && myProfile) refreshFavorites();
@@ -1665,6 +1729,7 @@ const refreshMoods = useCallback(async () => {
       imageUrl: r.image_url,
       audioUrl: r.audio_url,
       audioDuration: r.audio_duration,
+      sticker: r.sticker,
       createdAt: r.created_at,
       read: !!r.read_at,
     }));
@@ -1686,7 +1751,7 @@ const refreshMoods = useCallback(async () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `couple_id=eq.${coupleId}` },
         (payload) => {
-          const row = payload.new as { id: string; sender_profile_id: string; text: string | null; image_url: string | null; audio_url: string | null; audio_duration: number | null; created_at: string; read_at: string | null };
+          const row = payload.new as { id: string; sender_profile_id: string; text: string | null; image_url: string | null; audio_url: string | null; audio_duration: number | null; sticker: string | null; created_at: string; read_at: string | null };
           const mine = row.sender_profile_id === myId;
           // Own messages are already shown optimistically (and reconciled to
           // this same real id) by sendChatMessage the moment it's sent — an
@@ -1696,12 +1761,12 @@ const refreshMoods = useCallback(async () => {
           const onChatScreen = screenRef.current === 'chat';
           setState(s => {
             if (s.chatMessages.some(m => m.id === row.id)) return s;
-            const msg: ChatMessage = { id: row.id, senderId: row.sender_profile_id, sender: partnerName, mine: false, text: row.text, imageUrl: row.image_url, audioUrl: row.audio_url, audioDuration: row.audio_duration, createdAt: row.created_at, read: !!row.read_at };
+            const msg: ChatMessage = { id: row.id, senderId: row.sender_profile_id, sender: partnerName, mine: false, text: row.text, imageUrl: row.image_url, audioUrl: row.audio_url, audioDuration: row.audio_duration, sticker: row.sticker, createdAt: row.created_at, read: !!row.read_at };
             return { ...s, chatMessages: [...s.chatMessages, msg], unreadChatCount: !onChatScreen ? s.unreadChatCount + 1 : s.unreadChatCount };
           });
           if (onChatScreen) markChatReadFrom(partnerId);
           else {
-            const preview = row.image_url ? '📷 Sent a photo' : row.audio_url ? '🎤 Sent a voice message' : (row.text ?? '').length > 60 ? row.text!.slice(0, 60) + '…' : (row.text ?? '');
+            const preview = row.sticker ? `${row.sticker} Sent a sticker` : row.image_url ? '📷 Sent a photo' : row.audio_url ? '🎤 Sent a voice message' : (row.text ?? '').length > 60 ? row.text!.slice(0, 60) + '…' : (row.text ?? '');
             toast(`${partnerName}: ${preview}`, '💬', { passive: true });
           }
         }
@@ -1725,7 +1790,7 @@ const refreshMoods = useCallback(async () => {
   const sendChatMessage = async (msg: NewChatMessage) => {
     if (!myProfile) return;
     const text = msg.text?.trim();
-    if (!text && !msg.imageUrl && !msg.audioUrl) return;
+    if (!text && !msg.imageUrl && !msg.audioUrl && !msg.sticker) return;
     const tempId = `temp-${uid()}`;
     const optimistic: ChatMessage = {
       id: tempId,
@@ -1736,6 +1801,7 @@ const refreshMoods = useCallback(async () => {
       imageUrl: msg.imageUrl ?? null,
       audioUrl: msg.audioUrl ?? null,
       audioDuration: msg.audioDuration ?? null,
+      sticker: msg.sticker ?? null,
       createdAt: new Date().toISOString(),
       read: false,
       pending: true,
@@ -1789,10 +1855,43 @@ const refreshMoods = useCallback(async () => {
     return res;
   };
 
+  const completePasswordRecovery = async (newPassword: string) => {
+    const res = await authChangePassword(newPassword);
+    if (res.ok) { setPasswordRecovery(false); toast('Password reset — welcome back 🔒'); }
+    return res;
+  };
+
   // Simply opening the app counts as activity — fires once per session
   // (myProfile.id only changes on login/logout, not on every profile edit).
   useEffect(() => {
     if (myProfile?.id) touchLastActive();
+  }, [myProfile?.id]);
+
+  // Reports foreground/visibility state to the server so push-notification
+  // triggers can skip pushing to someone who's already looking at the app —
+  // a heartbeat while visible (not just the visibilitychange edges) keeps
+  // app_foreground_at fresh enough for the trigger's staleness check.
+  useEffect(() => {
+    if (!myProfile?.id) return;
+    let heartbeat: ReturnType<typeof setInterval> | null = null;
+    const markVisible = () => {
+      setForegroundState(true);
+      if (!heartbeat) heartbeat = setInterval(() => setForegroundState(true), 20000);
+    };
+    const markHidden = () => {
+      if (heartbeat) { clearInterval(heartbeat); heartbeat = null; }
+      setForegroundState(false);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') markVisible(); else markHidden();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    if (document.visibilityState === 'visible') markVisible();
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      if (heartbeat) clearInterval(heartbeat);
+      markHidden();
+    };
   }, [myProfile?.id]);
 
   const invitePartner = useCallback(async (username: string) => {
@@ -1837,7 +1936,7 @@ const refreshMoods = useCallback(async () => {
   return (
     <Ctx.Provider value={{
       state, currentUser,
-      authed, authLoading, profileLoaded, isLinked, dataReady, imagesReady, hydratedFromCache, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
+      authed, authLoading, profileLoaded, isLinked, isLinkedSettled, isAdmin, dataReady, imagesReady, hydratedFromCache, passwordRecovery, completePasswordRecovery, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
       pendingInvite, sentInvite, invitePartner, acceptInvite, rejectInvite, cancelSentInvite,
       screen, selectedId, navigate, goBack, navSeq, lastNavWasPop,
       toasts, toast,

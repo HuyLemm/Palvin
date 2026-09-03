@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { register, login } from '../auth';
+import { register, login, requestPasswordReset } from '../auth';
+import { useApp } from '../context';
 import Icon from '../components/Icon';
 
-type Flow = 'welcome' | 'login' | 'register' | 'check-email';
+type Flow = 'welcome' | 'login' | 'register' | 'check-email' | 'forgot' | 'reset-sent';
+
+const REMEMBERED_USERNAME_KEY = 'palvin_remembered_username';
 
 /* ── Petal decoration ── */
 function Petals() {
@@ -212,9 +215,11 @@ export default function AuthScreen() {
   const [flow, setFlow] = useState<Flow>('welcome');
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
-  const [loginUsername, setLoginUsername] = useState('');
+  const [loginUsername, setLoginUsername] = useState(() => localStorage.getItem(REMEMBERED_USERNAME_KEY) ?? '');
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem(REMEMBERED_USERNAME_KEY));
   const [password, setPassword] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
+  const [forgotUsername, setForgotUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -253,6 +258,18 @@ export default function AuthScreen() {
     // Đăng nhập thành công sẽ tự động vào app qua Supabase session listener,
     // không cần điều hướng thủ công ở đây.
     if (!res.ok) return setError(res.error!);
+    if (rememberMe) localStorage.setItem(REMEMBERED_USERNAME_KEY, loginUsername.trim());
+    else localStorage.removeItem(REMEMBERED_USERNAME_KEY);
+  }
+
+  async function handleForgotPassword() {
+    setError('');
+    if (!forgotUsername.trim()) return setError('Enter your username.');
+    setLoading(true);
+    const res = await requestPasswordReset(forgotUsername.trim());
+    setLoading(false);
+    if (!res.ok) return setError(res.error!);
+    setFlow('reset-sent');
   }
 
   /* ── CHECK EMAIL SCREEN ── */
@@ -273,6 +290,61 @@ export default function AuthScreen() {
             <button className="btn-ghost" onClick={() => { changeFlow('welcome'); }}>
               Back to home
             </button>
+          </div>
+        </div>
+      </AuthBg>
+    );
+  }
+
+  /* ── RESET LINK SENT SCREEN ── */
+  if (flow === 'reset-sent') {
+    return (
+      <AuthBg>
+        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 20px 100px', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div className="heart-beat" style={{ lineHeight: 1, marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Icon emoji="📧" size={48} /></div>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', marginBottom: 10 }}>
+              Check your email
+            </p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.7, maxWidth: 280, margin: '0 auto' }}>
+              We've sent a password reset link to your inbox. Tap it to choose a new password.
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button className="btn-ghost" onClick={() => { changeFlow('login'); }}>
+              Back to log in
+            </button>
+          </div>
+        </div>
+      </AuthBg>
+    );
+  }
+
+  /* ── FORGOT PASSWORD SCREEN ── */
+  if (flow === 'forgot') {
+    return (
+      <AuthBg>
+        <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '50px 20px 100px' }}>
+          <BackBtn onClick={() => { changeFlow('login'); }} />
+
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <div style={{ marginBottom: 28 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 27, color: 'var(--ink)', marginBottom: 6 }}>
+                Forgot password?
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Enter your username and we'll email you a reset link.</p>
+            </div>
+
+            <Card>
+              <Field label="Username" placeholder="Your username" value={forgotUsername} onChange={v => { setForgotUsername(v); setError(''); }} delay="0.05s" autoComplete="username" />
+              {error && <ErrorBox message={error} />}
+            </Card>
+
+            <div style={{ marginTop: 20 }}>
+              <button className="btn-sakura" onClick={handleForgotPassword} disabled={loading}>
+                {loading ? 'Sending...' : 'Send reset link'}
+              </button>
+            </div>
           </div>
         </div>
       </AuthBg>
@@ -332,6 +404,16 @@ export default function AuthScreen() {
             <Card>
               <Field label="Username" placeholder="Your username" value={loginUsername} onChange={v => { setLoginUsername(v); setError(''); }} delay="0.05s" autoComplete="username" />
               <Field label="Password" placeholder="Password" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" autoComplete="current-password" />
+
+              <div className="auth-fade-up" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: error ? 12 : 0, animationDelay: '0.12s' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--ink-2)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--sakura-deep)', cursor: 'pointer' }} />
+                  Remember me
+                </label>
+                <button onClick={() => { setForgotUsername(loginUsername); changeFlow('forgot'); }} style={{ background: 'none', border: 'none', padding: 0, color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                  Forgot password?
+                </button>
+              </div>
 
               {error && <ErrorBox message={error} />}
             </Card>
@@ -403,6 +485,50 @@ export default function AuthScreen() {
           <p style={{ textAlign: 'center', fontSize: 11, color: '#B09AA0', lineHeight: 1.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Icon emoji="🔒" size={11} /> Signing up requires email confirmation before you can log in
           </p>
+        </div>
+      </div>
+    </AuthBg>
+  );
+}
+
+/* ── Reset Password screen (shown after tapping the "forgot password" email link) ── */
+export function ResetPasswordScreen() {
+  const { completePasswordRecovery } = useApp();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit() {
+    setError('');
+    if (newPassword.length < 6) return setError('Password must be at least 6 characters.');
+    if (newPassword !== confirmPassword) return setError("Passwords don't match.");
+    setLoading(true);
+    const res = await completePasswordRecovery(newPassword);
+    setLoading(false);
+    if (!res.ok) return setError(res.error!);
+  }
+
+  return (
+    <AuthBg>
+      <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '50px 20px 100px', justifyContent: 'center' }}>
+        <div style={{ marginBottom: 28 }}>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 27, color: 'var(--ink)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Icon emoji="🔐" size={22} /> Set a new password
+          </p>
+          <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Choose a new password for your account.</p>
+        </div>
+
+        <Card>
+          <Field label="New password" placeholder="At least 6 characters" value={newPassword} onChange={v => { setNewPassword(v); setError(''); }} type="password" delay="0.05s" autoComplete="new-password" />
+          <Field label="Confirm new password" placeholder="Confirm your password" value={confirmPassword} onChange={v => { setConfirmPassword(v); setError(''); }} type="password" delay="0.1s" autoComplete="new-password" />
+          {error && <ErrorBox message={error} />}
+        </Card>
+
+        <div style={{ marginTop: 20 }}>
+          <button className="btn-sakura" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Saving...' : 'Save new password'}
+          </button>
         </div>
       </div>
     </AuthBg>

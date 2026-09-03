@@ -27,7 +27,7 @@ function MoreIcon() {
 }
 
 export default function PostCard({ post, reactions }: { post: Post; reactions: Record<string, { count: number; reacted: boolean }> }) {
-  const { toggleLike, toggleSave, addComment, addReaction, navigate, currentUser, deletePost } = useApp();
+  const { toggleLike, toggleSave, addComment, addReaction, navigate, currentUser, isAdmin, deletePost } = useApp();
   const [commentingId, setCommentingId] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [likedAnim, setLikedAnim] = useState(false);
@@ -37,7 +37,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
   const [showEdit, setShowEdit] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const isMine = post.author === currentUser;
+  const isMine = post.author === currentUser || isAdmin;
   const totalReactions = Object.values(reactions).reduce((s, r) => s + r.count, 0);
   const topReactions = Object.entries(reactions).filter(([, r]) => r.count > 0).slice(0, 3);
 

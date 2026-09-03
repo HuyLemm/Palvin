@@ -10,6 +10,7 @@ interface PostRow {
   caption: string;
   location: string | null;
   created_at: string;
+  post_date: string;
   post_comments: { id: string; author_id: string; text: string; created_at: string }[];
   post_likes: { user_id: string }[];
   post_saves: { user_id: string }[];
@@ -18,12 +19,21 @@ interface PostRow {
 
 export type ReactionMap = Record<string, Record<string, { count: number; reacted: boolean }>>;
 
-const POST_SELECT = 'id, author_id, image_urls, caption, location, created_at,' +
+const POST_SELECT = 'id, author_id, image_urls, caption, location, created_at, post_date,' +
   'post_comments(id, author_id, text, created_at),' +
   'post_likes(user_id), post_saves(user_id), post_reactions(user_id, emoji)';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+// post_date is a plain DATE column ('YYYY-MM-DD', no time/timezone) — parsed
+// by hand into local y/m/d instead of `new Date(dateStr)` (which treats a
+// bare date string as UTC midnight) so the displayed day can never shift
+// backward a day for anyone west of UTC.
+function formatPostDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 function rowToPost(row: PostRow, myId: string, names: ProfileNames, myName: string): Post {
@@ -33,7 +43,8 @@ function rowToPost(row: PostRow, myId: string, names: ProfileNames, myName: stri
   return {
     id: row.id,
     author: names[row.author_id] ?? myName,
-    date: formatDate(row.created_at),
+    date: formatPostDate(row.post_date),
+    postDate: row.post_date,
     images: row.image_urls,
     caption: row.caption,
     location: row.location ?? undefined,
@@ -48,6 +59,7 @@ export async function fetchPosts(myId: string, names: ProfileNames, myName: stri
   const { data, error } = await supabase
     .from('posts')
     .select(POST_SELECT)
+    .order('post_date', { ascending: false })
     .order('created_at', { ascending: false });
   if (error || !data) return { posts: [], reactions: {} };
 
@@ -68,9 +80,10 @@ export async function fetchPosts(myId: string, names: ProfileNames, myName: stri
   return { posts, reactions };
 }
 
-export async function createPost(authorId: string, data: { images: string[]; caption: string; location?: string }) {
+export async function createPost(authorId: string, data: { images: string[]; caption: string; location?: string; postDate?: string }) {
   return supabase.from('posts').insert({
     author_id: authorId, image_urls: data.images, caption: data.caption, location: data.location ?? null,
+    ...(data.postDate ? { post_date: data.postDate } : {}),
   });
 }
 

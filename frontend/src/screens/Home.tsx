@@ -4,6 +4,7 @@ import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
 import { getDaysTogether, getDuration } from '../data';
+import { nextOccurrence } from '../calendarRecurrence';
 import type { FavCategory, FavPlace, StoryQuote } from '../types';
 
 // Picks a quote that looks random day to day (not a fixed 0,1,2... queue
@@ -54,7 +55,7 @@ const MOOD_SCORE: Record<string, number> = {
 };
 
 export default function Home() {
-  const { state, navigate, setMood, currentUser, partnerProfile, sendHug } = useApp();
+  const { state, screen, navigate, setMood, currentUser, partnerProfile, sendHug } = useApp();
   const partnerName = partnerProfile?.displayName;
   const relationshipStart = state.relationshipStart ? new Date(state.relationshipStart + 'T00:00:00') : null;
   const [days, setDays] = useState(relationshipStart ? getDaysTogether(relationshipStart) : 0);
@@ -74,13 +75,19 @@ export default function Home() {
   const dur = relationshipStart ? getDuration(relationshipStart) : { years: 0, months: 0, days: 0 };
   const playlistPool = playlistFilter === 'all' ? state.playlist : state.playlist.filter(p => p.addedBy === playlistFilter);
 
+  // Home stays mounted in the background once visited (App.tsx's keep-alive
+  // ScreenRouter) — without the `screen === 'home'` guard, this tick (and
+  // the vinyl-rotation one below) would keep firing and re-rendering every
+  // 60s/4s for the rest of the session even while some other tab is the one
+  // actually on screen, needlessly competing with whatever *is* animating.
   useEffect(() => {
     if (!relationshipStart) { setDays(0); return; }
     setDays(getDaysTogether(relationshipStart));
+    if (screen !== 'home') return;
     const t = setInterval(() => setDays(getDaysTogether(relationshipStart)), 60000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.relationshipStart]);
+  }, [state.relationshipStart, screen]);
 
   // Cycle through playlist songs for the vinyl widget — paused while a
   // preview is actively playing, and once the user has manually picked a
@@ -89,10 +96,10 @@ export default function Home() {
   // reads as "pressing Next snaps back to the previous song").
   const [manualNav, setManualNav] = useState(false);
   useEffect(() => {
-    if (playlistPool.length < 2 || isPlaying || manualNav) return;
+    if (playlistPool.length < 2 || isPlaying || manualNav || screen !== 'home') return;
     const t = setInterval(() => setVinylIdx(i => (i + 1) % playlistPool.length), 4000);
     return () => clearInterval(t);
-  }, [playlistPool.length, isPlaying, manualNav]);
+  }, [playlistPool.length, isPlaying, manualNav, screen]);
 
   // Switching the "who added it" filter swaps the underlying song list
   // out from under whatever index was showing — snap back to the start of
@@ -138,9 +145,11 @@ export default function Home() {
     if (!state.favCategories.some(c => c.id === selectedFavCat)) setSelectedFavCat(state.favCategories[0].id);
   }, [state.favCategories, selectedFavCat]);
 
+  const todayStr = new Date().toISOString().slice(0, 10);
   const upcoming = [...state.events]
-    .filter(e => new Date(e.date) >= new Date(new Date().toDateString()))
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(e => ({ event: e, displayDate: nextOccurrence(e, new Date()) }))
+    .filter(({ displayDate }) => displayDate >= todayStr)
+    .sort((a, b) => a.displayDate.localeCompare(b.displayDate))
     .slice(0, 3);
 
   const recentMemories = state.memories.slice(0, 5);
@@ -437,8 +446,8 @@ export default function Home() {
         <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12 }}>Upcoming</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {upcoming.map(ev => {
-              const d = new Date(ev.date);
+            {upcoming.map(({ event: ev, displayDate }) => {
+              const d = new Date(displayDate);
               const mon = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
               return (
                 <div key={ev.id} onClick={() => navigate('calendar')} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 12px', background: 'var(--bg)', borderRadius: 12, transition: 'background 0.15s' }}
@@ -518,27 +527,23 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Mood picker sheet */}
+      {/* Mood picker — centered modal (was a bottom sheet) */}
       {showMoodPicker && (
-        <>
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.4)', backdropFilter: 'blur(4px)', zIndex: 50 }} onClick={() => setShowMoodPicker(false)} />
-          <div className="bottom-sheet" style={{ zIndex: 51, paddingBottom: 32 }}>
-            <div className="sheet-handle" />
-            <div style={{ padding: '0 20px 16px' }}>
-              <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>How are you feeling today?</p>
-              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Updating for <strong>{currentUser}</strong></p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
-                {MOODS_LIST.map(m => (
-                  <button key={m.emoji} onClick={() => { setMood(currentUser, m); setShowMoodPicker(false); }}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '14px 8px', borderRadius: 14, background: state.moods[currentUser]?.emoji === m.emoji ? 'var(--sakura-light)' : 'var(--bg)', border: state.moods[currentUser]?.emoji === m.emoji ? '1.5px solid var(--sakura)' : '1.5px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s' }}>
-                    <Icon emoji={m.emoji} size={28} />
-                    <span style={{ fontSize: 11, color: 'var(--ink-2)', textAlign: 'center', lineHeight: 1.2, fontWeight: 500 }}>{m.label}</span>
-                  </button>
-                ))}
-              </div>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setShowMoodPicker(false)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 340, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 4, textAlign: 'center' }}>How are you feeling today?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16, textAlign: 'center' }}>Updating for <strong>{currentUser}</strong></p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+              {MOODS_LIST.map(m => (
+                <button key={m.emoji} onClick={() => { setMood(currentUser, m); setShowMoodPicker(false); }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '14px 8px', borderRadius: 14, background: state.moods[currentUser]?.emoji === m.emoji ? 'var(--sakura-light)' : 'var(--bg)', border: state.moods[currentUser]?.emoji === m.emoji ? '1.5px solid var(--sakura)' : '1.5px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s' }}>
+                  <Icon emoji={m.emoji} size={28} />
+                  <span style={{ fontSize: 11, color: 'var(--ink-2)', textAlign: 'center', lineHeight: 1.2, fontWeight: 500 }}>{m.label}</span>
+                </button>
+              ))}
             </div>
           </div>
-        </>
+        </div>
       )}
 
     </div>

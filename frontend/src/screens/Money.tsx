@@ -25,11 +25,26 @@ const CAT_COLORS: Record<string, string> = {
   Shopping: '#D4A028', Health: '#5AC26A', Other: '#A0A0A0',
 };
 
-const MONTHS = ['2026-08', '2026-07', '2026-06', '2026-05', '2026-04', '2026-03'];
-const MONTH_LABELS: Record<string, string> = {
-  '2026-08': 'August', '2026-07': 'July', '2026-06': 'June',
-  '2026-05': 'May', '2026-04': 'April', '2026-03': 'March',
-};
+// Was a hardcoded 6-entry array anchored to August 2026 — correct only for
+// that one month, permanently "stuck" on it afterward instead of rolling
+// forward. Computed from the real current date instead, so the dropdown/chip
+// list and its default selection are always the actual last 6 months.
+function getRecentMonths(count: number): string[] {
+  const months: string[] = [];
+  const d = new Date();
+  d.setDate(1); // pin to day 1 first so setMonth() below can't skip/repeat a
+  // month on a day that doesn't exist in the target month (e.g. the 31st).
+  for (let i = 0; i < count; i++) {
+    months.push(d.toISOString().slice(0, 7));
+    d.setMonth(d.getMonth() - 1);
+  }
+  return months;
+}
+const MONTHS = getRecentMonths(6);
+function monthLabel(m: string): string {
+  const [y, mo] = m.split('-').map(Number);
+  return new Date(y, mo - 1, 1).toLocaleDateString('en-US', { month: 'long' });
+}
 
 const VND = (n: number) => `${Math.round(n).toLocaleString('en-US')} VND`;
 
@@ -54,12 +69,15 @@ export default function Money() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddIncome, setShowAddIncome] = useState(false);
 
-  // The bottom-nav's dedicated Stats button and the Money tab both land on
-  // this same kept-alive screen (see App.tsx's ScreenRouter) — this is the
-  // only way to tell them apart post-mount, since a repeat tap on either
-  // doesn't remount the component.
+  // The bottom-nav's dedicated Stats button, a Bill/Savings-goal
+  // notification, and the Money tab itself all land on this same kept-alive
+  // screen (see App.tsx's ScreenRouter) — this is the only way to tell them
+  // apart post-mount, since a repeat tap on any of them doesn't remount the
+  // component.
   useEffect(() => {
     if (screen === 'stats') setTab('stats');
+    else if (screen === 'bills') setTab('bills');
+    else if (screen === 'goals') setTab('goals');
   }, [screen]);
 
   return (
@@ -172,7 +190,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
           style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '7px 10px', fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', cursor: 'pointer' }}
         >
           <option value="all">All</option>
-          {MONTHS.map(m => <option key={m} value={m}>{MONTH_LABELS[m]}</option>)}
+          {MONTHS.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
       </div>
 
@@ -369,7 +387,7 @@ function lastNMonths(anchor: string, n: number): string[] {
 function StatsTab({ expenses }: { expenses: any[] }) {
   const { currentUser, partnerProfile } = useApp();
   const partnerName = partnerProfile?.displayName;
-  const [month, setMonth] = useState('2026-08');
+  const [month, setMonth] = useState(MONTHS[0]);
   const monthExp = expenses.filter(e => e.date.startsWith(month) && e.type !== 'income');
   const monthInc = expenses.filter(e => e.date.startsWith(month) && e.type === 'income');
   const total = monthExp.reduce((s: number, e: any) => s + e.amount, 0);
@@ -455,14 +473,14 @@ function StatsTab({ expenses }: { expenses: any[] }) {
             color: m === month ? 'white' : 'var(--ink-2)',
             border: m === month ? 'none' : '1px solid var(--border)',
             boxShadow: m === month ? '0 2px 8px rgba(201,95,124,0.3)' : 'none',
-          }}>{MONTH_LABELS[m]}</button>
+          }}>{monthLabel(m)}</button>
         ))}
       </div>
 
       {/* Hero — tổng chi tiêu, % so tháng trước, thu nhập */}
       <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{MONTH_LABELS[month]} · Spending</p>
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{monthLabel(month)} · Spending</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, color: 'white', lineHeight: 1.1, marginBottom: 6 }}>{VND(total)}</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {change !== null && (

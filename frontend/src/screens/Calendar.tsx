@@ -3,6 +3,7 @@ import { useApp } from '../context';
 import AddEventForm from '../components/forms/AddEventForm';
 import Icon from '../components/Icon';
 import type { CalendarEvent, CycleLog } from '../types';
+import { eventOccursOn, nextOccurrence } from '../calendarRecurrence';
 
 const CAT_EMOJI: Record<CalendarEvent['category'], string> = { anniversary: '💕', birthday: '🎂', trip: '✈️', date: '❤️', reminder: '📅' };
 const CAT_COLOR: Record<CalendarEvent['category'], string> = { anniversary: 'var(--sakura-accent)', birthday: 'var(--sakura)', trip: 'var(--ink-2)', date: 'var(--sakura-deep)', reminder: 'var(--sakura-light)' };
@@ -43,14 +44,20 @@ function SpecialDatesTab() {
 
   const eventsOnDay = (d: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-    return state.events.filter(e => e.date === dateStr);
+    return state.events.filter(e => eventOccursOn(e, dateStr));
   };
 
-  const selectedEvents = selected ? state.events.filter(e => e.date === selected) : [];
+  const selectedEvents = selected ? state.events.filter(e => eventOccursOn(e, selected)) : [];
 
+  // A recurring event's stored `date` is just its anchor/first occurrence —
+  // sorting/filtering by that directly would drop it off "Upcoming" forever
+  // once that first date passes, or show it far out of order. displayDate
+  // carries the real next occurrence through to EventCard without touching
+  // the event's own `date` (editing/deleting still target the real anchor).
   const upcoming = [...state.events]
-    .filter(e => e.date >= now.toISOString().split('T')[0])
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .map(e => ({ event: e, displayDate: nextOccurrence(e, now) }))
+    .filter(({ displayDate }) => displayDate >= now.toISOString().split('T')[0])
+    .sort((a, b) => a.displayDate.localeCompare(b.displayDate))
     .slice(0, 5);
 
   return (
@@ -119,7 +126,7 @@ function SpecialDatesTab() {
         <div>
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Upcoming</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {upcoming.map(ev => <EventCard key={ev.id} event={ev} onEdit={setEditing} onDelete={deleteEvent} />)}
+            {upcoming.map(({ event: ev, displayDate }) => <EventCard key={ev.id} event={ev} displayDate={displayDate} onEdit={setEditing} onDelete={deleteEvent} />)}
           </div>
         </div>
       )}
@@ -130,14 +137,17 @@ function SpecialDatesTab() {
   );
 }
 
-function EventCard({ event: ev, onEdit, onDelete }: { event: CalendarEvent; onEdit: (ev: CalendarEvent) => void; onDelete: (id: string) => void }) {
+function EventCard({ event: ev, displayDate, onEdit, onDelete }: { event: CalendarEvent; displayDate?: string; onEdit: (ev: CalendarEvent) => void; onDelete: (id: string) => void }) {
   const [confirm, setConfirm] = useState(false);
-  const d = new Date(ev.date + 'T12:00:00');
+  const d = new Date((displayDate ?? ev.date) + 'T12:00:00');
   return (
     <div className="card" style={{ padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
       <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={CAT_EMOJI[ev.category]} size={22} /></div>
       <div style={{ flex: 1 }}>
-        <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{ev.title}</p>
+        <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 5 }}>
+          {ev.title}
+          {ev.recurrence !== 'none' && <Icon emoji="🔁" size={12} style={{ opacity: 0.6 }} />}
+        </p>
         <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{ev.time ? ` · ${ev.time}` : ''}</p>
         {ev.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={12} /> {ev.location}</p>}
         {ev.notes && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 4 }}>{ev.notes}</p>}

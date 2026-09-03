@@ -11,11 +11,13 @@ export default function AddLoveNoteForm({ onClose }: { onClose: () => void }) {
   const [message, setMessage] = useState('');
   const [mood, setMood] = useState('💕');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!message.trim()) { setError('Write something beautiful'); return; }
     const now = new Date();
-    addLoveNote({
+    setSaving(true);
+    await addLoveNote({
       from: currentUser, to,
       message,
       date: now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
@@ -41,8 +43,8 @@ export default function AddLoveNoteForm({ onClose }: { onClose: () => void }) {
         </div>
         {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>{error} <Icon emoji="✨" size={14} /></p>}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Send Note <Icon emoji="💌" size={16} /></button>
+          <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
+          <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>{saving ? 'Sending...' : <>Send Note <Icon emoji="💌" size={16} /></>}</button>
         </div>
       </div>
     </BottomSheet>

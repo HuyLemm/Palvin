@@ -14,7 +14,7 @@ const PROMPTS = [
 interface Props { onBack: () => void; }
 
 export default function GratitudeJournal({ onBack }: Props) {
-  const { state, addGratitude, updateGratitude, deleteGratitude, currentUser, partnerProfile } = useApp();
+  const { state, addGratitude, updateGratitude, deleteGratitude, currentUser, isAdmin, partnerProfile } = useApp();
   const partnerName = partnerProfile?.displayName;
   const [text, setText] = useState('');
   const [filter, setFilter] = useState<string>('all');
@@ -22,6 +22,7 @@ export default function GratitudeJournal({ onBack }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   function startEdit(id: string, currentText: string) {
     setEditingId(id);
@@ -37,10 +38,12 @@ export default function GratitudeJournal({ onBack }: Props) {
   const today = new Date().toISOString().slice(0, 10);
   const alreadyToday = state.gratitude.find(g => g.from === currentUser && g.date === today);
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!text.trim()) return;
-    addGratitude({ from: currentUser, text: text.trim(), date: today });
+    setSaving(true);
+    await addGratitude({ from: currentUser, text: text.trim(), date: today });
     setText('');
+    setSaving(false);
   }
 
   const filtered = filter === 'all'
@@ -90,8 +93,8 @@ export default function GratitudeJournal({ onBack }: Props) {
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
               <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{text.length} characters</p>
-              <button onClick={handleSubmit} disabled={!text.trim()} style={{ padding: '10px 20px', background: text.trim() ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 12, color: text.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: text.trim() ? 'pointer' : 'default', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                Save <Icon emoji="🌸" size={14} />
+              <button onClick={handleSubmit} disabled={!text.trim() || saving} style={{ padding: '10px 20px', background: (text.trim() && !saving) ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 12, color: (text.trim() && !saving) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: (text.trim() && !saving) ? 'pointer' : 'default', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {saving ? 'Saving...' : 'Save'} <Icon emoji="🌸" size={14} />
               </button>
             </div>
           </>
@@ -137,7 +140,7 @@ export default function GratitudeJournal({ onBack }: Props) {
                   <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{g.from}</p>
                   <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatDate(g.date)}</p>
                 </div>
-                {g.from === currentUser ? (
+                {(g.from === currentUser || isAdmin) ? (
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                     <button
                       onClick={() => startEdit(g.id, g.text)}

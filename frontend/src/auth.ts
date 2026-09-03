@@ -16,6 +16,7 @@ export interface AuthProfile {
   coupleId: string | null;
   notifyPrefs: NotifyPrefs;
   lastActiveAt: string | null;
+  darkMode: boolean;
 }
 
 export interface PendingInvite {
@@ -60,11 +61,23 @@ export async function login(username: string, password: string): Promise<Result>
   return { ok: true };
 }
 
+// Resolves username -> email the same way login() does, then asks Supabase
+// to email a recovery link. That link brings the user back here with a
+// PASSWORD_RECOVERY auth event (see context.tsx), which shows a "set a new
+// password" screen instead of the normal app.
+export async function requestPasswordReset(username: string): Promise<Result> {
+  const { data: email, error: lookupError } = await supabase.rpc('email_for_username', { username: username.trim() });
+  if (lookupError || !email) return { ok: false, error: 'Account not found.' };
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+  if (error) return { ok: false, error: mapAuthError(error.message) };
+  return { ok: true };
+}
+
 export async function logout(): Promise<void> {
   await supabase.auth.signOut();
 }
 
-function rowToProfile(row: { id: string; display_name: string; couple_id: string | null; avatar_url: string | null; notify_prefs?: Partial<NotifyPrefs> | null; last_active_at: string | null }): AuthProfile {
+function rowToProfile(row: { id: string; display_name: string; couple_id: string | null; avatar_url: string | null; notify_prefs?: Partial<NotifyPrefs> | null; last_active_at: string | null; dark_mode?: boolean | null }): AuthProfile {
   return {
     id: row.id,
     displayName: row.display_name,
@@ -72,10 +85,11 @@ function rowToProfile(row: { id: string; display_name: string; couple_id: string
     photoUrl: row.avatar_url ?? undefined,
     notifyPrefs: { ...DEFAULT_NOTIFY_PREFS, ...(row.notify_prefs ?? {}) },
     lastActiveAt: row.last_active_at,
+    darkMode: !!row.dark_mode,
   };
 }
 
-const PROFILE_SELECT = 'id, display_name, couple_id, avatar_url, notify_prefs, last_active_at';
+const PROFILE_SELECT = 'id, display_name, couple_id, avatar_url, notify_prefs, last_active_at, dark_mode';
 
 export async function getCurrentProfile(): Promise<AuthProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -138,6 +152,15 @@ export async function updateNotifyPrefs(prefs: NotifyPrefs): Promise<Result> {
   return { ok: true };
 }
 
+// Dark mode is a personal preference, not couple data — each account keeps
+// its own (profiles.dark_mode), so switching it for one partner never
+// affects what the other sees on their own device.
+export async function updateDarkModePref(profileId: string, darkMode: boolean): Promise<Result> {
+  const { error } = await supabase.from('profiles').update({ dark_mode: darkMode }).eq('id', profileId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 // Called once per app session (see context.tsx) — simply opening the app
 // counts as "activity" here, unlike the stricter "did something real" bar
 // mark_active_today() uses for the couple streak.
@@ -145,6 +168,18 @@ export async function touchLastActive(): Promise<void> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
   await supabase.from('profiles').update({ last_active_at: new Date().toISOString() }).eq('id', user.id);
+}
+
+// Reports whether the app is currently visible/foregrounded on this device,
+// so the push-notification DB triggers can skip sending a system push to
+// someone who's already looking at the app (see context.tsx's visibility
+// listener and migration 0070_push_skip_foreground.sql). Called on every
+// visibility change plus a heartbeat while visible, so a crashed/killed tab
+// that never fires "hidden" naturally goes stale and pushes resume.
+export async function setForegroundState(active: boolean): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from('profiles').update({ app_foreground: active, app_foreground_at: new Date().toISOString() }).eq('id', user.id);
 }
 
 /* ── Partner invite / accept flow (replaces instant link-code linking) ── */

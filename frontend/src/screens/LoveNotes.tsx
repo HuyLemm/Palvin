@@ -280,14 +280,16 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
   const [body, setBody] = useState('');
   const [stationery, setStationery] = useState('rose');
   const [font, setFont] = useState('serif');
+  const [sending, setSending] = useState(false);
   const to = partnerProfile?.displayName ?? currentUser;
 
   const st = STATIONERY[stationery];
   const isDark = stationery === 'midnight';
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!title.trim() || !body.trim()) return;
-    addLoveLetter({
+    setSending(true);
+    await addLoveLetter({
       from: currentUser,
       to,
       title: title.trim(),
@@ -304,9 +306,9 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
       <div style={{ minHeight: '100%', padding: '20px 16px 40px', display: 'flex', flexDirection: 'column', maxWidth: 430, margin: '0 auto' }}>
         {/* Toolbar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✕" size={14} /> Cancel</button>
+          <button onClick={onClose} disabled={sending} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✕" size={14} /> Cancel</button>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'white', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✉️" size={18} /> Write Letter</p>
-          <button onClick={handleSend} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14, opacity: title && body ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>Send <Icon emoji="💌" size={14} /></button>
+          <button onClick={handleSend} disabled={sending} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14, opacity: (title && body && !sending) ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>{sending ? 'Sending...' : <>Send <Icon emoji="💌" size={14} /></>}</button>
         </div>
 
         {/* Stationery picker */}
@@ -364,11 +366,13 @@ function SecretNoteComposer({ onClose }: { onClose: () => void }) {
   const [message, setMessage] = useState('');
   const [unlockDate, setUnlockDate] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!message.trim()) return setError('Write your note first.');
     if (!unlockDate) return setError('Choose an unlock date.');
-    addSecretNote({ from: currentUser, message: message.trim(), unlockDate });
+    setSaving(true);
+    await addSecretNote({ from: currentUser, message: message.trim(), unlockDate });
     onClose();
   };
 
@@ -392,8 +396,8 @@ function SecretNoteComposer({ onClose }: { onClose: () => void }) {
       />
       {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 12, marginBottom: 10 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button className="btn-ghost" onClick={onClose} style={{ flex: 1 }}>Cancel</button>
-        <button className="btn-primary" onClick={handleSubmit} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Seal it <Icon emoji="🔒" size={14} /></button>
+        <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
+        <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>{saving ? 'Sealing...' : <>Seal it <Icon emoji="🔒" size={14} /></>}</button>
       </div>
     </div>
   );
