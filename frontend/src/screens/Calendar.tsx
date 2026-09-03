@@ -60,6 +60,15 @@ function SpecialDatesTab() {
     .sort((a, b) => a.displayDate.localeCompare(b.displayDate))
     .slice(0, 5);
 
+  // Everything not urgent enough for "Upcoming" still needs somewhere to be
+  // seen — otherwise an event more than a month out is invisible unless you
+  // happen to flip the calendar grid to that exact month.
+  const upcomingIds = new Set(upcoming.map(u => u.event.id));
+  const later = [...state.events]
+    .filter(e => !upcomingIds.has(e.id))
+    .map(e => ({ event: e, displayDate: nextOccurrence(e, now) }))
+    .sort((a, b) => a.displayDate.localeCompare(b.displayDate));
+
   return (
     <div>
       {/* Calendar header */}
@@ -123,10 +132,20 @@ function SpecialDatesTab() {
 
       {/* Upcoming */}
       {upcoming.length > 0 && (
-        <div>
+        <div style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Upcoming</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {upcoming.map(({ event: ev, displayDate }) => <EventCard key={ev.id} event={ev} displayDate={displayDate} onEdit={setEditing} onDelete={deleteEvent} />)}
+          </div>
+        </div>
+      )}
+
+      {/* Later — everything more than a month out, so it's never invisible */}
+      {later.length > 0 && (
+        <div>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Later</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {later.map(({ event: ev, displayDate }) => <EventCard key={ev.id} event={ev} displayDate={displayDate} onEdit={setEditing} onDelete={deleteEvent} />)}
           </div>
         </div>
       )}

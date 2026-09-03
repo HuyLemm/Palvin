@@ -13,6 +13,7 @@ import {
   Unlock, Globe, Mountain, Building2, Ship, Landmark, Map, Link2, Disc,
   Headphones, Ticket, Umbrella, DollarSign, TrendingDown, Hourglass, Cat, PawPrint,
   Undo2, Play, Pause, SkipForward, Hotel,
+  AlarmClock, NotebookText, Repeat, Egg, RotateCw,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -101,4 +102,10 @@ export const EMOJI_ICON_MAP: Record<string, LucideIcon> = {
   '🎟️': Ticket, '🎟': Ticket,
   '☂️': Umbrella, '☂': Umbrella,
   '⏳': Hourglass,
+  '⏰': AlarmClock,
+  '📒': NotebookText,
+  '🔁': Repeat,
+  '🥚': Egg,
+  '🔄': RotateCw,
+  '🩸': Droplet,
 };
