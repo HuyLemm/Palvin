@@ -13,39 +13,39 @@ import type { Bill, Expense, SavingsGoal } from '../types';
 type Tab = 'expenses' | 'goals' | 'stats' | 'bills';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
-  { key: 'expenses', label: 'Thu chi', icon: '💸' },
-  { key: 'goals', label: 'Quỹ', icon: '💰' },
-  { key: 'bills', label: 'Hóa đơn', icon: '🧾' },
-  { key: 'stats', label: 'Thống kê', icon: '📊' },
+  { key: 'expenses', label: 'Expenses', icon: '💸' },
+  { key: 'goals', label: 'Goals', icon: '💰' },
+  { key: 'bills', label: 'Bills', icon: '🧾' },
+  { key: 'stats', label: 'Stats', icon: '📊' },
 ];
 
 const CAT_COLORS: Record<string, string> = {
-  Food: '#E67F9A', Coffee: '#C48A52', Entertainment: '#8B6FD4',
+  Food: 'var(--sakura-accent)', Coffee: '#C48A52', Entertainment: '#8B6FD4',
   Home: '#4AAEAA', Transportation: '#4A8AE8', Gifts: '#E8844A',
   Shopping: '#D4A028', Health: '#5AC26A', Other: '#A0A0A0',
 };
 
 const MONTHS = ['2026-08', '2026-07', '2026-06', '2026-05', '2026-04', '2026-03'];
 const MONTH_LABELS: Record<string, string> = {
-  '2026-08': 'Tháng 8', '2026-07': 'Tháng 7', '2026-06': 'Tháng 6',
-  '2026-05': 'Tháng 5', '2026-04': 'Tháng 4', '2026-03': 'Tháng 3',
+  '2026-08': 'August', '2026-07': 'July', '2026-06': 'June',
+  '2026-05': 'May', '2026-04': 'April', '2026-03': 'March',
 };
 
-const VND = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} VND`;
+const VND = (n: number) => `${Math.round(n).toLocaleString('en-US')} VND`;
 
 const BILL_CAT_LABELS: Record<string, string> = {
-  rent: 'Tiền nhà',
-  utilities: 'Điện / Nước',
+  rent: 'Rent',
+  utilities: 'Electricity / Water',
   internet: 'Internet',
   subscription: 'Subscription',
-  other: 'Khác',
+  other: 'Other',
 };
 
 const FREQUENCY_PRESETS = [1, 2, 3, 6, 12];
 function frequencyLabel(n: number): string {
-  if (n === 1) return 'Hàng tháng';
-  if (n === 12) return 'Hàng năm';
-  return `${n} tháng/lần`;
+  if (n === 1) return 'Monthly';
+  if (n === 12) return 'Yearly';
+  return `Every ${n} months`;
 }
 
 export default function Money() {
@@ -125,24 +125,24 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
 
       {/* Net balance hero */}
       <div key={`net-${filter}-${month}`} className="money-in" style={{
-        background: net >= 0 ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'linear-gradient(135deg, #E67F9A, #C95F7C)',
+        background: net >= 0 ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
         borderRadius: 20, padding: '18px 20px', marginBottom: 12, position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 90, height: 90, background: 'rgba(255,255,255,0.08)', borderRadius: '50%' }} />
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Còn lại</p>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 30, color: 'white', lineHeight: 1.1 }}>{VND(net)}</p>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 6 }}>Thu {VND(totalIncome)} · Chi {VND(totalExpense)}</p>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Remaining</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 31, color: 'white', lineHeight: 1.1 }}>{VND(net)}</p>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 6 }}>Income {VND(totalIncome)} · Spent {VND(totalExpense)}</p>
       </div>
 
       {/* Summary strip */}
       <div key={`sum-${filter}-${month}`} className="money-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16, animationDelay: '0.04s' }}>
         <div style={{ background: 'linear-gradient(135deg, #5AC26A, #38a853)', borderRadius: 16, padding: '14px 16px' }}>
-          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Thu nhập</p>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 19, color: 'white', lineHeight: 1 }}>{VND(totalIncome)}</p>
+          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Income</p>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'white', lineHeight: 1 }}>{VND(totalIncome)}</p>
         </div>
-        <div style={{ background: 'linear-gradient(135deg, #E67F9A, #C95F7C)', borderRadius: 16, padding: '14px 16px' }}>
-          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Chi tiêu</p>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 19, color: 'white', lineHeight: 1 }}>{VND(totalExpense)}</p>
+        <div style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', borderRadius: 16, padding: '14px 16px' }}>
+          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Expenses</p>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'white', lineHeight: 1 }}>{VND(totalExpense)}</p>
         </div>
       </div>
 
@@ -155,7 +155,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
               background: filter === f ? 'var(--sakura-accent)' : 'transparent',
               color: filter === f ? 'white' : 'var(--ink-2)',
               transition: 'all 0.2s ease',
-            }}>{f === 'all' ? 'Tất cả' : f === 'income' ? 'Thu' : 'Chi'}</button>
+            }}>{f === 'all' ? 'All' : f === 'income' ? 'Income' : 'Expense'}</button>
           ))}
         </div>
         <select
@@ -163,7 +163,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
           onChange={e => setMonth(e.target.value)}
           style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '7px 10px', fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', cursor: 'pointer' }}
         >
-          <option value="all">Tất cả</option>
+          <option value="all">All</option>
           {MONTHS.map(m => <option key={m} value={m}>{MONTH_LABELS[m]}</option>)}
         </select>
       </div>
@@ -176,19 +176,19 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
           color: 'white', fontWeight: 700, fontSize: 14,
           boxShadow: '0 4px 12px rgba(90,194,106,0.3)',
           transition: 'transform 0.15s ease',
-        }}>+ Khoản thu</button>
+        }}>+ Income</button>
         <button onClick={onAdd} style={{
           flex: 1, padding: '11px', borderRadius: 14, border: 'none', cursor: 'pointer',
           background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
           color: 'white', fontWeight: 700, fontSize: 14,
           boxShadow: '0 4px 12px rgba(201,95,124,0.3)',
           transition: 'transform 0.15s ease',
-        }}>+ Khoản chi</button>
+        }}>+ Expense</button>
       </div>
 
       {/* Grouped list */}
       {dates.length === 0
-        ? <EmptyState icon="💸" title="Chưa có giao dịch" sub="Thêm thu nhập hoặc chi tiêu đầu tiên." />
+        ? <EmptyState icon="💸" title="No transactions yet" sub="Add your first income or expense to get started." />
         : dates.map((date, gi) => (
           <div key={`${date}-${filter}-${month}`} className="money-in" style={{ marginBottom: 16, animationDelay: `${0.08 + gi * 0.05}s` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -210,7 +210,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
                 >
                   <div style={{
                     width: 40, height: 40, background: e.type === 'income' ? 'rgba(90,194,106,0.12)' : 'var(--sakura-light)',
-                    borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0,
+                    borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, flexShrink: 0,
                   }}>{e.categoryEmoji}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</p>
@@ -245,25 +245,25 @@ function GoalsTab({ goals, addToGoal, withdrawFromGoal }: { goals: SavingsGoal[]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(135deg, #E67F9A, #C95F7C)', borderRadius: 24, padding: '24px 20px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', borderRadius: 24, padding: '24px 20px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: 'rgba(255,255,255,0.08)', borderRadius: '50%' }} />
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Tổng tiết kiệm</p>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 38, color: 'white', lineHeight: 1, marginBottom: 6 }}>{VND(totalSaved)}</p>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Mục tiêu: {VND(totalTarget)} · {goals.length} quỹ</p>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Total savings</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, color: 'white', lineHeight: 1, marginBottom: 6 }}>{VND(totalSaved)}</p>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Target: {VND(totalTarget)} · {goals.length} goals</p>
         <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 99, marginTop: 14, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${totalTarget > 0 ? Math.min((totalSaved / totalTarget) * 100, 100) : 0}%`, background: 'white', borderRadius: 99, transition: 'width 0.5s' }} />
+          <div style={{ height: '100%', width: `${totalTarget > 0 ? Math.min((totalSaved / totalTarget) * 100, 100) : 0}%`, background: 'var(--white)', borderRadius: 99, transition: 'width 0.5s' }} />
         </div>
       </div>
 
       {/* Add goal */}
       <button onClick={() => setShowAddGoal(true)} style={{
         width: '100%', padding: '11px', marginBottom: 16, borderRadius: 14, border: 'none', cursor: 'pointer',
-        background: 'linear-gradient(135deg, #E67F9A, #C95F7C)',
+        background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
         color: 'white', fontWeight: 700, fontSize: 14,
         boxShadow: '0 4px 12px rgba(201,95,124,0.3)',
-      }}>+ Tạo quỹ mới</button>
+      }}>+ Create new goal</button>
 
-      {goals.length === 0 && <EmptyState icon="💰" title="Chưa có quỹ nào" sub="Tạo quỹ đầu tiên để bắt đầu tiết kiệm." />}
+      {goals.length === 0 && <EmptyState icon="💰" title="No goals yet" sub="Create your first goal to start saving." />}
 
       {/* Goals list */}
       {goals.map(g => {
@@ -275,11 +275,11 @@ function GoalsTab({ goals, addToGoal, withdrawFromGoal }: { goals: SavingsGoal[]
                 <div style={{ width: 44, height: 44, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={g.emoji} size={22} /></div>
                 <div>
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{g.title}</p>
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Mục tiêu: {g.deadline}</p>
+                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Target: {g.deadline}</p>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: pct >= 100 ? '#5AC26A' : 'var(--sakura-deep)' }}>{pct}%</p>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: pct >= 100 ? '#5AC26A' : 'var(--sakura-deep)' }}>{pct}%</p>
                 <button
                   onClick={() => setEditingGoal(g)}
                   style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -297,20 +297,20 @@ function GoalsTab({ goals, addToGoal, withdrawFromGoal }: { goals: SavingsGoal[]
               <div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <AmountInput
-                    placeholder="Số tiền (VND)" value={addAmt}
+                    placeholder="Amount (VND)" value={addAmt}
                     onChange={v => { setAddAmt(v); setAmtError(''); }}
                     style={{ flex: 1, padding: '8px 12px' }}
                   />
                   <button
                     onClick={() => {
                       const n = +addAmt;
-                      if (!addAmt || isNaN(n) || n <= 0) { setAmtError('Nhập số tiền hợp lệ.'); return; }
-                      if (activeAction.mode === 'withdraw' && n > g.current) { setAmtError('Số dư quỹ không đủ.'); return; }
+                      if (!addAmt || isNaN(n) || n <= 0) { setAmtError('Enter a valid amount.'); return; }
+                      if (activeAction.mode === 'withdraw' && n > g.current) { setAmtError('Not enough left in this goal.'); return; }
                       if (activeAction.mode === 'deposit') addToGoal(g.id, n); else withdrawFromGoal(g.id, n);
                       setActiveAction(null); setAddAmt(''); setAmtError('');
                     }}
                     style={{ background: activeAction.mode === 'deposit' ? 'var(--sakura-accent)' : '#E8524A', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, cursor: 'pointer' }}
-                  >{activeAction.mode === 'deposit' ? 'Nạp' : 'Rút'}</button>
+                  >{activeAction.mode === 'deposit' ? 'Deposit' : 'Withdraw'}</button>
                   <button
                     onClick={() => { setActiveAction(null); setAddAmt(''); setAmtError(''); }}
                     style={{ background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center' }}
@@ -323,12 +323,12 @@ function GoalsTab({ goals, addToGoal, withdrawFromGoal }: { goals: SavingsGoal[]
                 <button
                   onClick={() => setActiveAction({ id: g.id, mode: 'deposit' })}
                   style={{ flex: 1, padding: '9px', background: 'var(--sakura-light)', border: 'none', borderRadius: 10, color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
-                >+ Nạp tiền</button>
+                >+ Add money</button>
                 <button
                   onClick={() => g.current > 0 && setActiveAction({ id: g.id, mode: 'withdraw' })}
                   disabled={g.current <= 0}
                   style={{ flex: 1, padding: '9px', background: g.current > 0 ? 'rgba(232,82,74,0.1)' : 'var(--bg)', border: 'none', borderRadius: 10, color: g.current > 0 ? '#E8524A' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: g.current > 0 ? 'pointer' : 'not-allowed', opacity: g.current > 0 ? 1 : 0.5 }}
-                >− Rút quỹ</button>
+                >− Withdraw</button>
               </div>
             )}
           </div>
@@ -348,7 +348,8 @@ function shiftMonth(month: string, delta: number): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 function monthShortLabel(month: string): string {
-  return `Th ${Number(month.slice(5, 7))}`;
+  const abbr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return abbr[Number(month.slice(5, 7)) - 1];
 }
 function lastNMonths(anchor: string, n: number): string[] {
   const out: string[] = [];
@@ -358,13 +359,15 @@ function lastNMonths(anchor: string, n: number): string[] {
 
 /* ─── Thống kê tab ────────────────────────────────── */
 function StatsTab({ expenses }: { expenses: any[] }) {
+  const { currentUser, partnerProfile } = useApp();
+  const partnerName = partnerProfile?.displayName;
   const [month, setMonth] = useState('2026-08');
   const monthExp = expenses.filter(e => e.date.startsWith(month) && e.type !== 'income');
   const monthInc = expenses.filter(e => e.date.startsWith(month) && e.type === 'income');
   const total = monthExp.reduce((s: number, e: any) => s + e.amount, 0);
   const totalInc = monthInc.reduce((s: number, e: any) => s + e.amount, 0);
-  const alvinT = monthExp.filter((e: any) => e.paidBy === 'Alvin').reduce((s: number, e: any) => s + e.amount, 0);
-  const paoiT = monthExp.filter((e: any) => e.paidBy === 'Paoi').reduce((s: number, e: any) => s + e.amount, 0);
+  const alvinT = monthExp.filter((e: any) => e.paidBy === currentUser).reduce((s: number, e: any) => s + e.amount, 0);
+  const paoiT = partnerName ? monthExp.filter((e: any) => e.paidBy === partnerName).reduce((s: number, e: any) => s + e.amount, 0) : 0;
   const bothT = monthExp.filter((e: any) => e.paidBy === 'Both').reduce((s: number, e: any) => s + e.amount, 0);
 
   const prevMonth = shiftMonth(month, -1);
@@ -396,18 +399,18 @@ function StatsTab({ expenses }: { expenses: any[] }) {
 
   const topExpenses = [...monthExp].sort((a, b) => b.amount - a.amount).slice(0, 5);
 
-  // Net amount moved to/from savings this month, broken down per Hũ (the auto-linked
-  // "Nạp vào quỹ X" / "Rút từ quỹ X" transactions carry the jar's name in their title).
+  // Net amount moved to/from savings this month, broken down per fund (the auto-linked
+  // "Deposit to X" / "Withdraw from X" transactions carry the fund's name in their title).
   const jarMap: Record<string, { emoji: string; net: number }> = {};
   for (const e of monthExp) {
-    if (e.category !== 'Tiết kiệm') continue;
-    const name = e.title.replace(/^Nạp vào quỹ /, '');
+    if (e.category !== 'Savings') continue;
+    const name = e.title.replace(/^Deposit to /, '');
     if (!jarMap[name]) jarMap[name] = { emoji: e.categoryEmoji, net: 0 };
     jarMap[name].net += e.amount;
   }
   for (const e of monthInc) {
-    if (e.category !== 'Tiết kiệm') continue;
-    const name = e.title.replace(/^Rút từ quỹ /, '');
+    if (e.category !== 'Savings') continue;
+    const name = e.title.replace(/^Withdraw from /, '');
     if (!jarMap[name]) jarMap[name] = { emoji: e.categoryEmoji, net: 0 };
     jarMap[name].net -= e.amount;
   }
@@ -418,19 +421,19 @@ function StatsTab({ expenses }: { expenses: any[] }) {
   const insights: { icon: string; text: string }[] = [];
   if (categories.length > 0 && total > 0) {
     const top = categories[0];
-    insights.push({ icon: top.emoji, text: `${top.cat} là danh mục chi nhiều nhất — ${VND(top.amount)} (${Math.round((top.amount / total) * 100)}% tổng chi).` });
+    insights.push({ icon: top.emoji, text: `${top.cat} is your biggest spending category — ${VND(top.amount)} (${Math.round((top.amount / total) * 100)}% of total spending).` });
   }
   const risers = categories
     .filter(c => c.prevAmount > 0 && c.amount > c.prevAmount)
     .map(c => ({ ...c, changePct: ((c.amount - c.prevAmount) / c.prevAmount) * 100 }))
     .sort((a, b) => b.changePct - a.changePct);
   if (risers[0] && risers[0].changePct >= 20) {
-    insights.push({ icon: risers[0].emoji, text: `${risers[0].cat} tăng ${Math.round(risers[0].changePct)}% so với tháng trước.` });
+    insights.push({ icon: risers[0].emoji, text: `${risers[0].cat} is up ${Math.round(risers[0].changePct)}% from last month.` });
   }
   if (sixMonthAvg > 0) {
     const avgDiff = ((total - sixMonthAvg) / sixMonthAvg) * 100;
-    if (Math.abs(avgDiff) < 8) insights.push({ icon: '💡', text: `Chi tiêu tháng này xấp xỉ mức trung bình 6 tháng (${VND(sixMonthAvg)}).` });
-    else insights.push({ icon: avgDiff > 0 ? '📈' : '📉', text: `Chi tiêu tháng này ${avgDiff > 0 ? 'cao hơn' : 'thấp hơn'} ${Math.round(Math.abs(avgDiff))}% so với trung bình 6 tháng (${VND(sixMonthAvg)}).` });
+    if (Math.abs(avgDiff) < 8) insights.push({ icon: '💡', text: `This month's spending is about the same as your 6-month average (${VND(sixMonthAvg)}).` });
+    else insights.push({ icon: avgDiff > 0 ? '📈' : '📉', text: `This month's spending is ${avgDiff > 0 ? 'higher' : 'lower'} than your 6-month average by ${Math.round(Math.abs(avgDiff))}% (${VND(sixMonthAvg)}).` });
   }
 
   return (
@@ -451,32 +454,32 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       {/* Hero — tổng chi tiêu, % so tháng trước, thu nhập */}
       <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{MONTH_LABELS[month]} · Chi tiêu</p>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 34, color: 'white', lineHeight: 1.1, marginBottom: 6 }}>{VND(total)}</p>
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{MONTH_LABELS[month]} · Spending</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, color: 'white', lineHeight: 1.1, marginBottom: 6 }}>{VND(total)}</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {change !== null && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: change > 0 ? 'rgba(255,100,100,0.25)' : 'rgba(100,220,140,0.25)', borderRadius: 99, padding: '3px 10px' }}>
-              <span style={{ color: 'white', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji={change > 0 ? '↑' : '↓'} size={11} /> {Math.abs(change).toFixed(0)}% so tháng trước</span>
+              <span style={{ color: 'white', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji={change > 0 ? '↑' : '↓'} size={11} /> {Math.abs(change).toFixed(0)}% vs last month</span>
             </div>
           )}
           {totalInc > 0 && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(90,194,106,0.25)', borderRadius: 99, padding: '3px 10px' }}>
-              <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>Thu: {VND(totalInc)}</span>
+              <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>Income: {VND(totalInc)}</span>
             </div>
           )}
         </div>
-        {monthExp.length === 0 && <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 6 }}>Chưa có giao dịch</p>}
+        {monthExp.length === 0 && <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 6 }}>No transactions yet</p>}
       </div>
 
       {/* Ai đã chi? — gộp đóng góp từng người + tỉ lệ */}
       {total > 0 && (
         <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 12 }}>Ai đã chi?</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 12 }}>Who paid?</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
             {[
-              { name: 'Alvin', amount: alvinT, color: '#4A8AE8' },
-              { name: 'Paoi', amount: paoiT, color: '#E67F9A' },
-              ...(bothT > 0 ? [{ name: 'Cả hai', amount: bothT, color: '#8B6FD4' }] : []),
+              { name: currentUser, amount: alvinT, color: '#4A8AE8' },
+              ...(partnerName ? [{ name: partnerName, amount: paoiT, color: 'var(--sakura-accent)' }] : []),
+              ...(bothT > 0 ? [{ name: 'Both', amount: bothT, color: '#8B6FD4' }] : []),
             ].map(p => (
               <div key={p.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -492,7 +495,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
           </div>
           <div style={{ height: 10, borderRadius: 99, overflow: 'hidden', display: 'flex', gap: 1, background: 'var(--bg)' }}>
             {alvinT > 0 && <div style={{ width: `${(alvinT / total) * 100}%`, background: '#4A8AE8', transition: 'width 0.5s' }} />}
-            {paoiT > 0 && <div style={{ width: `${(paoiT / total) * 100}%`, background: '#E67F9A', transition: 'width 0.5s' }} />}
+            {paoiT > 0 && <div style={{ width: `${(paoiT / total) * 100}%`, background: 'var(--sakura-accent)', transition: 'width 0.5s' }} />}
             {bothT > 0 && <div style={{ flex: 1, background: '#8B6FD4', transition: 'width 0.5s' }} />}
           </div>
         </div>
@@ -501,7 +504,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       {/* Chi tiêu theo danh mục — % tổng chi + % so tháng trước */}
       {categories.length > 0 && (
         <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>Chi tiêu theo danh mục</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>Spending by category</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {categories.map(c => {
               const pctOfTotal = total > 0 ? Math.round((c.amount / total) * 100) : 0;
@@ -524,7 +527,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
                   </div>
                   {catChange !== null && (
                     <p style={{ fontSize: 10, color: catChange > 0 ? '#E8524A' : '#5AC26A', display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Icon emoji={catChange > 0 ? '↑' : '↓'} size={10} /> {Math.abs(Math.round(catChange))}% so tháng trước
+                      <Icon emoji={catChange > 0 ? '↑' : '↓'} size={10} /> {Math.abs(Math.round(catChange))}% vs last month
                     </p>
                   )}
                 </div>
@@ -538,7 +541,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       {jarEntries.length > 0 && (
         <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>Tiết kiệm tháng này</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>Savings this month</p>
             <span style={{ fontSize: 13, fontWeight: 700, color: savedThisMonth >= 0 ? '#5AC26A' : '#E8524A' }}>
               {savedThisMonth >= 0 ? '+' : '−'}{VND(Math.abs(savedThisMonth))}
             </span>
@@ -562,7 +565,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       {/* Đáng chú ý */}
       {insights.length > 0 && (
         <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>Đáng chú ý</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>Worth noting</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {insights.map((ins, i) => (
               <p key={i} style={{ fontSize: 12.5, color: 'var(--ink)', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -576,8 +579,8 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       {/* 6 tháng gần nhất — tính động theo tháng đang chọn, + mức trung bình */}
       <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>6 tháng gần nhất</p>
-          <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>TB: <strong style={{ color: 'var(--ink)' }}>{VND(sixMonthAvg)}</strong></p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>Last 6 months</p>
+          <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Avg: <strong style={{ color: 'var(--ink)' }}>{VND(sixMonthAvg)}</strong></p>
         </div>
         <MonthlyBar data={monthlyData} avg={sixMonthAvg} />
       </div>
@@ -585,7 +588,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       {/* Top 5 khoản chi lớn nhất */}
       {topExpenses.length > 0 && (
         <div className="card" style={{ padding: '14px 16px' }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 12 }}>Top 5 khoản chi lớn nhất</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 12 }}>Top 5 biggest expenses</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {topExpenses.map((e, i) => (
               <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -654,11 +657,11 @@ function BillsTab({ bills, onAdd, onTogglePaid }: {
   const totalMonth = monthBills.reduce((s, b) => s + b.amount, 0);
 
   const getDueStatus = (dueDay: number, isPaid: boolean) => {
-    if (isPaid) return { label: 'Đã trả', color: '#5AC26A', bg: 'rgba(90,194,106,0.1)' };
+    if (isPaid) return { label: 'Paid', color: '#5AC26A', bg: 'rgba(90,194,106,0.1)' };
     const daysLeft = dueDay - currentDay;
-    if (daysLeft < 0) return { label: 'Quá hạn', color: '#E8524A', bg: 'rgba(232,82,74,0.1)' };
-    if (daysLeft <= 3) return { label: `Còn ${daysLeft} ngày`, color: '#E8844A', bg: 'rgba(232,132,74,0.1)' };
-    return { label: `Ngày ${dueDay}`, color: 'var(--ink-2)', bg: 'var(--bg)' };
+    if (daysLeft < 0) return { label: 'Overdue', color: '#E8524A', bg: 'rgba(232,82,74,0.1)' };
+    if (daysLeft <= 3) return { label: `${daysLeft} days left`, color: '#E8844A', bg: 'rgba(232,132,74,0.1)' };
+    return { label: `Day ${dueDay}`, color: 'var(--ink-2)', bg: 'var(--bg)' };
   };
 
   return (
@@ -666,19 +669,19 @@ function BillsTab({ bills, onAdd, onTogglePaid }: {
       {/* Summary */}
       <div style={{ background: 'linear-gradient(135deg, #8B6FD4, #6A4FB8)', borderRadius: 20, padding: '20px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.08)', borderRadius: '50%' }} />
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Tháng này cần thanh toán</p>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 34, color: 'white', lineHeight: 1.1, marginBottom: 8 }}>{VND(totalUnpaid)}</p>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Due this month</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, color: 'white', lineHeight: 1.1, marginBottom: 8 }}>{VND(totalUnpaid)}</p>
         <div style={{ display: 'flex', gap: 16 }}>
           <div>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Chưa trả</p>
-            <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{unpaid.length} khoản</p>
+            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Unpaid</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{unpaid.length} bills</p>
           </div>
           <div>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Đã trả</p>
-            <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{paid.length} khoản</p>
+            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Paid</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{paid.length} bills</p>
           </div>
           <div>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Tổng tháng</p>
+            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Total this month</p>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{VND(totalMonth)}</p>
           </div>
         </div>
@@ -690,12 +693,12 @@ function BillsTab({ bills, onAdd, onTogglePaid }: {
         background: 'linear-gradient(135deg, #8B6FD4, #6A4FB8)',
         color: 'white', fontWeight: 700, fontSize: 14,
         boxShadow: '0 4px 12px rgba(139,111,212,0.35)',
-      }}>+ Thêm hóa đơn</button>
+      }}>+ Add bill</button>
 
       {/* Unpaid */}
       {unpaid.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Chưa thanh toán</p>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Unpaid</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {unpaid.map(b => <BillCard key={b.id} bill={b} onTogglePaid={onTogglePaid} onEdit={setEditingBill} getDueStatus={getDueStatus} />)}
           </div>
@@ -705,14 +708,14 @@ function BillsTab({ bills, onAdd, onTogglePaid }: {
       {/* Paid */}
       {paid.length > 0 && (
         <div>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Đã thanh toán</p>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Paid</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {paid.map(b => <BillCard key={b.id} bill={b} onTogglePaid={onTogglePaid} onEdit={setEditingBill} getDueStatus={getDueStatus} />)}
           </div>
         </div>
       )}
 
-      {monthBills.length === 0 && <EmptyState icon="🧾" title="Chưa có hóa đơn" sub="Thêm các khoản cố định hàng tháng." />}
+      {monthBills.length === 0 && <EmptyState icon="🧾" title="No bills yet" sub="Add your recurring monthly bills." />}
 
       {showForm && <AddBillForm onClose={() => setShowForm(false)} onAdd={onAdd} />}
       {editingBill && <EditBillForm bill={editingBill} onClose={() => setEditingBill(null)} />}
@@ -744,12 +747,12 @@ function BillCard({ bill: b, onTogglePaid, onEdit, getDueStatus }: {
             {b.note && <span style={{ fontSize: 10, color: 'var(--ink-2)', opacity: 0.7 }}>· {b.note}</span>}
           </div>
           {b.paid && b.paidDate && (
-            <p style={{ fontSize: 10, color: '#5AC26A', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}><Icon emoji="✓" size={10} /> Đã trả {formatDate(b.paidDate)}</p>
+            <p style={{ fontSize: 10, color: '#5AC26A', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}><Icon emoji="✓" size={10} /> Paid {formatDate(b.paidDate)}</p>
           )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: b.paid ? 'var(--ink-2)' : '#8B6FD4' }}>{VND(b.amount)}</p>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: b.paid ? 'var(--ink-2)' : '#8B6FD4' }}>{VND(b.amount)}</p>
             <button
               onClick={() => onEdit(b)}
               style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 22, height: 22, flexShrink: 0, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -763,7 +766,7 @@ function BillCard({ bill: b, onTogglePaid, onEdit, getDueStatus }: {
                 border: b.paid ? '1.5px solid var(--border)' : 'none', borderRadius: 8,
                 padding: '4px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700,
               }}
-            >{b.paid ? 'Hủy' : 'Đã trả'}</button>
+            >{b.paid ? 'Undo' : 'Paid'}</button>
           </div>
         </div>
       </div>
@@ -782,11 +785,11 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
 
   const EMOJIS = ['🏠', '⚡', '💧', '📡', '🎬', '🎵', '🚗', '📱', '🏋️', '🛡️', '🧾'];
   const CAT_OPTIONS: { key: Bill['category']; label: string }[] = [
-    { key: 'rent', label: 'Tiền nhà' },
-    { key: 'utilities', label: 'Điện / Nước' },
+    { key: 'rent', label: 'Rent' },
+    { key: 'utilities', label: 'Electricity / Water' },
     { key: 'internet', label: 'Internet' },
     { key: 'subscription', label: 'Subscription' },
-    { key: 'other', label: 'Khác' },
+    { key: 'other', label: 'Other' },
   ];
 
   const handleSubmit = () => {
@@ -799,7 +802,7 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={onClose}>
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)' }}>Thêm hóa đơn</p>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)' }}>Add bill</p>
           <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         </div>
 
@@ -816,14 +819,14 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input className="input-field" placeholder="Tên hóa đơn" value={title} onChange={e => setTitle(e.target.value)} />
+          <input className="input-field" placeholder="Bill name" value={title} onChange={e => setTitle(e.target.value)} />
 
           <select className="input-field" value={category} onChange={e => setCategory(e.target.value as Bill['category'])}>
             {CAT_OPTIONS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
           </select>
 
           <div>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Chu kỳ lặp lại</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Repeats</p>
             <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
               {FREQUENCY_PRESETS.map(f => (
                 <button key={f} onClick={() => setFrequencyMonths(f)} style={{
@@ -838,22 +841,22 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
               <input className="input-field" type="number" min="1" max="60" value={frequencyMonths}
                 onChange={e => setFrequencyMonths(Math.min(60, Math.max(1, +e.target.value || 1)))}
                 style={{ width: 90 }} />
-              <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>tháng / lần (tùy chỉnh)</span>
+              <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>months (custom)</span>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <AmountInput placeholder="Số tiền (VND)" value={amount} onChange={setAmount} />
-            <input className="input-field" type="number" placeholder="Ngày đến hạn" min="1" max="31" value={dueDay} onChange={e => setDueDay(e.target.value)} />
+            <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
+            <input className="input-field" type="number" placeholder="Due day" min="1" max="31" value={dueDay} onChange={e => setDueDay(e.target.value)} />
           </div>
 
-          <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={note} onChange={e => setNote(e.target.value)} />
+          <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
 
           <button onClick={handleSubmit} style={{
             padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer',
             background: 'linear-gradient(135deg, #8B6FD4, #6A4FB8)',
             color: 'white', fontWeight: 700, fontSize: 15,
-          }}>Thêm hóa đơn</button>
+          }}>Add bill</button>
         </div>
       </div>
     </div>
@@ -863,7 +866,7 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
 /* ─── Helpers ────────────────────────────────────────── */
 function formatDate(dateStr: string) {
   const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long' });
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
 }
 
 function EmptyState({ icon, title, sub }: { icon: string; title: string; sub: string }) {

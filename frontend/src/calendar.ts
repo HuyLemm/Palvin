@@ -43,6 +43,17 @@ export async function createEvent(e: Omit<CalendarEvent, 'id'>) {
   });
 }
 
+export async function updateEventRow(id: string, e: Omit<CalendarEvent, 'id'>) {
+  return supabase.from('calendar_events').update({
+    title: e.title,
+    event_date: e.date,
+    event_time: e.time || null,
+    category: e.category,
+    location: e.location || null,
+    notes: e.notes || null,
+  }).eq('id', id);
+}
+
 export async function deleteEventRow(id: string) {
   return supabase.from('calendar_events').delete().eq('id', id);
 }

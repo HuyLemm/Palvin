@@ -2,6 +2,7 @@ import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import SwipeToDelete from '../components/SwipeToDelete';
 import Icon from '../components/Icon';
+import FadeImage from '../components/FadeImage';
 import type { AppNotification } from '../types';
 
 function dayLabel(iso: string): string {
@@ -10,9 +11,9 @@ function dayLabel(iso: string): string {
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
   const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (sameDay(d, today)) return 'Hôm nay';
-  if (sameDay(d, yesterday)) return 'Hôm qua';
-  return d.toLocaleDateString('vi-VN', {
+  if (sameDay(d, today)) return 'Today';
+  if (sameDay(d, yesterday)) return 'Yesterday';
+  return d.toLocaleDateString('en-US', {
     day: 'numeric', month: 'long',
     year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined,
   });
@@ -44,23 +45,23 @@ export default function Notifications() {
       {pendingInvite && (
         <div style={{
           padding: '16px 18px', marginBottom: 14, borderRadius: 16,
-          background: 'linear-gradient(135deg, #FFF0F4, white)', border: '1.5px solid var(--sakura-accent)',
+          background: 'linear-gradient(135deg, var(--pink-glow), white)', border: '1.5px solid var(--sakura-accent)',
         }}>
           <p style={{ fontSize: 14, color: 'var(--ink)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Icon emoji="💕" size={14} /> <strong>{pendingInvite.name}</strong> muốn liên kết với bạn
+            <Icon emoji="💕" size={14} /> <strong>{pendingInvite.name}</strong> wants to link up with you
           </p>
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => acceptInvite(pendingInvite.id)}
               style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             >
-              Đồng ý <Icon emoji="💕" size={14} />
+              Accept <Icon emoji="💕" size={14} />
             </button>
             <button
               onClick={() => rejectInvite(pendingInvite.id)}
-              style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
+              style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
             >
-              Từ chối
+              Decline
             </button>
           </div>
         </div>
@@ -91,7 +92,7 @@ export default function Notifications() {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 12,
                       padding: '14px 16px',
-                      background: !n.read ? 'linear-gradient(135deg, #FFF0F4, var(--white))' : 'var(--white)',
+                      background: !n.read ? 'linear-gradient(135deg, var(--pink-glow), var(--white))' : 'var(--white)',
                       border: '1px solid var(--border)',
                       borderLeft: !n.read ? '3px solid var(--sakura-accent)' : '1px solid var(--border)',
                       borderRadius: 14,
@@ -121,7 +122,7 @@ export default function Notifications() {
                     </div>
                     {n.previewImageUrl && (
                       <div style={{ width: 44, height: 44, borderRadius: 10, overflow: 'hidden', flexShrink: 0 }}>
-                        <img src={n.previewImageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <FadeImage src={n.previewImageUrl} alt="" style={{ width: '100%', height: '100%' }} />
                       </div>
                     )}
                     {!n.read && <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sakura-accent)', flexShrink: 0 }} />}

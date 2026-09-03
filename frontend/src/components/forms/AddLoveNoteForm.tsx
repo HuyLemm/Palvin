@@ -2,13 +2,12 @@ import { useState } from 'react';
 import { useApp } from '../../context';
 import BottomSheet from '../BottomSheet';
 import Icon from '../Icon';
-import type { User } from '../../types';
 
 const MOODS = ['💕', '🥰', '😍', '🌸', '✨', '🥺', '💌', '🎀'];
 
 export default function AddLoveNoteForm({ onClose }: { onClose: () => void }) {
-  const { addLoveNote, currentUser } = useApp();
-  const to: User = currentUser === 'Alvin' ? 'Paoi' : 'Alvin';
+  const { addLoveNote, currentUser, partnerProfile } = useApp();
+  const to = partnerProfile?.displayName ?? currentUser;
   const [message, setMessage] = useState('');
   const [mood, setMood] = useState('💕');
   const [error, setError] = useState('');

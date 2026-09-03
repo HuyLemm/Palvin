@@ -1,6 +1,7 @@
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
+import FadeImage from '../components/FadeImage';
 
 export default function MemoryDetail() {
   const { state, selectedId, goBack, toggleFavorite } = useApp();
@@ -13,12 +14,12 @@ export default function MemoryDetail() {
       <button onClick={goBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
 
       <div style={{ borderRadius: 20, overflow: 'hidden', background: 'var(--sakura-light)', marginBottom: 20, maxHeight: 440 }}>
-        <img src={memory.image} alt={memory.title} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', maxHeight: 440 }} />
+        <FadeImage src={memory.image} alt={memory.title} style={{ width: '100%', height: '100%', maxHeight: 440 }} />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
-          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--ink)', lineHeight: 1.2, marginBottom: 4 }}>{memory.title}</h1>
+          <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 27, color: 'var(--ink)', lineHeight: 1.2, marginBottom: 4 }}>{memory.title}</h1>
           <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>{memory.date}</p>
           {memory.location && <p style={{ fontSize: 14, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={14} /> {memory.location}</p>}
         </div>
@@ -29,7 +30,7 @@ export default function MemoryDetail() {
 
       {memory.description && (
         <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontStyle: 'italic', fontSize: 16, color: 'var(--ink)', lineHeight: 1.7 }}>{memory.description}</p>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: 16, color: 'var(--ink)', lineHeight: 1.7 }}>{memory.description}</p>
         </div>
       )}
 

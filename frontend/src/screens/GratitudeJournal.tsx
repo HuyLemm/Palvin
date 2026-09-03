@@ -2,22 +2,22 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
-import type { User } from '../types';
 
 const PROMPTS = [
-  'Hôm nay tôi biết ơn vì...',
-  'Điều làm tôi yêu em/anh hơn hôm nay là...',
-  'Khoảnh khắc nhỏ đáng nhớ hôm nay là...',
-  'Em/Anh đã khiến tôi mỉm cười khi...',
-  'Tôi trân trọng em/anh vì...',
+  "Today I'm grateful for...",
+  "What made me love you more today is...",
+  "A small memorable moment today was...",
+  "You made me smile when...",
+  "I appreciate you because...",
 ];
 
 interface Props { onBack: () => void; }
 
 export default function GratitudeJournal({ onBack }: Props) {
-  const { state, addGratitude, updateGratitude, deleteGratitude, currentUser } = useApp();
+  const { state, addGratitude, updateGratitude, deleteGratitude, currentUser, partnerProfile } = useApp();
+  const partnerName = partnerProfile?.displayName;
   const [text, setText] = useState('');
-  const [filter, setFilter] = useState<'all' | User>('all');
+  const [filter, setFilter] = useState<string>('all');
   const [promptIdx] = useState(() => Math.floor(Math.random() * PROMPTS.length));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -51,9 +51,9 @@ export default function GratitudeJournal({ onBack }: Props) {
     const d = new Date(dateStr);
     const now = new Date();
     const diff = Math.floor((now.getTime() - d.getTime()) / 86400000);
-    if (diff === 0) return 'Hôm nay';
-    if (diff === 1) return 'Hôm qua';
-    return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'long' });
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    return d.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
   }
 
   return (
@@ -65,15 +65,15 @@ export default function GratitudeJournal({ onBack }: Props) {
 
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
 
-      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>Nhật Ký Biết Ơn <Icon emoji="🌸" size={20} /></p>
-      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Ghi lại điều bạn trân trọng về nhau mỗi ngày</p>
+      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>Gratitude Journal <Icon emoji="🌸" size={20} /></p>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Record what you appreciate about each other every day</p>
 
       {/* Write entry */}
-      <div className="card" style={{ padding: '20px', marginBottom: 20, background: 'linear-gradient(135deg, #FFF8FC, #FADCE4)' }}>
+      <div className="card" style={{ padding: '20px', marginBottom: 20, background: 'linear-gradient(135deg, var(--pink-glow), var(--sakura-light))' }}>
         {alreadyToday ? (
           <div style={{ textAlign: 'center', padding: '8px 0' }}>
             <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><Icon emoji="✅" size={28} /></div>
-            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--sakura-deep)' }}>Bạn đã ghi hôm nay!</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--sakura-deep)' }}>You've written today!</p>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 4, fontStyle: 'italic', lineHeight: 1.5 }}>"{alreadyToday.text}"</p>
           </div>
         ) : (
@@ -82,16 +82,16 @@ export default function GratitudeJournal({ onBack }: Props) {
             <textarea
               value={text}
               onChange={e => setText(e.target.value)}
-              placeholder="Viết điều bạn biết ơn hôm nay..."
+              placeholder="Write what you're grateful for today..."
               rows={4}
-              style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #F0DDE4', borderRadius: 14, background: 'rgba(255,255,255,0.8)', fontFamily: "'Outfit', sans-serif", fontSize: 14, color: 'var(--ink)', resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color 0.2s' }}
+              style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 14, background: 'var(--white)', fontFamily: "'Nunito', sans-serif", fontSize: 14, color: 'var(--ink)', resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color 0.2s' }}
               onFocus={e => (e.target.style.borderColor = 'var(--sakura-accent)')}
-              onBlur={e => (e.target.style.borderColor = '#F0DDE4')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
-              <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{text.length} ký tự</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{text.length} characters</p>
               <button onClick={handleSubmit} disabled={!text.trim()} style={{ padding: '10px 20px', background: text.trim() ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 12, color: text.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: text.trim() ? 'pointer' : 'default', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                Ghi lại <Icon emoji="🌸" size={14} />
+                Save <Icon emoji="🌸" size={14} />
               </button>
             </div>
           </>
@@ -100,13 +100,13 @@ export default function GratitudeJournal({ onBack }: Props) {
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-        {(['Alvin', 'Paoi'] as User[]).map(u => {
+        {[currentUser, ...(partnerName ? [partnerName] : [])].map(u => {
           const count = state.gratitude.filter(g => g.from === u).length;
           return (
             <div key={u} className="card" style={{ padding: '16px', textAlign: 'center' }}>
               <Avatar user={u} size={36} ring />
-              <p style={{ fontSize: 22, fontWeight: 700, color: 'var(--sakura-deep)', marginTop: 8 }}>{count}</p>
-              <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>lần biết ơn</p>
+              <p style={{ fontSize: 23, fontWeight: 700, color: 'var(--sakura-deep)', marginTop: 8 }}>{count}</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>gratitude entries</p>
             </div>
           );
         })}
@@ -114,9 +114,9 @@ export default function GratitudeJournal({ onBack }: Props) {
 
       {/* Filter */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-        {(['all', 'Alvin', 'Paoi'] as const).map(f => (
+        {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: filter === f ? 'var(--sakura-deep)' : 'var(--sakura-light)', color: filter === f ? 'white' : 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s' }}>
-            {f === 'all' ? 'Tất cả' : f}
+            {f === 'all' ? 'All' : f}
           </button>
         ))}
       </div>
@@ -125,7 +125,7 @@ export default function GratitudeJournal({ onBack }: Props) {
       {filtered.length === 0 ? (
         <div className="card" style={{ padding: '40px 20px', textAlign: 'center' }}>
           <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji="🌸" size={32} /></div>
-          <p style={{ fontSize: 15, color: 'var(--ink-2)' }}>Chưa có ghi chép nào</p>
+          <p style={{ fontSize: 15, color: 'var(--ink-2)' }}>No entries yet</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -163,7 +163,7 @@ export default function GratitudeJournal({ onBack }: Props) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setEditingId(null)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Sửa ghi chép <Icon emoji="✏️" size={15} /></p>
+              <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Edit entry <Icon emoji="✏️" size={15} /></p>
               <button onClick={() => setEditingId(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
             </div>
             <textarea
@@ -171,11 +171,11 @@ export default function GratitudeJournal({ onBack }: Props) {
               onChange={e => setEditText(e.target.value)}
               rows={4}
               autoFocus
-              style={{ width: '100%', padding: '12px 14px', border: '1.5px solid #F0DDE4', borderRadius: 14, background: 'var(--bg)', fontFamily: "'Outfit', sans-serif", fontSize: 14, color: 'var(--ink)', resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, marginBottom: 14 }}
+              style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 14, background: 'var(--bg)', fontFamily: "'Nunito', sans-serif", fontSize: 14, color: 'var(--ink)', resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, marginBottom: 14 }}
             />
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setEditingId(null)} className="btn-ghost" style={{ flex: 1 }}>Hủy</button>
-              <button onClick={() => saveEdit(editingId)} disabled={!editText.trim()} style={{ flex: 2, padding: '13px', background: editText.trim() ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 14, color: editText.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, cursor: editText.trim() ? 'pointer' : 'default' }}>Lưu thay đổi</button>
+              <button onClick={() => setEditingId(null)} className="btn-ghost" style={{ flex: 1 }}>Cancel</button>
+              <button onClick={() => saveEdit(editingId)} disabled={!editText.trim()} style={{ flex: 2, padding: '13px', background: editText.trim() ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 14, color: editText.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, cursor: editText.trim() ? 'pointer' : 'default' }}>Save changes</button>
             </div>
           </div>
         </div>
@@ -185,11 +185,11 @@ export default function GratitudeJournal({ onBack }: Props) {
       {confirmDeleteId && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteId(null)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa ghi chép này?</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Delete this entry?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This can't be undone once deleted.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={() => { deleteGratitude(confirmDeleteId); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { deleteGratitude(confirmDeleteId); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>

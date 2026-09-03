@@ -19,11 +19,11 @@ interface LoveNoteRow {
   created_at: string;
 }
 
-function rowToLoveNote(row: LoveNoteRow, names: ProfileNames): LoveNote {
+function rowToLoveNote(row: LoveNoteRow, names: ProfileNames, myName: string, partnerName: string): LoveNote {
   return {
     id: row.id,
-    from: names[row.from_profile_id] ?? 'Alvin',
-    to: names[row.to_profile_id] ?? 'Paoi',
+    from: names[row.from_profile_id] ?? myName,
+    to: names[row.to_profile_id] ?? partnerName,
     message: row.message,
     date: formatDate(row.created_at),
     mood: row.mood ?? '💕',
@@ -31,13 +31,13 @@ function rowToLoveNote(row: LoveNoteRow, names: ProfileNames): LoveNote {
   };
 }
 
-export async function fetchLoveNotes(names: ProfileNames): Promise<LoveNote[]> {
+export async function fetchLoveNotes(names: ProfileNames, myName: string, partnerName: string): Promise<LoveNote[]> {
   const { data, error } = await supabase
     .from('love_notes')
     .select('id, from_profile_id, to_profile_id, message, mood, read, created_at')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return (data as LoveNoteRow[]).map(r => rowToLoveNote(r, names));
+  return (data as LoveNoteRow[]).map(r => rowToLoveNote(r, names, myName, partnerName));
 }
 
 export async function createLoveNote(fromId: string, toId: string, message: string, mood: string) {
@@ -61,11 +61,11 @@ interface LoveLetterRow {
   created_at: string;
 }
 
-function rowToLoveLetter(row: LoveLetterRow, names: ProfileNames): LoveLetter {
+function rowToLoveLetter(row: LoveLetterRow, names: ProfileNames, myName: string, partnerName: string): LoveLetter {
   return {
     id: row.id,
-    from: names[row.from_profile_id] ?? 'Alvin',
-    to: names[row.to_profile_id] ?? 'Paoi',
+    from: names[row.from_profile_id] ?? myName,
+    to: names[row.to_profile_id] ?? partnerName,
     title: row.title,
     body: row.body,
     date: formatDate(row.created_at),
@@ -74,13 +74,13 @@ function rowToLoveLetter(row: LoveLetterRow, names: ProfileNames): LoveLetter {
   };
 }
 
-export async function fetchLoveLetters(names: ProfileNames): Promise<LoveLetter[]> {
+export async function fetchLoveLetters(names: ProfileNames, myName: string, partnerName: string): Promise<LoveLetter[]> {
   const { data, error } = await supabase
     .from('love_letters')
     .select('id, from_profile_id, to_profile_id, title, body, stationery, font, created_at')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return (data as LoveLetterRow[]).map(r => rowToLoveLetter(r, names));
+  return (data as LoveLetterRow[]).map(r => rowToLoveLetter(r, names, myName, partnerName));
 }
 
 export async function createLoveLetter(
@@ -104,22 +104,22 @@ interface SecretNoteRow {
   unlock_date: string;
 }
 
-function rowToSecretNote(row: SecretNoteRow, names: ProfileNames): SecretNote {
+function rowToSecretNote(row: SecretNoteRow, names: ProfileNames, myName: string): SecretNote {
   return {
     id: row.id,
-    from: names[row.from_profile_id] ?? 'Alvin',
+    from: names[row.from_profile_id] ?? myName,
     message: row.message,
     unlockDate: row.unlock_date,
   };
 }
 
-export async function fetchSecretNotes(names: ProfileNames): Promise<SecretNote[]> {
+export async function fetchSecretNotes(names: ProfileNames, myName: string): Promise<SecretNote[]> {
   const { data, error } = await supabase
     .from('secret_notes')
     .select('id, from_profile_id, message, unlock_date')
     .order('unlock_date', { ascending: true });
   if (error || !data) return [];
-  return (data as SecretNoteRow[]).map(r => rowToSecretNote(r, names));
+  return (data as SecretNoteRow[]).map(r => rowToSecretNote(r, names, myName));
 }
 
 export async function createSecretNote(fromId: string, message: string, unlockDate: string) {

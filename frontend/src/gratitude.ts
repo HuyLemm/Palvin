@@ -10,22 +10,22 @@ interface GratitudeRow {
   entry_date: string;
 }
 
-function rowToEntry(row: GratitudeRow, names: ProfileNames): GratitudeEntry {
+function rowToEntry(row: GratitudeRow, names: ProfileNames, myName: string): GratitudeEntry {
   return {
     id: row.id,
-    from: names[row.from_profile_id] ?? 'Alvin',
+    from: names[row.from_profile_id] ?? myName,
     text: row.text,
     date: row.entry_date,
   };
 }
 
-export async function fetchGratitude(names: ProfileNames): Promise<GratitudeEntry[]> {
+export async function fetchGratitude(names: ProfileNames, myName: string): Promise<GratitudeEntry[]> {
   const { data, error } = await supabase
     .from('gratitude_entries')
     .select('id, from_profile_id, text, entry_date')
     .order('entry_date', { ascending: false });
   if (error || !data) return [];
-  return (data as GratitudeRow[]).map(r => rowToEntry(r, names));
+  return (data as GratitudeRow[]).map(r => rowToEntry(r, names, myName));
 }
 
 export async function createGratitude(fromId: string, text: string, date: string) {

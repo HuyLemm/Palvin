@@ -4,9 +4,11 @@ import type { ReactNode } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
+import FadeImage from '../components/FadeImage';
 import AmountInput from '../components/AmountInput';
 import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
+import { uploadPlaceImage } from '../places';
 import FutureUs from './FutureUs';
 import Calendar from './Calendar';
 import TripPlanner from './TripPlanner';
@@ -14,9 +16,9 @@ import TimeCapsule from './TimeCapsule';
 import DateIdeaJar from './DateIdeaJar';
 import GratitudeJournal from './GratitudeJournal';
 import DatePermit from './DatePermit';
-import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem } from '../types';
+import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem, StoryQuote, Debt, Place } from '../types';
 
-type SubScreen = 'main' | 'story' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit';
+type SubScreen = 'main' | 'story' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'debts' | 'places';
 
 // Remembers which sub-screen was showing when the user drilled into a
 // separate top-level screen (e.g. a memory's detail page) from within Us —
@@ -29,10 +31,10 @@ let lastUsSub: SubScreen = 'main';
 // categories themselves are user-defined and stored in fav_categories now,
 // not a fixed set, so these are just reasonable starting options.
 const CATEGORY_EMOJI_CHOICES = ['📍', '🍜', '☕', '🎱', '🎮', '🎬', '🎵', '✈️', '🏋️', '📚', '🛍️', '🎨', '🍕', '🍺'];
-const CATEGORY_COLOR_CHOICES = ['#C95F7C', '#E8844A', '#C48A52', '#4A8AE8', '#8B6FD4', '#5AC26A', '#DC2626', '#E85C97'];
+const CATEGORY_COLOR_CHOICES = ['var(--sakura-deep)', '#E8844A', '#C48A52', '#4A8AE8', '#8B6FD4', '#5AC26A', '#DC2626', '#E85C97'];
 
 export default function Us() {
-  const { state, navigate, screen, selectedId, navSeq, lastNavWasPop, updateFavorite, currentUser, addToPlaylist, removeFromPlaylist, addWish, removeWish, addFavPlace, removeFavPlace, openCreate } = useApp();
+  const { state, navigate, screen, selectedId, navSeq, lastNavWasPop, currentUser, partnerProfile, addToPlaylist, removeFromPlaylist, addWish, removeWish, addFavPlace, removeFavPlace, openCreate } = useApp();
   // A tapped date-request notification lands on the "Us" screen with a real
   // dateRequests id attached (a plain tab click never carries one) — go
   // straight to 'permit'. Otherwise, if we're remounting because the user
@@ -110,16 +112,16 @@ export default function Us() {
       <div style={{ paddingBottom: 32 }}>
         <Back />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)' }}>Our Story</p>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)' }}>Our Story</p>
           <button onClick={() => openCreate('memory')} style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 12, padding: '8px 14px', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            + Thêm kỷ niệm <Icon emoji="🌸" size={14} />
+            + Add memory <Icon emoji="🌸" size={14} />
           </button>
         </div>
         {timeline.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '48px 24px' }}>
             <Icon emoji="🌸" size={40} style={{ marginBottom: 12 }} />
-            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>Chưa có kỷ niệm nào</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Thêm kỷ niệm để bắt đầu câu chuyện của hai người.</p>
+            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>No memories yet</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Add a memory to start your story together.</p>
           </div>
         ) : (
           <div style={{ position: 'relative' }}>
@@ -127,7 +129,7 @@ export default function Us() {
             {timeline.map(m => (
               <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ display: 'flex', gap: 18, marginBottom: 28, position: 'relative', cursor: 'pointer' }}>
                 <div style={{ width: 60, height: 60, borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--sakura)', flexShrink: 0, zIndex: 1, background: 'var(--sakura-light)' }}>
-                  <img src={m.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <FadeImage src={m.image} alt="" style={{ width: '100%', height: '100%' }} />
                 </div>
                 <div style={{ paddingTop: 10 }}>
                   <p style={{ fontSize: 13, color: 'var(--sakura-accent)', fontWeight: 600, marginBottom: 3 }}>{m.date}</p>
@@ -148,32 +150,35 @@ export default function Us() {
   else if (sub === 'capsule')  content = <div style={{ paddingBottom: 0 }}><Back /><TimeCapsule /></div>;
   else if (sub === 'playlist') content = <PlaylistScreen onBack={() => setSub('main')} />;
   else if (sub === 'collage')  content = <PhotoCollage onBack={() => setSub('main')} />;
+  else if (sub === 'quotes')   content = <StoryQuotesScreen onBack={() => setSub('main')} />;
+  else if (sub === 'debts')    content = <DebtScreen onBack={() => setSub('main')} />;
+  else if (sub === 'places')   content = <OurPlacesScreen onBack={() => setSub('main')} />;
   else {
 
   // Main
   content = (
     <div style={{ paddingBottom: 32 }}>
       {/* Couple hero */}
-      <div style={{ textAlign: 'center', padding: '24px 20px', background: 'linear-gradient(135deg, #FFF0F4, var(--bg))', borderRadius: 24, border: '1px solid var(--border)', marginBottom: 20 }}>
+      <div style={{ textAlign: 'center', padding: '24px 20px', background: 'linear-gradient(135deg, var(--pink-glow), var(--bg))', borderRadius: 24, border: '1px solid var(--border)', marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-          <Avatar user="Alvin" size={60} ring />
+          <Avatar user={currentUser} size={60} ring />
           <Icon emoji="❤️" size={28} />
-          <Avatar user="Paoi" size={60} ring />
+          <Avatar user={partnerProfile?.displayName ?? currentUser} size={60} ring />
         </div>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Alvin <Icon emoji="❤️" size={18} /> Paoi</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>{currentUser}{partnerProfile && <><Icon emoji="❤️" size={18} /> {partnerProfile.displayName}</>}</p>
         <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 8 }}>
           {relationshipStart
             ? `Together since ${relationshipStart.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
-            : <button onClick={() => navigate('settings')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', fontSize: 14, textDecoration: 'underline' }}><Icon emoji="💕" size={14} /> Đặt ngày bắt đầu yêu</button>}
+            : <button onClick={() => navigate('settings')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', fontSize: 14, textDecoration: 'underline' }}><Icon emoji="💕" size={14} /> Set your relationship start date</button>}
         </p>
         <div style={{ display: 'inline-flex', gap: 12, background: 'var(--white)', borderRadius: 12, padding: '8px 16px', border: '1px solid var(--border)' }}>
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--sakura-deep)' }}>{days.toLocaleString()}</p>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, fontWeight: 700, color: 'var(--sakura-deep)' }}>{days.toLocaleString()}</p>
             <p style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 500 }}>Days</p>
           </div>
           <div style={{ width: 1, background: 'var(--border)' }} />
           <div style={{ textAlign: 'center' }}>
-            <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--sakura-deep)' }}>{dur.years}</p>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--sakura-deep)' }}>{dur.years}</p>
             <p style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 500 }}>Years</p>
           </div>
         </div>
@@ -188,46 +193,81 @@ export default function Us() {
           { val: state.playlist.length.toString(), label: 'Songs' },
         ].map(s => (
           <div key={s.label} style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 8px', textAlign: 'center' }}>
-            <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--sakura-deep)' }}>{s.val}</div>
+            <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--sakura-deep)' }}>{s.val}</div>
             <div style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 500, marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* Menu items */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {([
-          { label: 'Đơn Xin Phép', emoji: '📋', key: 'permit' as SubScreen,
-            sub: (state.dateRequests.filter(r => r.to === currentUser && r.status === 'pending').length > 0
-              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon emoji="⚡" size={12} /> {state.dateRequests.filter(r => r.to === currentUser && r.status === 'pending').length} đơn chờ duyệt!</span>
-              : `${state.dateRequests.length} đơn tổng cộng`) },
-          { label: 'Nhật Ký Biết Ơn', emoji: '🌸', key: 'gratitude' as SubScreen, sub: `${state.gratitude.length} lần biết ơn` },
-          { label: 'Hũ Hẹn Hò', emoji: '🫙', key: 'dateidea' as SubScreen, sub: 'Rút ý tưởng hẹn hò ngẫu nhiên' },
-          { label: 'Gift Wishlist', labelIcon: '🎁', emoji: '🎁', key: 'wishjar' as SubScreen,
-            sub: `${state.wishes.filter(w => !w.drawn).length} món đang chờ được mua` },
-          { label: 'Our Story', emoji: '📖', key: 'story' as SubScreen, sub: 'Relationship timeline' },
-          { label: 'Our Favourites', emoji: '💕', key: 'favorites' as SubScreen,
-            sub: `${Object.values(state.favPlaces).flat().length} địa điểm yêu thích` },
-          { label: 'Playlist của mình', emoji: '🎵', key: 'playlist' as SubScreen, sub: `${state.playlist.length} bài hát` },
-          { label: 'Trip Planner', labelIcon: '✈️', emoji: '🗺️', key: 'trips' as SubScreen, sub: `${state.trips.length} chuyến đi` },
-          { label: 'Time Capsule', labelIcon: '💌', emoji: '⏳', key: 'capsule' as SubScreen, sub: `${state.capsules.length} thư` },
-          { label: 'Photo Collage', emoji: '🖼️', key: 'collage' as SubScreen, sub: 'Tổng kết theo tháng từ memories' },
-          { label: 'Future Us', emoji: '✨', key: 'future' as SubScreen, sub: `${state.goals.filter(g => !g.completed).length} dreams to achieve` },
-          { label: 'Our Calendar', emoji: '📅', key: 'calendar' as SubScreen, sub: `${state.events.length} events` },
-        ] as { label: string; labelIcon?: string; emoji: string; key: SubScreen; sub: ReactNode }[]).map(item => (
-          <button key={item.key} onClick={() => goToSub(item.key)} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, cursor: 'pointer', transition: 'background 0.15s', textAlign: 'left', width: '100%' }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--white)'}
-          >
-            <div style={{ width: 44, height: 44, background: 'var(--sakura-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={item.emoji} size={22} /></div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>{item.label}{item.labelIcon && <Icon emoji={item.labelIcon} size={14} />}</p>
-              <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{item.sub}</p>
-            </div>
-            <span style={{ color: 'var(--ink-2)', fontSize: 18 }}>›</span>
-          </button>
-        ))}
-      </div>
+      {/* Menu items — grouped from most forward-facing/frequent (planning
+          together, daily rituals) down to reflective/archival (memories,
+          keepsakes), instead of the old accretion order (newest feature
+          tacked onto the bottom regardless of how it relates to the rest). */}
+      {([
+        {
+          title: 'Plan together',
+          items: [
+            { label: 'Our Calendar', emoji: '📅', key: 'calendar' as SubScreen, sub: `${state.events.length} events` },
+            { label: 'Future Us', emoji: '✨', key: 'future' as SubScreen, sub: `${state.goals.filter(g => !g.completed).length} dreams to achieve` },
+            { label: 'Date Permit', emoji: '📋', key: 'permit' as SubScreen,
+              sub: (state.dateRequests.filter(r => r.to === currentUser && r.status === 'pending').length > 0
+                ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon emoji="⚡" size={12} /> {state.dateRequests.filter(r => r.to === currentUser && r.status === 'pending').length} request(s) awaiting approval!</span>
+                : `${state.dateRequests.length} requests total`) },
+            { label: 'Date Idea Jar', emoji: '🫙', key: 'dateidea' as SubScreen, sub: 'Draw a random date idea' },
+            { label: 'Trip Planner', labelIcon: '✈️', emoji: '🗺️', key: 'trips' as SubScreen, sub: `${state.trips.length} trips` },
+          ],
+        },
+        {
+          title: 'Daily rituals',
+          items: [
+            { label: 'Gratitude Journal', emoji: '🌸', key: 'gratitude' as SubScreen, sub: `${state.gratitude.length} things you're grateful for` },
+            { label: 'Quote of the Day', emoji: '💬', key: 'quotes' as SubScreen, sub: `${state.storyQuotes.length} quotes — changes daily on the Dashboard` },
+            { label: 'Our Playlist', emoji: '🎵', key: 'playlist' as SubScreen, sub: `${state.playlist.length} songs` },
+          ],
+        },
+        {
+          title: 'Gifts & extras',
+          items: [
+            { label: 'Gift Wishlist', labelIcon: '🎁', emoji: '🎁', key: 'wishjar' as SubScreen,
+              sub: `${state.wishes.filter(w => !w.drawn).length} item(s) waiting to be bought` },
+            { label: 'Our Favourites', emoji: '💕', key: 'favorites' as SubScreen,
+              sub: `${Object.values(state.favPlaces).flat().length} favourite spots` },
+            { label: 'Debt Tracker', emoji: '📒', key: 'debts' as SubScreen,
+              sub: (() => {
+                const unpaid = state.debts.filter(d => !d.paid);
+                return unpaid.length > 0 ? `${unpaid.length} people owe you` : 'No one owes you yet';
+              })() },
+          ],
+        },
+        {
+          title: 'Memories & keepsakes',
+          items: [
+            { label: 'Time Capsule', labelIcon: '💌', emoji: '⏳', key: 'capsule' as SubScreen, sub: `${state.capsules.length} letters` },
+            { label: 'Our Story', emoji: '📖', key: 'story' as SubScreen, sub: 'Relationship timeline' },
+            { label: 'Photo Collage', emoji: '🖼️', key: 'collage' as SubScreen, sub: 'A month-by-month recap from your memories' },
+            { label: "Places We've Been", emoji: '🗺️', key: 'places' as SubScreen, sub: `${state.places.length} saved places` },
+          ],
+        },
+      ] as { title: string; items: { label: string; labelIcon?: string; emoji: string; key: SubScreen; sub: ReactNode }[] }[]).map(group => (
+        <div key={group.title} style={{ marginBottom: 20 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8, padding: '0 4px' }}>{group.title}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {group.items.map(item => (
+              <button key={item.key} onClick={() => goToSub(item.key)} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 16, cursor: 'pointer', transition: 'background 0.15s', textAlign: 'left', width: '100%' }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--white)'}
+              >
+                <div style={{ width: 44, height: 44, background: 'var(--sakura-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={item.emoji} size={22} /></div>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>{item.label}{item.labelIcon && <Icon emoji={item.labelIcon} size={14} />}</p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{item.sub}</p>
+                </div>
+                <span style={{ color: 'var(--ink-2)', fontSize: 18 }}>›</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
   }
@@ -335,8 +375,8 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
   return (
     <div style={{ paddingBottom: 32 }}>
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
-      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Our Favourites <Icon emoji="💕" size={20} /></p>
-      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 18 }}>Những nơi yêu thích của hai đứa mình.</p>
+      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Our Favourites <Icon emoji="💕" size={20} /></p>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 18 }}>Your favourite places together.</p>
 
       {/* Category tabs */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
@@ -347,14 +387,14 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
           </button>
         ))}
         <button onClick={() => setShowAddCategory(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 99, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-          + Mới
+          + New
         </button>
       </div>
 
       {cfg && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 14, marginBottom: 16 }}>
-          <button onClick={() => openEditCategory(cfg)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}><Icon emoji="✏️" size={12} /> Sửa danh mục</button>
-          <button onClick={() => setConfirmDeleteCategory(cfg)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8524A', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}><Icon emoji="🗑️" size={12} /> Xóa danh mục</button>
+          <button onClick={() => openEditCategory(cfg)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}><Icon emoji="✏️" size={12} /> Edit category</button>
+          <button onClick={() => setConfirmDeleteCategory(cfg)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#E8524A', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, padding: 0 }}><Icon emoji="🗑️" size={12} /> Delete category</button>
         </div>
       )}
 
@@ -363,10 +403,10 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
         {list.map((pl, i) => (
           <div key={pl.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
             {pl.image
-              ? <img src={pl.image} alt="" style={{ width: 68, height: 68, borderRadius: 14, objectFit: 'cover', flexShrink: 0 }} />
+              ? <FadeImage src={pl.image} alt="" style={{ width: 68, height: 68, borderRadius: 14, flexShrink: 0 }} />
               : (
                 <div style={{ width: 68, height: 68, borderRadius: 14, background: `${cfg?.color}15`, border: `1.5px solid ${cfg?.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 24, fontFamily: "'DM Serif Display', serif", color: cfg?.color, fontWeight: 700 }}>{i + 1}</span>
+                  <span style={{ fontSize: 25, fontFamily: "'Playfair Display', serif", color: cfg?.color, fontWeight: 700 }}>{i + 1}</span>
                 </div>
               )}
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -380,13 +420,13 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
         {cfg && list.length === 0 && (
           <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
             <Icon emoji={cfg.emoji} size={36} style={{ display: 'block', marginBottom: 8 }} />
-            Chưa có địa điểm nào. Thêm vào nhé!
+            No places here yet. Add one!
           </div>
         )}
         {!cfg && (
           <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
             <Icon emoji="💕" size={36} style={{ display: 'block', marginBottom: 8 }} />
-            Chưa có danh mục nào. Bấm "+ Mới" để tạo!
+            No categories yet. Tap "+ New" to create one!
           </div>
         )}
       </div>
@@ -394,7 +434,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
       {/* Add place button */}
       {cfg && (
         <button onClick={() => setShowAdd(true)} style={{ width: '100%', padding: '13px', borderRadius: 14, border: `1.5px dashed ${cfg.color}`, background: `${cfg.color}08`, color: cfg.color, fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          + Thêm <Icon emoji={cfg.emoji} size={14} /> {cfg.label}
+          + Add <Icon emoji={cfg.emoji} size={14} /> {cfg.label}
         </button>
       )}
 
@@ -403,14 +443,14 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeAdd}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Thêm <Icon emoji={cfg.emoji} size={18} /> {cfg.label} mới</p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Add a new <Icon emoji={cfg.emoji} size={18} /> {cfg.label}</p>
               <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input className="input-field" placeholder="Tên địa điểm..." value={inputName} onChange={e => setInputName(e.target.value)} autoFocus />
-              <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={inputNote} onChange={e => setInputNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} />
+              <input className="input-field" placeholder="Place name..." value={inputName} onChange={e => setInputName(e.target.value)} autoFocus />
+              <input className="input-field" placeholder="Note (optional)" value={inputNote} onChange={e => setInputNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} />
               <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Ảnh (tùy chọn)</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photo (optional)</p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {inputPreview && (
                     <div style={{ position: 'relative', width: 64, height: 64, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: `2px solid ${cfg.color}` }}>
@@ -422,12 +462,12 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                   )}
-                  <button onClick={() => fileInputRef.current?.click()} style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 12, border: `2px dashed ${cfg.color}`, background: `${cfg.color}08`, color: cfg.color, fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{inputPreview ? '↻' : '+'}</button>
+                  <button onClick={() => fileInputRef.current?.click()} style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 12, border: `2px dashed ${cfg.color}`, background: `${cfg.color}08`, color: cfg.color, fontSize: 23, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{inputPreview ? '↻' : '+'}</button>
                   <input ref={fileInputRef} type="file" accept="image/*" onChange={e => { handleAddFile(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
                 </div>
                 <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
               </div>
-              <button onClick={handleAdd} disabled={!inputName.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: inputName.trim() ? 'pointer' : 'default', background: inputName.trim() ? cfg.color : 'var(--border)', color: inputName.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Thêm</button>
+              <button onClick={handleAdd} disabled={!inputName.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: inputName.trim() ? 'pointer' : 'default', background: inputName.trim() ? cfg.color : 'var(--border)', color: inputName.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Add</button>
             </div>
           </div>
         </div>
@@ -438,14 +478,14 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditPlace}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Sửa địa điểm <Icon emoji="✏️" size={18} /></p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Edit place <Icon emoji="✏️" size={18} /></p>
               <button onClick={closeEditPlace} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input className="input-field" placeholder="Tên địa điểm..." value={editPlaceName} onChange={e => setEditPlaceName(e.target.value)} autoFocus />
-              <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={editPlaceNote} onChange={e => setEditPlaceNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSavePlace()} />
+              <input className="input-field" placeholder="Place name..." value={editPlaceName} onChange={e => setEditPlaceName(e.target.value)} autoFocus />
+              <input className="input-field" placeholder="Note (optional)" value={editPlaceNote} onChange={e => setEditPlaceNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSavePlace()} />
               <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Ảnh (tùy chọn)</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photo (optional)</p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {editPlacePreview && (
                     <div style={{ position: 'relative', width: 64, height: 64, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2px solid var(--sakura-deep)' }}>
@@ -457,11 +497,11 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
                       )}
                     </div>
                   )}
-                  <button onClick={() => editFileInputRef.current?.click()} style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{editPlacePreview ? '↻' : '+'}</button>
+                  <button onClick={() => editFileInputRef.current?.click()} style={{ width: 64, height: 64, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 23, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{editPlacePreview ? '↻' : '+'}</button>
                   <input ref={editFileInputRef} type="file" accept="image/*" onChange={e => { handleEditFile(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
                 </div>
               </div>
-              <button onClick={handleSavePlace} disabled={!editPlaceName.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editPlaceName.trim() ? 'pointer' : 'default', background: editPlaceName.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editPlaceName.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Lưu thay đổi</button>
+              <button onClick={handleSavePlace} disabled={!editPlaceName.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editPlaceName.trim() ? 'pointer' : 'default', background: editPlaceName.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editPlaceName.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save changes</button>
             </div>
           </div>
         </div>
@@ -471,11 +511,11 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
       {confirmDeletePlace && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeletePlace(null)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa "{confirmDeletePlace.name}"?</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Delete "{confirmDeletePlace.name}"?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This can't be undone.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDeletePlace(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={() => { removeFavPlace(activeTab, confirmDeletePlace.id); setConfirmDeletePlace(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+              <button onClick={() => setConfirmDeletePlace(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { removeFavPlace(activeTab, confirmDeletePlace.id); setConfirmDeletePlace(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>
@@ -486,11 +526,11 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeAddCategory}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)' }}>Danh mục mới</p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>New category</p>
               <button onClick={closeAddCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <input className="input-field" placeholder="Tên danh mục (VD: Sách, Du lịch...)" value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} autoFocus />
+              <input className="input-field" placeholder="Category name (e.g. Books, Travel...)" value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} autoFocus />
               <div>
                 <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -500,14 +540,14 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
                 </div>
               </div>
               <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Màu</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Color</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {CATEGORY_COLOR_CHOICES.map(c => (
                     <button key={c} onClick={() => setNewCatColor(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: newCatColor === c ? '3px solid var(--ink)' : '3px solid transparent', cursor: 'pointer' }} />
                   ))}
                 </div>
               </div>
-              <button onClick={handleAddCategory} disabled={!newCatLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: newCatLabel.trim() ? 'pointer' : 'default', background: newCatLabel.trim() ? newCatColor : 'var(--border)', color: newCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Tạo danh mục</button>
+              <button onClick={handleAddCategory} disabled={!newCatLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: newCatLabel.trim() ? 'pointer' : 'default', background: newCatLabel.trim() ? newCatColor : 'var(--border)', color: newCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Create category</button>
             </div>
           </div>
         </div>
@@ -518,7 +558,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditCategory}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)' }}>Sửa danh mục</p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>Edit category</p>
               <button onClick={closeEditCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -532,14 +572,14 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
                 </div>
               </div>
               <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Màu</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Color</p>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {CATEGORY_COLOR_CHOICES.map(c => (
                     <button key={c} onClick={() => setEditCatColor(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: editCatColor === c ? '3px solid var(--ink)' : '3px solid transparent', cursor: 'pointer' }} />
                   ))}
                 </div>
               </div>
-              <button onClick={handleSaveCategory} disabled={!editCatLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editCatLabel.trim() ? 'pointer' : 'default', background: editCatLabel.trim() ? editCatColor : 'var(--border)', color: editCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Lưu thay đổi</button>
+              <button onClick={handleSaveCategory} disabled={!editCatLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editCatLabel.trim() ? 'pointer' : 'default', background: editCatLabel.trim() ? editCatColor : 'var(--border)', color: editCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save changes</button>
             </div>
           </div>
         </div>
@@ -549,11 +589,11 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
       {confirmDeleteCategory && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteCategory(null)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa danh mục "{confirmDeleteCategory.label}"?</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Toàn bộ địa điểm trong danh mục này ({(state.favPlaces[confirmDeleteCategory.id] ?? []).length}) sẽ bị xóa theo. Không thể hoàn tác.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Delete category "{confirmDeleteCategory.label}"?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>All places in this category ({(state.favPlaces[confirmDeleteCategory.id] ?? []).length}) will be deleted too. This can't be undone.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDeleteCategory(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={() => { removeFavCategory(confirmDeleteCategory.id); setConfirmDeleteCategory(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+              <button onClick={() => setConfirmDeleteCategory(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { removeFavCategory(confirmDeleteCategory.id); setConfirmDeleteCategory(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>
@@ -566,12 +606,12 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
 type LinkPreview = { title?: string; image?: string; description?: string };
 
 function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
-  const { state, currentUser, addWish, updateWish, removeWish, drawWish } = useApp();
+  const { state, currentUser, partnerProfile, addWish, updateWish, removeWish, drawWish } = useApp();
   const [showAdd, setShowAdd] = useState(false);
   const [wishText, setWishText] = useState('');
   const [wishLink, setWishLink] = useState('');
   const [wishPrice, setWishPrice] = useState('');
-  const [filter, setFilter] = useState<'all' | 'Alvin' | 'Paoi' | 'bought'>('all');
+  const [filter, setFilter] = useState<string>('all');
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -584,7 +624,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
   const [editPreviewLoading, setEditPreviewLoading] = useState(false);
   const [confirmDeleteWish, setConfirmDeleteWish] = useState<string | null>(null);
 
-  const other = currentUser === 'Alvin' ? 'Paoi' : 'Alvin';
+  const other = partnerProfile?.displayName ?? currentUser;
 
   const filtered = state.wishes.filter(w => {
     if (filter === 'bought') return w.drawn;
@@ -684,20 +724,20 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
     return (
       <div key={w.id} className="card wish-card" style={{ padding: '14px 16px', opacity: isBought ? 0.6 : 1, animation: `wishCardIn 0.3s cubic-bezier(0.32,0.72,0,1) both`, animationDelay: `${Math.min(index, 6) * 30}ms` }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: isBought ? 'var(--bg)' : (w.from === 'Paoi' ? '#FFE4EC' : '#E4ECFF'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s ease' }}>
-            <Icon emoji={isBought ? '✅' : (w.from === 'Paoi' ? '💗' : '💙')} size={20} />
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: isBought ? 'var(--bg)' : (isOwner ? '#E4ECFF' : '#FFE4EC'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s ease' }}>
+            <Icon emoji={isBought ? '✅' : (isOwner ? '💙' : '💗')} size={20} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: isBought ? 'line-through' : 'none', lineHeight: 1.3 }}>{w.wish}</p>
             <p style={{ fontSize: 11, color: 'var(--sakura-deep)', marginTop: 3, fontWeight: 600 }}>{w.from}'s wishlist · {w.date}</p>
-            {w.price && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💰" size={12} /> {/^\d+$/.test(w.price) ? `${Number(w.price).toLocaleString('vi-VN')} VND` : w.price}</p>}
+            {w.price && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💰" size={12} /> {/^\d+$/.test(w.price) ? `${Number(w.price).toLocaleString('en-US')} VND` : w.price}</p>}
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             {!isBought && (
-              <button className="wish-action-btn" onClick={() => drawWish(w.id, true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Đã mua <Icon emoji="🎁" size={12} /></button>
+              <button className="wish-action-btn" onClick={() => drawWish(w.id, true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Bought <Icon emoji="🎁" size={12} /></button>
             )}
             {isBought && (
-              <button className="wish-action-btn" onClick={() => drawWish(w.id, false)} style={{ background: 'var(--bg)', color: 'var(--ink-2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Hoàn tác <Icon emoji="↩️" size={12} /></button>
+              <button className="wish-action-btn" onClick={() => drawWish(w.id, false)} style={{ background: 'var(--bg)', color: 'var(--ink-2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Undo <Icon emoji="↩️" size={12} /></button>
             )}
             {isOwner && (
               <>
@@ -710,7 +750,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
         {w.link && (
           <a href={w.link} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, padding: 8, background: 'var(--bg)', borderRadius: 10, textDecoration: 'none', minWidth: 0 }}>
             {w.linkImage
-              ? <img src={w.linkImage} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+              ? <FadeImage src={w.linkImage} alt="" style={{ width: 44, height: 44, borderRadius: 8, flexShrink: 0 }} />
               : <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🔗" size={16} /></div>}
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: 12, color: '#4A8AE8', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.linkTitle || w.link}</p>
@@ -733,18 +773,18 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
         .wish-card { transition: opacity 0.25s ease; }
       `}</style>
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
-      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Gift Wishlist <Icon emoji="🎁" size={20} /></p>
-      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Những món đồ muốn mua — để bên kia biết mà tặng quà!</p>
+      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Gift Wishlist <Icon emoji="🎁" size={20} /></p>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Things you'd love to receive — so your partner knows what to get you!</p>
 
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
-          { k: 'all', label: 'Tất cả', count: state.wishes.filter(w => !w.drawn).length },
-          { k: 'Alvin', label: "Alvin's list", count: state.wishes.filter(w => !w.drawn && w.from === 'Alvin').length },
-          { k: 'Paoi', label: "Paoi's list", count: state.wishes.filter(w => !w.drawn && w.from === 'Paoi').length },
-          { k: 'bought', label: 'Đã mua', count: state.wishes.filter(w => w.drawn).length },
+          { k: 'all', label: 'All', count: state.wishes.filter(w => !w.drawn).length },
+          { k: currentUser, label: `${currentUser}'s list`, count: state.wishes.filter(w => !w.drawn && w.from === currentUser).length },
+          ...(other !== currentUser ? [{ k: other, label: `${other}'s list`, count: state.wishes.filter(w => !w.drawn && w.from === other).length }] : []),
+          { k: 'bought', label: 'Bought', count: state.wishes.filter(w => w.drawn).length },
         ].map(f => (
-          <button key={f.k} className="wish-tab-btn" onClick={() => setFilter(f.k as typeof filter)} style={{ padding: '6px 14px', borderRadius: 99, border: filter === f.k ? 'none' : '1.5px solid var(--border)', background: filter === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <button key={f.k} className="wish-tab-btn" onClick={() => setFilter(f.k)} style={{ padding: '6px 14px', borderRadius: 99, border: filter === f.k ? 'none' : '1.5px solid var(--border)', background: filter === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {f.label}
             <span style={{
               minWidth: 17, height: 17, padding: '0 4px', borderRadius: 99, fontSize: 10, fontWeight: 800,
@@ -758,7 +798,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
 
       {/* Add button */}
       <button onClick={() => setShowAdd(true)} style={{ width: '100%', padding: '13px', borderRadius: 14, border: '1.5px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 14, cursor: 'pointer', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-        + Thêm món đồ vào wishlist <Icon emoji="🎁" size={14} />
+        + Add an item to your wishlist <Icon emoji="🎁" size={14} />
       </button>
 
       {/* List — key={filter} remounts the whole batch on tab switch so it replays the entrance animation together */}
@@ -767,7 +807,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
         {filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
             <Icon emoji="🎁" size={36} style={{ display: 'block', marginBottom: 8 }} />
-            Chưa có gì trong wishlist này cả!
+            Nothing in this wishlist yet!
           </div>
         )}
       </div>
@@ -778,22 +818,22 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
           <div style={{ width: '100%', maxWidth: 380, maxHeight: '80vh', transform: 'translateY(-40px)' }} onClick={e => e.stopPropagation()}>
             <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Thêm vào wishlist <Icon emoji="🎁" size={18} /></p>
+                <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Add to wishlist<Icon emoji="🎁" size={18} /></p>
                 <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
               </div>
-              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 14 }}>Đang thêm cho <strong>{currentUser}</strong> — {other} sẽ thấy và có thể mua tặng!</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 14 }}>Adding for <strong>{currentUser}</strong> — {other} will see it and can surprise you with it!</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <input className="input-field" placeholder="Tên món đồ muốn mua..." value={wishText} onChange={e => setWishText(e.target.value)} />
-                <AmountInput placeholder="Giá tham khảo (VND, tùy chọn)" value={wishPrice} onChange={setWishPrice} />
-                <input className="input-field" placeholder="Link sản phẩm (tùy chọn)" value={wishLink} onChange={e => setWishLink(e.target.value)} />
-                {previewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Đang lấy thông tin từ link...</p>}
+                <input className="input-field" placeholder="Item you'd like to receive..." value={wishText} onChange={e => setWishText(e.target.value)} />
+                <AmountInput placeholder="Estimated price (VND, optional)" value={wishPrice} onChange={setWishPrice} />
+                <input className="input-field" placeholder="Product link (optional)" value={wishLink} onChange={e => setWishLink(e.target.value)} />
+                {previewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
                 {!previewLoading && linkPreview && (linkPreview.image || linkPreview.title) && (
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
                     {linkPreview.image
-                      ? <img src={linkPreview.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                      ? <FadeImage src={linkPreview.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }} />
                       : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🔗" size={18} /></div>}
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 700, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{linkPreview.title || 'Đã lấy được ảnh sản phẩm'}</p>
+                      <p style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 700, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{linkPreview.title || 'Product image found'}</p>
                       {linkPreview.description && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{linkPreview.description}</p>}
                     </div>
                   </div>
@@ -804,7 +844,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
                       addWish({
                         from: currentUser,
                         wish: wishText.trim(),
-                        date: new Date().toLocaleDateString('vi-VN', { day: 'numeric', month: 'long', year: 'numeric' }),
+                        date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
                         ...(wishPrice ? { price: wishPrice } : {}),
                         ...(wishLink ? { link: wishLink } : {}),
                         ...(linkPreview?.image ? { linkImage: linkPreview.image } : {}),
@@ -815,7 +855,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
                     }
                   }}
                   style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >Thêm vào wishlist <Icon emoji="🎁" size={15} /></button>
+                >Add to wishlist<Icon emoji="🎁" size={15} /></button>
               </div>
             </div>
           </div>
@@ -827,21 +867,21 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditWish}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Sửa wishlist <Icon emoji="✏️" size={18} /></p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Edit wish <Icon emoji="✏️" size={18} /></p>
               <button onClick={closeEditWish} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input className="input-field" placeholder="Tên món đồ muốn mua..." value={editText} onChange={e => setEditText(e.target.value)} />
-              <AmountInput placeholder="Giá tham khảo (VND, tùy chọn)" value={editPrice} onChange={setEditPrice} />
-              <input className="input-field" placeholder="Link sản phẩm (tùy chọn)" value={editLink} onChange={e => setEditLink(e.target.value)} />
-              {editPreviewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Đang lấy thông tin từ link...</p>}
+              <input className="input-field" placeholder="Item you'd like to receive..." value={editText} onChange={e => setEditText(e.target.value)} />
+              <AmountInput placeholder="Estimated price (VND, optional)" value={editPrice} onChange={setEditPrice} />
+              <input className="input-field" placeholder="Product link (optional)" value={editLink} onChange={e => setEditLink(e.target.value)} />
+              {editPreviewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
               {!editPreviewLoading && editLinkPreview && (editLinkPreview.image || editLinkPreview.title) && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
                   {editLinkPreview.image
-                    ? <img src={editLinkPreview.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                    ? <FadeImage src={editLinkPreview.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }} />
                     : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🔗" size={18} /></div>}
                   <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 700, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{editLinkPreview.title || 'Đã lấy được ảnh sản phẩm'}</p>
+                    <p style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 700, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{editLinkPreview.title || 'Product image found'}</p>
                     {editLinkPreview.description && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{editLinkPreview.description}</p>}
                   </div>
                 </div>
@@ -850,7 +890,7 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
                 onClick={saveEditWish}
                 disabled={!editText.trim()}
                 style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editText.trim() ? 'pointer' : 'default', background: editText.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editText.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-              >Lưu thay đổi <Icon emoji="✓" size={15} /></button>
+              >Save changes <Icon emoji="✓" size={15} /></button>
             </div>
           </div>
         </div>
@@ -860,11 +900,11 @@ function GiftWishlistScreen({ onBack }: { onBack: () => void }) {
       {confirmDeleteWish && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteWish(null)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa món này khỏi wishlist?</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Delete this item from the wishlist?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This can't be undone.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDeleteWish(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={() => { removeWish(confirmDeleteWish); setConfirmDeleteWish(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+              <button onClick={() => setConfirmDeleteWish(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { removeWish(confirmDeleteWish); setConfirmDeleteWish(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>
@@ -885,7 +925,7 @@ function formatDuration(seconds: number): string {
 function formatReleaseDate(isoDate: string): string {
   const d = new Date(isoDate);
   if (isNaN(d.getTime())) return '';
-  return d.toLocaleDateString('vi-VN', { day: 'numeric', month: 'numeric', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'numeric', year: 'numeric' });
 }
 
 // iTunes Search — free, no key, CORS-enabled from the browser (same reasoning
@@ -1003,7 +1043,7 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
         <div ref={anchorRef} style={{ display: 'flex', gap: 8 }}>
           <input
             className="input-field"
-            placeholder="Tên bài hát"
+            placeholder="Song title"
             value={title}
             onChange={e => { onTitleChange(e.target.value); setShowResults(false); setHasSearched(false); setSearchError(false); }}
             onKeyDown={e => e.key === 'Enter' && runSearch()}
@@ -1020,13 +1060,13 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
             own stopPropagation keeps working. */}
         {showResults && dropdownRect && (searching || results.length > 0 || hasSearched) && createPortal(
           <div style={{ position: 'fixed', top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width, background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', zIndex: 500, maxHeight: 400, overflowY: 'auto' }}>
-            {searching && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>Đang tìm...</p>}
-            {!searching && hasSearched && searchError && <p style={{ fontSize: 12, color: '#E8524A', padding: '10px 12px' }}>Không kết nối được tới dịch vụ tìm bài hát — kiểm tra mạng/wifi rồi thử lại.</p>}
-            {!searching && hasSearched && !searchError && results.length === 0 && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>Không tìm thấy bài hát nào, thử tên khác nhé.</p>}
+            {searching && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>Searching...</p>}
+            {!searching && hasSearched && searchError && <p style={{ fontSize: 12, color: '#E8524A', padding: '10px 12px' }}>Couldn't connect to the song search service — check your network/wifi and try again.</p>}
+            {!searching && hasSearched && !searchError && results.length === 0 && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>No songs found, try a different title.</p>}
             {!searching && results.map((r, i) => (
               <button key={i} onClick={() => { onPick(r); setShowResults(false); setResults([]); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 12px', background: 'none', border: 'none', borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', textAlign: 'left' }}>
                 {r.image
-                  ? <img src={r.image} alt="" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                  ? <FadeImage src={r.image} alt="" style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0 }} />
                   : <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🎵" size={16} /></div>}
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</p>
@@ -1042,7 +1082,7 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
       </div>
       {image && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 10, background: 'var(--bg)', borderRadius: 12, marginTop: 10 }}>
-          <img src={image} alt="" style={{ width: 52, height: 52, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+          <FadeImage src={image} alt="" style={{ width: 52, height: 52, borderRadius: 10, flexShrink: 0 }} />
           <div style={{ minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</p>
             <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{artist}</p>
@@ -1061,8 +1101,9 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
 }
 
 function PlaylistScreen({ onBack }: { onBack: () => void }) {
-  const { state, currentUser, addToPlaylist, updatePlaylist, removeFromPlaylist } = useApp();
-  const [filter, setFilter] = useState<'all' | 'Alvin' | 'Paoi'>('all');
+  const { state, currentUser, partnerProfile, addToPlaylist, updatePlaylist, removeFromPlaylist } = useApp();
+  const partnerName = partnerProfile?.displayName;
+  const [filter, setFilter] = useState<string>('all');
   const [showAdd, setShowAdd] = useState(false);
   const [title, setTitle] = useState('');
   const [artist, setArtist] = useState('');
@@ -1071,6 +1112,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
   const [duration, setDuration] = useState<number | undefined>(undefined);
   const [releaseDate, setReleaseDate] = useState<string | undefined>(undefined);
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(undefined);
+  const [addedByChoice, setAddedByChoice] = useState(currentUser);
 
   const [editingSong, setEditingSong] = useState<PlaylistItem | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -1080,26 +1122,27 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
   const [editDuration, setEditDuration] = useState<number | undefined>(undefined);
   const [editReleaseDate, setEditReleaseDate] = useState<string | undefined>(undefined);
   const [editPreviewUrl, setEditPreviewUrl] = useState<string | undefined>(undefined);
+  const [editAddedBy, setEditAddedBy] = useState(currentUser);
   const [confirmDeleteSong, setConfirmDeleteSong] = useState<PlaylistItem | null>(null);
 
   const filtered = filter === 'all' ? state.playlist : state.playlist.filter(p => p.addedBy === filter);
 
-  const closeAdd = () => { setShowAdd(false); setTitle(''); setArtist(''); setNote(''); setImage(''); setDuration(undefined); setReleaseDate(undefined); setPreviewUrl(undefined); };
+  const closeAdd = () => { setShowAdd(false); setTitle(''); setArtist(''); setNote(''); setImage(''); setDuration(undefined); setReleaseDate(undefined); setPreviewUrl(undefined); setAddedByChoice(currentUser); };
   const pickAddResult = (r: SongResult) => { setTitle(r.title); setArtist(r.artist); setImage(r.image); setDuration(r.durationSeconds); setReleaseDate(r.releaseDate); setPreviewUrl(r.previewUrl); };
   const handleAdd = () => {
     if (!title.trim()) return;
-    addToPlaylist({ title: title.trim(), artist: artist || title.trim(), emoji: '🎵', image: image || undefined, durationSeconds: duration, releaseDate, previewUrl, note, addedBy: currentUser });
+    addToPlaylist({ title: title.trim(), artist: artist || title.trim(), emoji: '🎵', image: image || undefined, durationSeconds: duration, releaseDate, previewUrl, note, addedBy: addedByChoice });
     closeAdd();
   };
 
   const openEditSong = (p: PlaylistItem) => {
-    setEditingSong(p); setEditTitle(p.title); setEditArtist(p.artist); setEditNote(p.note); setEditImage(p.image ?? ''); setEditDuration(p.durationSeconds); setEditReleaseDate(p.releaseDate); setEditPreviewUrl(p.previewUrl);
+    setEditingSong(p); setEditTitle(p.title); setEditArtist(p.artist); setEditNote(p.note); setEditImage(p.image ?? ''); setEditDuration(p.durationSeconds); setEditReleaseDate(p.releaseDate); setEditPreviewUrl(p.previewUrl); setEditAddedBy(p.addedBy);
   };
   const closeEditSong = () => setEditingSong(null);
   const pickEditResult = (r: SongResult) => { setEditTitle(r.title); setEditArtist(r.artist); setEditImage(r.image); setEditDuration(r.durationSeconds); setEditReleaseDate(r.releaseDate); setEditPreviewUrl(r.previewUrl); };
   const handleSaveSong = () => {
     if (!editingSong || !editTitle.trim()) return;
-    updatePlaylist(editingSong.id, { title: editTitle.trim(), artist: editArtist || editTitle.trim(), emoji: editingSong.emoji, image: editImage || undefined, durationSeconds: editDuration, releaseDate: editReleaseDate, previewUrl: editPreviewUrl, note: editNote });
+    updatePlaylist(editingSong.id, { title: editTitle.trim(), artist: editArtist || editTitle.trim(), emoji: editingSong.emoji, image: editImage || undefined, durationSeconds: editDuration, releaseDate: editReleaseDate, previewUrl: editPreviewUrl, note: editNote, addedBy: editAddedBy });
     closeEditSong();
   };
 
@@ -1107,18 +1150,18 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
     <div style={{ paddingBottom: 32 }}>
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Playlist của mình <Icon emoji="🎵" size={20} /></p>
-        <button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 12, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Thêm</button>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Our Playlist <Icon emoji="🎵" size={20} /></p>
+        <button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 12, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add</button>
       </div>
 
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
-          { k: 'all', label: 'Tất cả', emoji: null as string | null },
-          { k: 'Alvin', label: 'Alvin thêm', emoji: '💙' },
-          { k: 'Paoi', label: 'Paoi thêm', emoji: '💗' },
+          { k: 'all', label: 'All', emoji: null as string | null },
+          { k: currentUser, label: `Added by ${currentUser}`, emoji: '💙' },
+          ...(partnerName ? [{ k: partnerName, label: `Added by ${partnerName}`, emoji: '💗' }] : []),
         ].map(f => (
-          <button key={f.k} onClick={() => setFilter(f.k as typeof filter)} style={{ padding: '6px 14px', borderRadius: 99, border: filter === f.k ? 'none' : '1.5px solid var(--border)', background: filter === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{f.label}{f.emoji && <Icon emoji={f.emoji} size={12} />}</button>
+          <button key={f.k} onClick={() => setFilter(f.k)} style={{ padding: '6px 14px', borderRadius: 99, border: filter === f.k ? 'none' : '1.5px solid var(--border)', background: filter === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{f.label}{f.emoji && <Icon emoji={f.emoji} size={12} />}</button>
         ))}
       </div>
 
@@ -1126,12 +1169,12 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
         {filtered.map((p, i) => (
           <div key={p.id} className="card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
             {p.image
-              ? <img src={p.image} alt="" style={{ width: 60, height: 60, borderRadius: 14, objectFit: 'cover', flexShrink: 0 }} />
+              ? <FadeImage src={p.image} alt="" style={{ width: 60, height: 60, borderRadius: 14, flexShrink: 0 }} />
               : <div style={{ width: 60, height: 60, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={p.emoji} size={26} /></div>}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
               <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
-              {p.releaseDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Phát hành {formatReleaseDate(p.releaseDate)}</p>}
+              {p.releaseDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Released {formatReleaseDate(p.releaseDate)}</p>}
               {p.note && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
@@ -1143,7 +1186,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
             </div>
           </div>
         ))}
-        {filtered.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>Chưa có bài hát nào. Thêm bài hát đầu tiên!</div>}
+        {filtered.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>No songs yet. Add the first one!</div>}
       </div>
 
       {/* Add modal */}
@@ -1151,13 +1194,21 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeAdd}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)' }}>Thêm bài hát</p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>Add song</p>
               <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <SongSearchField title={title} onTitleChange={setTitle} artist={artist} image={image} durationSeconds={duration} releaseDate={releaseDate} onPick={pickAddResult} />
-              <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={note} onChange={e => setNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} />
-              <button onClick={handleAdd} disabled={!title.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: title.trim() ? 'pointer' : 'default', background: title.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: title.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Thêm vào playlist</button>
+              <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} />
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Added by</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[currentUser, ...(partnerName ? [partnerName] : [])].map(u => (
+                    <button key={u} onClick={() => setAddedByChoice(u)} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: addedByChoice === u ? 'var(--sakura-light)' : 'var(--bg)', border: addedByChoice === u ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: addedByChoice === u ? 'var(--sakura-deep)' : 'var(--ink-2)' }}>{u}</button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={handleAdd} disabled={!title.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: title.trim() ? 'pointer' : 'default', background: title.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: title.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Add to playlist</button>
             </div>
           </div>
         </div>
@@ -1168,13 +1219,21 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditSong}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Sửa bài hát <Icon emoji="✏️" size={18} /></p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Edit song <Icon emoji="✏️" size={18} /></p>
               <button onClick={closeEditSong} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <SongSearchField title={editTitle} onTitleChange={setEditTitle} artist={editArtist} image={editImage} durationSeconds={editDuration} releaseDate={editReleaseDate} onPick={pickEditResult} />
-              <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={editNote} onChange={e => setEditNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSaveSong()} />
-              <button onClick={handleSaveSong} disabled={!editTitle.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editTitle.trim() ? 'pointer' : 'default', background: editTitle.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editTitle.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Lưu thay đổi</button>
+              <input className="input-field" placeholder="Note (optional)" value={editNote} onChange={e => setEditNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSaveSong()} />
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Added by</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[currentUser, ...(partnerName ? [partnerName] : [])].map(u => (
+                    <button key={u} onClick={() => setEditAddedBy(u)} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: editAddedBy === u ? 'var(--sakura-light)' : 'var(--bg)', border: editAddedBy === u ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: editAddedBy === u ? 'var(--sakura-deep)' : 'var(--ink-2)' }}>{u}</button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={handleSaveSong} disabled={!editTitle.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editTitle.trim() ? 'pointer' : 'default', background: editTitle.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editTitle.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save changes</button>
             </div>
           </div>
         </div>
@@ -1184,11 +1243,11 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
       {confirmDeleteSong && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteSong(null)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa "{confirmDeleteSong.title}"?</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Delete "{confirmDeleteSong.title}"?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This can't be undone.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDeleteSong(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={() => { removeFromPlaylist(confirmDeleteSong.id); setConfirmDeleteSong(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+              <button onClick={() => setConfirmDeleteSong(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { removeFromPlaylist(confirmDeleteSong.id); setConfirmDeleteSong(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>
@@ -1222,14 +1281,14 @@ function PhotoCollage({ onBack }: { onBack: () => void }) {
 
   const formatMonth = (key: string) => {
     const [y, m] = key.split('-');
-    return new Date(+y, +m - 1).toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+    return new Date(+y, +m - 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
   return (
     <div style={{ paddingBottom: 32 }}>
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
-      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Photo Collage <Icon emoji="🖼️" size={20} /></p>
-      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Mỗi post một ảnh đại diện, tổng hợp theo tháng — bấm vào để xem lại bài đăng.</p>
+      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>Photo Collage <Icon emoji="🖼️" size={20} /></p>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>One cover photo per post, grouped by month — tap one to revisit that post.</p>
 
       {months.map(key => {
         const posts = byMonth[key];
@@ -1239,18 +1298,18 @@ function PhotoCollage({ onBack }: { onBack: () => void }) {
           <div key={key} style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{formatMonth(key)}</p>
-              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{posts.length} bài đăng</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{posts.length} posts</span>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
               {grid4.map((post, i) => (
                 <button key={post.postId} onClick={() => navigate('post-detail', post.postId)} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '1', background: 'var(--sakura-light)', border: 'none', padding: 0, cursor: 'pointer' }}>
-                  <img src={post.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <FadeImage src={post.image} alt="" style={{ width: '100%', height: '100%' }} />
                   {post.count > 1 && (
                     <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 9, fontWeight: 700, color: 'white', background: 'rgba(0,0,0,0.5)', padding: '1px 5px', borderRadius: 99 }}>1/{post.count}</span>
                   )}
                   {i === 3 && rest > 0 && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(51,42,45,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'white' }}>+{rest}</p>
+                      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'white' }}>+{rest}</p>
                     </div>
                   )}
                 </button>
@@ -1266,7 +1325,465 @@ function PhotoCollage({ onBack }: { onBack: () => void }) {
       {months.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 20px' }}>
           <Icon emoji="🖼️" size={48} style={{ marginBottom: 12 }} />
-          <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>Chưa có ảnh nào. Đăng post có ảnh để tạo collage!</p>
+          <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>No photos yet. Post something with photos to build a collage!</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// The line under the couple hero on Dashboard used to be a hardcoded
+// "Our little story continues." — now it's picked from this list, one per
+// day. Days-since-epoch mod the quote count keeps the choice stable for a
+// whole calendar day and identical for both partners, with no need to
+// store which quote was shown when.
+function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
+  const { state, addStoryQuote, updateStoryQuote, deleteStoryQuote } = useApp();
+  const [showAdd, setShowAdd] = useState(false);
+  const [editing, setEditing] = useState<StoryQuote | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [text, setText] = useState('');
+
+  const openAdd = () => { setText(''); setShowAdd(true); };
+  const openEdit = (q: StoryQuote) => { setText(q.text); setEditing(q); };
+  const closeForm = () => { setShowAdd(false); setEditing(null); setText(''); };
+
+  const handleSubmit = () => {
+    if (!text.trim()) return;
+    if (editing) updateStoryQuote(editing.id, text.trim());
+    else addStoryQuote(text.trim());
+    closeForm();
+  };
+
+  const confirmingQuote = state.storyQuotes.find(q => q.id === confirmDeleteId);
+
+  return (
+    <div style={{ paddingBottom: 32 }}>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Quote of the Day <Icon emoji="💬" size={20} /></p>
+        <button onClick={openAdd} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add quote</button>
+      </div>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>The Dashboard automatically switches to a different quote from this list each day.</p>
+
+      {state.storyQuotes.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '50px 20px' }}>
+          <div style={{ marginBottom: 12 }}><Icon emoji="💬" size={44} /></div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No quotes yet</p>
+          <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Add a few quotes so the Dashboard changes daily, instead of always showing the same one.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {state.storyQuotes.map(q => (
+            <div key={q.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <Icon emoji="🌸" size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+              <p style={{ flex: 1, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: 15, color: 'var(--ink)', lineHeight: 1.5 }}>"{q.text}"</p>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button onClick={() => openEdit(q)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+                <button onClick={() => setConfirmDeleteId(q.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(showAdd || editing) && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeForm}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="💬" size={18} /> {editing ? 'Edit quote' : 'Add a quote'}</p>
+              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <textarea className="input-field" placeholder="VD: Our little story continues." value={text} onChange={e => setText(e.target.value)} rows={3} style={{ resize: 'none', marginBottom: 14 }} autoFocus />
+            <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Add quote'}</button>
+          </div>
+        </div>
+      )}
+
+      {confirmingQuote && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteId(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Delete this quote?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>"{confirmingQuote.text}"</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { deleteStoryQuote(confirmingQuote.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Debt tracker ("Sổ nợ") — who owes you money outside the couple ── */
+
+function VND(n: number): string {
+  return `${Math.round(n).toLocaleString('en-US')} VND`;
+}
+
+function todayISO(): string {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function formatShortDate(d: string): string {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'numeric', year: 'numeric' });
+}
+
+function DebtScreen({ onBack }: { onBack: () => void }) {
+  const { state, currentUser, partnerProfile, addDebt, updateDebt, toggleDebtPaid, deleteDebt } = useApp();
+  const partnerName = partnerProfile?.displayName;
+  const [filter, setFilter] = useState('all');
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Debt | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const [debtorName, setDebtorName] = useState('');
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [date, setDate] = useState(todayISO());
+  const [dueDate, setDueDate] = useState('');
+  const [createdByChoice, setCreatedByChoice] = useState(currentUser);
+  const [error, setError] = useState('');
+
+  const openAdd = () => {
+    setDebtorName(''); setAmount(''); setNote(''); setDate(todayISO()); setDueDate(''); setCreatedByChoice(currentUser); setError('');
+    setShowForm(true);
+  };
+  const openEdit = (d: Debt) => {
+    setDebtorName(d.debtorName); setAmount(String(Math.round(d.amount))); setNote(d.note ?? ''); setDate(d.date); setDueDate(d.dueDate ?? ''); setCreatedByChoice(d.createdBy); setError('');
+    setEditing(d);
+  };
+  const closeForm = () => { setShowForm(false); setEditing(null); };
+
+  const handleSubmit = () => {
+    if (!debtorName.trim()) { setError("Enter the debtor's name."); return; }
+    if (!amount || isNaN(+amount) || +amount <= 0) { setError('Enter a valid amount.'); return; }
+    const data = { debtorName: debtorName.trim(), amount: +amount, note: note.trim() || undefined, date, dueDate: dueDate || undefined, createdBy: createdByChoice };
+    if (editing) updateDebt(editing.id, data);
+    else addDebt(data);
+    closeForm();
+  };
+
+  const filteredDebts = filter === 'all' ? state.debts : state.debts.filter(d => d.createdBy === filter);
+  const unpaid = filteredDebts.filter(d => !d.paid)
+    .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'));
+  const paid = filteredDebts.filter(d => d.paid);
+  const totalOwed = unpaid.reduce((s, d) => s + d.amount, 0);
+  const confirmingDebt = state.debts.find(d => d.id === confirmDeleteId);
+  const today = todayISO();
+
+  function renderDebtCard(d: Debt) {
+    const overdue = !d.paid && d.dueDate && d.dueDate < today;
+    return (
+      <div key={d.id} className="card" style={{ padding: '14px 16px', opacity: d.paid ? 0.6 : 1 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: d.paid ? 'var(--bg)' : overdue ? '#FEE2E2' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon emoji={d.paid ? '✅' : overdue ? '⏰' : '📒'} size={18} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: d.paid ? 'line-through' : 'none' }}>{d.debtorName}</p>
+            {d.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{d.note}</p>}
+            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>Lent on: {formatShortDate(d.date)}{filter === 'all' && ` · ${d.createdBy === 'Both' ? 'Both' : d.createdBy}`}</p>
+            {d.dueDate && !d.paid && (
+              <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
+              </p>
+            )}
+            {d.paid && d.paidDate && <p style={{ fontSize: 11, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)' }}>{VND(d.amount)}</p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => openEdit(d)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+              <button onClick={() => setConfirmDeleteId(d.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            </div>
+          </div>
+        </div>
+        <button onClick={() => toggleDebtPaid(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: d.paid ? '1.5px solid var(--border)' : 'none', background: d.paid ? 'var(--bg)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: d.paid ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+          {d.paid ? 'Mark as unpaid' : 'Mark as paid 🎉'}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ paddingBottom: 32 }}>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Debt Tracker <Icon emoji="📒" size={20} /></p>
+        <button onClick={openAdd} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Log debt</button>
+      </div>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Keep track of who owes you, so you never forget to ask for it back.</p>
+
+      {/* Filter — who logged this debt */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+            {f === 'all' ? 'All' : f}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 20, color: 'white' }}>
+        <p style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>Total owed to you</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 31 }}>{VND(totalOwed)}</p>
+        <p style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{unpaid.length} unpaid debt(s)</p>
+      </div>
+
+      {filteredDebts.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '50px 20px' }}>
+          <div style={{ marginBottom: 12 }}><Icon emoji="📒" size={44} /></div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>{state.debts.length === 0 ? 'No debts logged yet' : 'No debts found'}</p>
+          <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Tap "+ Log debt" whenever you lend someone money.</p>
+        </div>
+      ) : (
+        <>
+          {unpaid.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Unpaid · {unpaid.length}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {unpaid.map(renderDebtCard)}
+              </div>
+            </div>
+          )}
+          {paid.length > 0 && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Paid · {paid.length}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {paid.map(renderDebtCard)}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {(showForm || editing) && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeForm}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="📒" size={18} /> {editing ? 'Edit debt' : 'Log a new debt'}</p>
+              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <input className="input-field" placeholder="Debtor's name" value={debtorName} onChange={e => setDebtorName(e.target.value)} autoFocus />
+              <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
+              <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Logged by</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[currentUser, ...(partnerName ? [partnerName] : []), 'Both'].map(u => (
+                    <button key={u} onClick={() => setCreatedByChoice(u)} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: createdByChoice === u ? 'var(--sakura-light)' : 'var(--bg)', border: createdByChoice === u ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: createdByChoice === u ? 'var(--sakura-deep)' : 'var(--ink-2)' }}>{u === 'Both' ? 'Both' : u}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Date lent</p>
+                <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+              </div>
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Due date (optional)</p>
+                <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+              </div>
+              {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Log debt'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmingDebt && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteId(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Delete this debt?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>{confirmingDebt.debtorName} — {VND(confirmingDebt.amount)}</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { deleteDebt(confirmingDebt.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Our Places — "Places We've Been" ── */
+
+const PLACE_FLAG_CHOICES = ['🇻🇳', '🇯🇵', '🇰🇷', '🇹🇭', '🇸🇬', '🇲🇾', '🇹🇼', '🇭🇰', '🇨🇳', '🇺🇸', '🇫🇷', '🇬🇧', '🇦🇺', '🏳️'];
+
+function OurPlacesScreen({ onBack }: { onBack: () => void }) {
+  const { state, myProfile, addPlace, updatePlace, deletePlace } = useApp();
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Place | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<Place | null>(null);
+
+  const [name, setName] = useState('');
+  const [flag, setFlag] = useState('🏳️');
+  const [images, setImages] = useState<string[]>([]);
+  const [visitedDate, setVisitedDate] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const openAdd = () => {
+    setName(''); setFlag('🏳️'); setImages([]); setVisitedDate(''); setError('');
+    setShowForm(true);
+  };
+  const openEdit = (p: Place) => {
+    setName(p.name); setFlag(p.flag || '🏳️'); setImages(p.images); setVisitedDate(p.visitedDate ?? ''); setError('');
+    setEditing(p);
+  };
+  const closeForm = () => { setShowForm(false); setEditing(null); };
+
+  const handleFiles = (fileList: FileList | null) => {
+    const files = fileList ? Array.from(fileList) : [];
+    const coupleId = myProfile?.coupleId;
+    if (files.length === 0 || !coupleId) return;
+    setError('');
+    setUploading(true);
+    Promise.all(files.map(f => uploadPlaceImage(coupleId, f))).then(urls => {
+      setUploading(false);
+      const ok = urls.filter((u): u is string => !!u);
+      if (ok.length < files.length) setError('A few photos failed to upload, try again.');
+      setImages(prev => [...prev, ...ok]);
+    });
+  };
+
+  const removeImage = (url: string) => setImages(prev => prev.filter(u => u !== url));
+
+  const handleSubmit = () => {
+    if (!name.trim()) { setError('Enter a place name.'); return; }
+    if (images.length === 0) { setError(uploading ? 'Wait for the photos to finish uploading.' : 'Choose at least one photo.'); return; }
+    const data = { name: name.trim(), flag, images, visitedDate: visitedDate || undefined };
+    if (editing) updatePlace(editing.id, data);
+    else addPlace(data);
+    closeForm();
+  };
+
+  const confirmingPlace = state.places.find(p => p.id === confirmDeleteId);
+
+  return (
+    <div style={{ paddingBottom: 32 }}>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Places We've Been <Icon emoji="🗺️" size={20} /></p>
+        <button onClick={openAdd} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add place</button>
+      </div>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Save the places you've visited together.</p>
+
+      {state.places.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '50px 20px' }}>
+          <div style={{ marginBottom: 12 }}><Icon emoji="🗺️" size={44} /></div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No places saved yet</p>
+          <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Tap "+ Add place" to mark the first place you've been together.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          {state.places.map(p => (
+            <div key={p.id} className="card" style={{ overflow: 'hidden', cursor: 'pointer' }} onClick={() => setViewing(p)}>
+              <div style={{ position: 'relative', width: '100%', paddingTop: '75%', background: 'var(--bg)' }}>
+                {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />}
+                {p.images.length > 1 && (
+                  <span style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>1/{p.images.length}</span>
+                )}
+                <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
+                  <button onClick={e => { e.stopPropagation(); openEdit(p); }} title="Edit" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
+                  <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(p.id); }} title="Delete" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
+                </div>
+              </div>
+              <div style={{ padding: '10px 12px' }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>{p.flag} {p.name}</p>
+                {p.visitedDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{formatShortDate(p.visitedDate)}</p>}
+                {p.memoryIds.length > 0 && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{p.memoryIds.length} memories</p>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(showForm || editing) && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeForm}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="🗺️" size={18} /> {editing ? 'Edit place' : "Add a place you've been"}</p>
+              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <input className="input-field" placeholder="Place name (e.g. Da Lat)" value={name} onChange={e => setName(e.target.value)} autoFocus />
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Country flag</p>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {PLACE_FLAG_CHOICES.map(f => (
+                    <button key={f} onClick={() => setFlag(f)} style={{ width: 38, height: 38, borderRadius: 10, fontSize: 18, cursor: 'pointer', background: flag === f ? 'var(--sakura-light)' : 'var(--bg)', border: flag === f ? '2px solid var(--sakura-accent)' : '2px solid transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{f}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Visit date (optional)</p>
+                <input className="input-field" type="date" value={visitedDate} onChange={e => setVisitedDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+              </div>
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photos {images.length > 0 && `(${images.length})`}</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {images.map(url => (
+                    <div key={url} style={{ position: 'relative', width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2px solid var(--border)' }}>
+                      <FadeImage src={url} alt="" style={{ width: '100%', height: '100%' }} />
+                      <button onClick={() => removeImage(url)} style={{ position: 'absolute', top: 3, right: 3, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 99, width: 18, height: 18, color: 'white', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    style={{ width: 72, height: 72, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 25, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >{uploading ? <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid rgba(201,95,124,0.3)', borderTopColor: 'var(--sakura-deep)', animation: 'palvin-spin 0.7s linear infinite' }} /> : '+'}</button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={e => { handleFiles(e.target.files); e.target.value = ''; }}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+                <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+              {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
+              <button onClick={handleSubmit} disabled={uploading} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, opacity: uploading ? 0.6 : 1 }}>{editing ? 'Save changes' : 'Add place'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewing && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setViewing(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 16, width: '100%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>{viewing.flag} {viewing.name}</p>
+              <button onClick={() => setViewing(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            {viewing.visitedDate && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 12 }}>Visited on {formatShortDate(viewing.visitedDate)}</p>}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+              {viewing.images.map((url, i) => (
+                <img key={i} src={url} alt="" style={{ width: '100%', borderRadius: 12, objectFit: 'cover', display: 'block' }} />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmingPlace && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteId(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Delete this place?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>{confirmingPlace.flag} {confirmingPlace.name}</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { deletePlace(confirmingPlace.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

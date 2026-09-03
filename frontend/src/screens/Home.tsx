@@ -2,8 +2,24 @@ import { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
+import FadeImage from '../components/FadeImage';
 import { getDaysTogether, getDuration } from '../data';
-import type { FavCategory, FavPlace } from '../types';
+import type { FavCategory, FavPlace, StoryQuote } from '../types';
+
+// Picks a quote that looks random day to day (not a fixed 0,1,2... queue
+// order) while staying identical for both partners on the same calendar
+// day — a plain day-index scramble instead of storing which quote was
+// shown when. No quotes added yet (Us tab → "Câu nói mỗi ngày") → show
+// nothing, no hardcoded fallback line.
+function dailyQuote(quotes: StoryQuote[]): string | null {
+  if (quotes.length === 0) return null;
+  const dayIndex = Math.floor(Date.now() / 86400000);
+  let seed = dayIndex ^ 0x9E3779B9;
+  seed = Math.imul(seed ^ (seed >>> 16), 0x45d9f3b);
+  seed = Math.imul(seed ^ (seed >>> 16), 0x45d9f3b);
+  seed = seed ^ (seed >>> 16);
+  return quotes[Math.abs(seed) % quotes.length].text;
+}
 
 const MOODS_LIST = [
   { emoji: '🥰', label: 'Feeling loved' },
@@ -17,46 +33,43 @@ const MOODS_LIST = [
 ];
 
 const HUG_MESSAGES = [
-  '🫂 Ôm em thật chặt!',
-  '🌸 Gửi ôm ngọt ngào~',
-  '💕 Muốn ôm em lắm!',
-  '✨ Một cái ôm ấm áp!',
-  '🥰 Ôm ôm ôm!',
+  '🫂 Holding you so tight!',
+  '🌸 Sending a sweet hug~',
+  '💕 Missing your hugs so much!',
+  '✨ A warm hug for you!',
+  '🥰 Hug hug hug!',
 ];
 
 const THINKING_MESSAGES = [
-  '💭 Đang nghĩ đến em...',
-  '🌸 Nhớ em quá!',
-  '💕 Em đang ở đâu vậy?',
-  '✨ Tự nhiên nhớ em!',
-  '🥰 Em có đang nghĩ đến anh không?',
-  '💙 Nghĩ đến em cả ngày~',
+  '💭 Thinking of you...',
+  '🌸 Miss you so much!',
+  '💕 Where are you right now?',
+  '✨ Just thought of you out of nowhere!',
+  '🥰 Are you thinking of me too?',
+  '💙 Thinking of you all day~',
 ];
-
-function daysUntil(dateStr: string) {
-  const diff = new Date(dateStr).getTime() - new Date().setHours(0, 0, 0, 0);
-  return Math.ceil(diff / 86400000);
-}
 
 const MOOD_SCORE: Record<string, number> = {
   '😍': 5, '🥰': 5, '😊': 4, '😐': 3, '🥺': 2, '😭': 2, '😴': 2, '😤': 1,
 };
 
 export default function Home() {
-  const { state, navigate, setMood, currentUser, addCountdown, deleteCountdown, sendHug } = useApp();
+  const { state, navigate, setMood, currentUser, partnerProfile, sendHug } = useApp();
+  const partnerName = partnerProfile?.displayName;
   const relationshipStart = state.relationshipStart ? new Date(state.relationshipStart + 'T00:00:00') : null;
   const [days, setDays] = useState(relationshipStart ? getDaysTogether(relationshipStart) : 0);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
   const [picks, setPicks] = useState<Partial<Record<FavCategory, FavPlace>>>({});
   const [pickAnim, setPickAnim] = useState<Partial<Record<FavCategory, boolean>>>({});
   const [selectedFavCat, setSelectedFavCat] = useState<FavCategory>('');
-  const [showAddCountdown, setShowAddCountdown] = useState(false);
   const streak = state.streak;
+  const streakLitToday = state.streakLitToday;
+  const quote = dailyQuote(state.storyQuotes);
   const [hugAnim, setHugAnim] = useState(false);
   const [thinkAnim, setThinkAnim] = useState(false);
   const [vinylIdx, setVinylIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [playlistFilter, setPlaylistFilter] = useState<'all' | 'Alvin' | 'Paoi'>('all');
+  const [playlistFilter, setPlaylistFilter] = useState<string>('all');
   const audioRef = useRef<HTMLAudioElement>(null);
   const dur = relationshipStart ? getDuration(relationshipStart) : { years: 0, months: 0, days: 0 };
   const playlistPool = playlistFilter === 'all' ? state.playlist : state.playlist.filter(p => p.addedBy === playlistFilter);
@@ -81,7 +94,7 @@ export default function Home() {
     return () => clearInterval(t);
   }, [playlistPool.length, isPlaying, manualNav]);
 
-  // Switching the Alvin/Paoi/Tất cả filter swaps the underlying song list
+  // Switching the "who added it" filter swaps the underlying song list
   // out from under whatever index was showing — snap back to the start of
   // the new list instead of landing on an unrelated index, and hand control
   // back to auto-rotation.
@@ -173,9 +186,11 @@ export default function Home() {
 
   const moodChartData = last7.map(date => {
     const entry = state.moodHistory.find(e => e.date === date);
-    const alvinScore = entry?.Alvin ? (MOOD_SCORE[entry.Alvin.emoji] || 3) : null;
-    const paoiScore = entry?.Paoi ? (MOOD_SCORE[entry.Paoi.emoji] || 3) : null;
-    const label = new Date(date + 'T00:00:00').toLocaleDateString('vi-VN', { weekday: 'narrow' });
+    const myMood = entry?.moods[currentUser];
+    const partnerMood = partnerName ? entry?.moods[partnerName] : undefined;
+    const alvinScore = myMood ? (MOOD_SCORE[myMood.emoji] || 3) : null;
+    const paoiScore = partnerMood ? (MOOD_SCORE[partnerMood.emoji] || 3) : null;
+    const label = new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'narrow' });
     return { date, alvinScore, paoiScore, label };
   });
 
@@ -185,7 +200,7 @@ export default function Home() {
     <div style={{ paddingBottom: 32 }}>
       {/* Hero Counter */}
       <div style={{
-        background: 'linear-gradient(135deg, #FFF0F4 0%, #FFF8FA 50%, #FFF0F4 100%)',
+        background: 'linear-gradient(135deg, var(--pink-glow) 0%, var(--bg) 50%, var(--pink-glow) 100%)',
         borderRadius: 24, padding: '24px 20px', margin: '0 0 16px',
         textAlign: 'center', position: 'relative', overflow: 'hidden',
         border: '1px solid var(--border)',
@@ -194,7 +209,7 @@ export default function Home() {
           <Icon key={i} emoji={p} size={18} style={{ position: 'absolute', opacity: 0.2, top: `${20 + i * 30}%`, left: i % 2 === 0 ? '5%' : '88%', transform: `rotate(${i * 30}deg)` }} />
         ))}
         <p style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Together for</p>
-        <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 64, fontWeight: 400, color: 'var(--sakura-deep)', lineHeight: 1, marginBottom: 8 }}>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 68, fontWeight: 700, color: 'var(--sakura-deep)', lineHeight: 1, marginBottom: 8 }}>
           {days.toLocaleString()}
         </div>
         <p style={{ fontSize: 18, fontWeight: 600, color: 'var(--ink)', marginBottom: 4 }}>DAYS</p>
@@ -211,32 +226,32 @@ export default function Home() {
             </div>
           ) : (
             <button onClick={() => navigate('settings')} style={{ background: 'var(--white)', border: '1.5px dashed var(--sakura-accent)', borderRadius: 12, padding: '6px 14px', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Icon emoji="💕" size={14} /> Đặt ngày bắt đầu yêu
+              <Icon emoji="💕" size={14} /> Set your anniversary date
             </button>
           )}
           <div style={{ background: 'var(--white)', borderRadius: 12, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)' }}>
-            <Icon emoji="🔥" size={16} />
+            <Icon emoji="🔥" size={16} style={{ color: streakLitToday ? '#FF5A1F' : 'var(--ink-2)', fill: streakLitToday ? '#FF5A1F' : 'none', transition: 'color 0.3s, fill 0.3s' }} />
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)' }}>{streak} day streak</span>
           </div>
         </div>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontStyle: 'italic', color: 'var(--ink-2)', marginBottom: 14, fontSize: 15 }}>"Our little story continues."</p>
+        {quote && <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: 'var(--ink-2)', marginBottom: 14, fontSize: 15 }}>"{quote}"</p>}
 
         {/* Spinning Vinyl Disk */}
         {state.playlist.length > 0 && (
           <div>
-            {/* Alvin / Paoi / Tất cả — which pool of songs the widget draws from */}
+            {/* Mine / partner's / Tất cả — which pool of songs the widget draws from */}
             <div style={{ display: 'flex', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
               {[
-                { k: 'all', label: 'Tất cả' },
-                { k: 'Alvin', label: 'Alvin' },
-                { k: 'Paoi', label: 'Paoi' },
+                { k: 'all', label: 'All' },
+                { k: currentUser, label: currentUser },
+                ...(partnerName ? [{ k: partnerName, label: partnerName }] : []),
               ].map(f => (
-                <button key={f.k} onClick={() => setPlaylistFilter(f.k as typeof playlistFilter)} style={{ padding: '3px 10px', borderRadius: 99, border: 'none', background: playlistFilter === f.k ? 'var(--sakura-accent)' : 'rgba(255,255,255,0.7)', color: playlistFilter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>{f.label}</button>
+                <button key={f.k} onClick={() => setPlaylistFilter(f.k)} style={{ padding: '3px 10px', borderRadius: 99, border: 'none', background: playlistFilter === f.k ? 'var(--sakura-accent)' : 'var(--glass)', color: playlistFilter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>{f.label}</button>
               ))}
             </div>
 
             {currentSong ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '10px 20px', border: isPlaying ? '1px solid rgba(201,95,124,0.5)' : '1px solid rgba(243,166,185,0.3)', boxShadow: isPlaying ? '0 0 0 4px rgba(243,166,185,0.18)' : 'none', transition: 'box-shadow 0.3s, border-color 0.3s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--glass)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '10px 20px', border: isPlaying ? '1px solid rgba(201,95,124,0.5)' : '1px solid rgba(243,166,185,0.3)', boxShadow: isPlaying ? '0 0 0 4px rgba(243,166,185,0.18)' : 'none', transition: 'box-shadow 0.3s, border-color 0.3s' }}>
                 <style>{`
                   @keyframes spin-vinyl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                   @keyframes vinyl-glow { 0%, 100% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 0 rgba(243,166,185,0.5); } 50% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 8px rgba(243,166,185,0); } }
@@ -269,7 +284,7 @@ export default function Home() {
                 <button
                   onClick={nextSong}
                   disabled={playlistPool.length < 2}
-                  title="Bài tiếp theo"
+                  title="Next song"
                   style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'var(--white)', color: 'var(--sakura-deep)', cursor: playlistPool.length < 2 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: playlistPool.length < 2 ? 0.4 : 1 }}
                 >
                   <Icon emoji="⏭️" size={15} />
@@ -277,14 +292,14 @@ export default function Home() {
                 <button
                   onClick={() => togglePlay(currentSong.previewUrl)}
                   disabled={!currentSong.previewUrl}
-                  title={currentSong.previewUrl ? 'Nghe thử 30s' : 'Không có bản nghe thử'}
+                  title={currentSong.previewUrl ? '30s preview' : 'No preview available'}
                   style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: currentSong.previewUrl ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', cursor: currentSong.previewUrl ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
                   <Icon emoji={isPlaying ? '⏸️' : '▶️'} size={16} style={{ color: currentSong.previewUrl ? 'white' : 'var(--ink-2)' }} />
                 </button>
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '10px', color: 'var(--ink-2)', fontSize: 12 }}>Chưa có bài nào trong danh sách này.</div>
+              <div style={{ textAlign: 'center', padding: '10px', color: 'var(--ink-2)', fontSize: 12 }}>No songs in this list yet.</div>
             )}
           </div>
         )}
@@ -293,10 +308,10 @@ export default function Home() {
       {/* Couple Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
         {[
-          { emoji: '🌸', value: state.memories.length, label: 'Kỷ niệm' },
-          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length, label: 'Thư tình' },
+          { emoji: '🌸', value: state.memories.length, label: 'Memories' },
+          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length, label: 'Love notes' },
           { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist' },
-          { emoji: '🌿', value: state.gratitude.length, label: 'Biết ơn' },
+          { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude' },
         ].map(s => (
           <div key={s.label} className="card" style={{ padding: '12px 6px', textAlign: 'center' }}>
             <p style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={s.emoji} size={20} /></p>
@@ -311,34 +326,34 @@ export default function Home() {
         <button
           onClick={handleHug}
           style={{
-            background: hugAnim ? 'linear-gradient(135deg, #E67F9A, #C9507C)' : 'linear-gradient(135deg, #FFF0F4, #FFE4EC)',
-            border: '1.5px solid #F3A6B9', borderRadius: 18, padding: '16px 12px',
+            background: hugAnim ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'linear-gradient(135deg, var(--pink-glow), var(--sakura-light))',
+            border: '1.5px solid var(--sakura)', borderRadius: 18, padding: '16px 12px',
             cursor: 'pointer', transition: 'all 0.3s',
             transform: hugAnim ? 'scale(0.96)' : 'scale(1)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           }}
         >
           <Icon emoji="🫂" size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: hugAnim ? 'scale(1.3)' : 'scale(1)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : 'var(--sakura-deep)' }}>Gửi ôm</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : 'var(--sakura-deep)' }}>Send a hug</span>
           <span style={{ fontSize: 11, color: hugAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
-            {currentUser === 'Alvin' ? <>cho Paoi <Icon emoji="💗" size={11} /></> : <>cho Alvin <Icon emoji="💙" size={11} /></>}
+            to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
           </span>
         </button>
 
         <button
           onClick={handleThinking}
           style={{
-            background: thinkAnim ? 'linear-gradient(135deg, #8B6FD4, #6B4FB4)' : 'linear-gradient(135deg, #F5F0FF, #EDE6FF)',
-            border: '1.5px solid #C4B0F0', borderRadius: 18, padding: '16px 12px',
+            background: thinkAnim ? 'linear-gradient(135deg, #8B6FD4, #6B4FB4)' : 'linear-gradient(135deg, var(--lavender-glow), var(--lavender-light))',
+            border: '1.5px solid var(--lavender)', borderRadius: 18, padding: '16px 12px',
             cursor: 'pointer', transition: 'all 0.3s',
             transform: thinkAnim ? 'scale(0.96)' : 'scale(1)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           }}
         >
           <Icon emoji="💭" size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: thinkAnim ? 'scale(1.3)' : 'scale(1)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : '#8B6FD4' }}>Đang nghĩ đến em</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : 'var(--lavender)' }}>Thinking of you</span>
           <span style={{ fontSize: 11, color: thinkAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
-            {currentUser === 'Alvin' ? <>nhắn Paoi <Icon emoji="💗" size={11} /></> : <>nhắn Alvin <Icon emoji="💙" size={11} /></>}
+            to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
           </span>
         </button>
       </div>
@@ -351,7 +366,7 @@ export default function Home() {
         const animating = cat ? pickAnim[cat.id] : false;
         return (
           <div className="card" style={{ padding: '16px 18px', marginBottom: 16 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>Hôm nay của mình <Icon emoji="🎲" size={14} /></p>
+            <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>Today's pick <Icon emoji="🎲" size={14} /></p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
               {state.favCategories.map(c => (
                 <button key={c.id} onClick={() => setSelectedFavCat(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 99, border: 'none', background: selectedFavCat === c.id ? c.color : 'var(--bg)', color: selectedFavCat === c.id ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}>
@@ -366,9 +381,9 @@ export default function Home() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Icon emoji={cat.emoji} size={20} />
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2 }}>{cat.label} hôm nay?</p>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2 }}>{cat.label} today?</p>
                       {list.length === 0 && (
-                        <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>Chưa có địa điểm nào</p>
+                        <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>No spots added yet</p>
                       )}
                     </div>
                   </div>
@@ -377,14 +392,14 @@ export default function Home() {
                       onClick={() => rollPick(cat.id)}
                       style={{ background: `${cat.color}20`, border: `1.5px solid ${cat.color}40`, borderRadius: 10, padding: '6px 12px', color: cat.color, fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}
                     >
-                      {picked ? <Icon emoji="🔀" size={14} /> : <><Icon emoji="✨" size={14} /> Gợi ý</>}
+                      {picked ? <Icon emoji="🔀" size={14} /> : <><Icon emoji="✨" size={14} /> Suggest</>}
                     </button>
                   )}
                 </div>
                 {picked && (
                   <div style={{ marginTop: 8, background: `${cat.color}10`, border: `1px solid ${cat.color}25`, borderRadius: 10, padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10, opacity: animating ? 0 : 1, transition: 'opacity 0.2s' }}>
                     {picked.image
-                      ? <img src={picked.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'cover', flexShrink: 0 }} />
+                      ? <FadeImage src={picked.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }} />
                       : <div style={{ width: 44, height: 44, borderRadius: 10, background: `${cat.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={cat.emoji} size={20} /></div>}
                     <div style={{ minWidth: 0 }}>
                       <p style={{ fontSize: 14, fontWeight: 700, color: cat.color }}>{picked.name}</p>
@@ -402,12 +417,12 @@ export default function Home() {
       {lastYearMems.length > 0 && (
         <div style={{ marginBottom: 16, background: 'linear-gradient(135deg, #FFF8E6, #FFFAEF)', border: '1px solid #F5E6B0', borderRadius: 20, padding: '16px 18px', overflow: 'hidden', position: 'relative' }}>
           <Icon emoji="📅" size={48} style={{ position: 'absolute', top: -8, right: -8, opacity: 0.08 }} />
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#B8860B', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>Ngày này năm ngoái <Icon emoji="✨" size={14} /></p>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#B8860B', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>This day last year <Icon emoji="✨" size={14} /></p>
           <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 2 }}>
             {lastYearMems.map(m => (
               <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ flexShrink: 0, width: 120, cursor: 'pointer' }}>
                 <div style={{ width: 120, height: 100, borderRadius: 12, overflow: 'hidden', marginBottom: 6, background: 'var(--sakura-light)' }}>
-                  <img src={m.image} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <FadeImage src={m.image} alt={m.title} style={{ width: '100%', height: '100%' }} />
                 </div>
                 <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{m.title}</p>
                 <p style={{ fontSize: 11, color: '#B8860B', marginTop: 2 }}>{m.date}</p>
@@ -417,97 +432,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* Countdowns */}
-      {state.countdowns.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Đếm ngược</p>
-            <button onClick={() => setShowAddCountdown(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>+ Thêm</button>
-          </div>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-            {state.countdowns.map(cd => {
-              const d = daysUntil(cd.date);
-              return (
-                <div key={cd.id} style={{ flexShrink: 0, width: 110, background: `${cd.color}15`, border: `1.5px solid ${cd.color}30`, borderRadius: 16, padding: '14px 12px', textAlign: 'center', position: 'relative' }}>
-                  <button onClick={() => deleteCountdown(cd.id)} style={{ position: 'absolute', top: 4, right: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', opacity: 0.4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={10} /></button>
-                  <div style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={cd.emoji} size={22} /></div>
-                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: cd.color, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{d <= 0 ? <Icon emoji="🎉" size={26} /> : d}</div>
-                  {d > 0 && <div style={{ fontSize: 9, color: cd.color, fontWeight: 700, marginBottom: 4 }}>NGÀY NỮA</div>}
-                  <div style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 600, lineHeight: 1.3 }}>{cd.title}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      {state.countdowns.length === 0 && (
-        <div style={{ marginBottom: 16, textAlign: 'center' }}>
-          <button onClick={() => setShowAddCountdown(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: '1.5px dashed var(--sakura)', borderRadius: 14, padding: '10px 18px', cursor: 'pointer', fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="⏳" size={14} /> Thêm đếm ngược</button>
-        </div>
-      )}
-
-      {/* Today's Mood */}
-      <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Hôm nay</p>
-          <button onClick={() => setShowMoodPicker(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>Cập nhật</button>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-          {(['Alvin', 'Paoi'] as const).map(u => (
-            <div key={u} style={{ background: 'var(--bg)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Avatar user={u} size={36} />
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{u}</p>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {state.moods[u] ? <><Icon emoji={state.moods[u]!.emoji} size={14} /> {state.moods[u]!.label}</> : '— chưa cập nhật'}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 7-day mood chart */}
-        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Cảm xúc 7 ngày qua</p>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
-          {moodChartData.map(d => (
-            <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-              <div style={{ width: '100%', display: 'flex', gap: 1, alignItems: 'flex-end', height: 44 }}>
-                <div style={{ flex: 1, background: '#4A8AE8', borderRadius: '2px 2px 0 0', height: d.alvinScore ? `${(d.alvinScore / 5) * 100}%` : '8%', opacity: d.alvinScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
-                <div style={{ flex: 1, background: '#E67F9A', borderRadius: '2px 2px 0 0', height: d.paoiScore ? `${(d.paoiScore / 5) * 100}%` : '8%', opacity: d.paoiScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
-              </div>
-              <p style={{ fontSize: 8, color: 'var(--ink-2)', textAlign: 'center' }}>{d.label}</p>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A8AE8' }} /><span style={{ fontSize: 10, color: 'var(--ink-2)' }}>Alvin</span></div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#E67F9A' }} /><span style={{ fontSize: 10, color: 'var(--ink-2)' }}>Paoi</span></div>
-        </div>
-      </div>
-
-      {/* Recent Memories */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Memories gần đây</p>
-          <button onClick={() => navigate('memories')} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Xem tất cả</button>
-        </div>
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
-          {recentMemories.map(m => (
-            <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ flexShrink: 0, width: 140, cursor: 'pointer' }}>
-              <div style={{ width: 140, height: 160, borderRadius: 16, overflow: 'hidden', marginBottom: 8, background: 'var(--sakura-light)' }}>
-                <img src={m.image} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{m.title}</p>
-              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{m.date}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Upcoming */}
       {upcoming.length > 0 && (
         <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12 }}>Sắp tới</p>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12 }}>Upcoming</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {upcoming.map(ev => {
               const d = new Date(ev.date);
@@ -519,7 +447,7 @@ export default function Home() {
                 >
                   <div style={{ background: 'var(--sakura-light)', borderRadius: 10, padding: '6px 10px', textAlign: 'center', minWidth: 48 }}>
                     <div style={{ fontSize: 11, color: 'var(--sakura-deep)', fontWeight: 700 }}>{mon.split(' ')[0].toUpperCase()}</div>
-                    <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--sakura-deep)', lineHeight: 1 }}>{mon.split(' ')[1]}</div>
+                    <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--sakura-deep)', lineHeight: 1 }}>{mon.split(' ')[1]}</div>
                   </div>
                   <div>
                     <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{ev.title}</p>
@@ -532,6 +460,64 @@ export default function Home() {
         </div>
       )}
 
+      {/* Today's Mood */}
+      <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Today</p>
+          <button onClick={() => setShowMoodPicker(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>Update</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          {[currentUser, ...(partnerName ? [partnerName] : [])].map(u => (
+            <div key={u} style={{ background: 'var(--bg)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar user={u} size={36} />
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{u}</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {state.moods[u] ? <><Icon emoji={state.moods[u]!.emoji} size={14} /> {state.moods[u]!.label}</> : '— not set yet'}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 7-day mood chart */}
+        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Mood over the last 7 days</p>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
+          {moodChartData.map(d => (
+            <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <div style={{ width: '100%', display: 'flex', gap: 1, alignItems: 'flex-end', height: 44 }}>
+                <div style={{ flex: 1, background: '#4A8AE8', borderRadius: '2px 2px 0 0', height: d.alvinScore ? `${(d.alvinScore / 5) * 100}%` : '8%', opacity: d.alvinScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
+                <div style={{ flex: 1, background: 'var(--sakura-accent)', borderRadius: '2px 2px 0 0', height: d.paoiScore ? `${(d.paoiScore / 5) * 100}%` : '8%', opacity: d.paoiScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
+              </div>
+              <p style={{ fontSize: 8, color: 'var(--ink-2)', textAlign: 'center' }}>{d.label}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A8AE8' }} /><span style={{ fontSize: 10, color: 'var(--ink-2)' }}>{currentUser}</span></div>
+          {partnerName && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sakura-accent)' }} /><span style={{ fontSize: 10, color: 'var(--ink-2)' }}>{partnerName}</span></div>}
+        </div>
+      </div>
+
+      {/* Recent Memories */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Recent Memories</p>
+          <button onClick={() => navigate('memories')} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>View all</button>
+        </div>
+        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
+          {recentMemories.map(m => (
+            <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ flexShrink: 0, width: 140, cursor: 'pointer' }}>
+              <div style={{ width: 140, height: 160, borderRadius: 16, overflow: 'hidden', marginBottom: 8, background: 'var(--sakura-light)' }}>
+                <FadeImage src={m.image} alt={m.title} style={{ width: '100%', height: '100%' }} />
+              </div>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{m.title}</p>
+              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{m.date}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Mood picker sheet */}
       {showMoodPicker && (
         <>
@@ -539,8 +525,8 @@ export default function Home() {
           <div className="bottom-sheet" style={{ zIndex: 51, paddingBottom: 32 }}>
             <div className="sheet-handle" />
             <div style={{ padding: '0 20px 16px' }}>
-              <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>Hôm nay cảm thấy thế nào?</p>
-              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Đang cập nhật cho <strong>{currentUser}</strong></p>
+              <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', marginBottom: 4 }}>How are you feeling today?</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Updating for <strong>{currentUser}</strong></p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
                 {MOODS_LIST.map(m => (
                   <button key={m.emoji} onClick={() => { setMood(currentUser, m); setShowMoodPicker(false); }}
@@ -555,39 +541,6 @@ export default function Home() {
         </>
       )}
 
-      {/* Add Countdown modal */}
-      {showAddCountdown && <AddCountdownModal onClose={() => setShowAddCountdown(false)} onAdd={addCountdown} />}
-    </div>
-  );
-}
-
-function AddCountdownModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: { title: string; emoji: string; date: string; color: string }) => void }) {
-  const [title, setTitle] = useState('');
-  const [emoji, setEmoji] = useState('🎉');
-  const [date, setDate] = useState('');
-  const [color, setColor] = useState('#E67F9A');
-  const COLORS = ['#E67F9A', '#8B6FD4', '#4A8AE8', '#5AC26A', '#E8844A', '#C48A52'];
-  const EMOJIS = ['🎉', '✈️', '🎂', '💕', '🎆', '🏖️', '🌸', '🎓', '🏡', '💍'];
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out' }}>
-      <div style={{ background: 'var(--white)', borderRadius: '24px 24px 0 0', padding: '24px 20px 40px', width: '100%', maxWidth: 430, animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)' }}>Thêm đếm ngược</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-          {EMOJIS.map(e => <button key={e} onClick={() => setEmoji(e)} style={{ width: 36, height: 36, border: emoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: emoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={18} /></button>)}
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-          {COLORS.map(c => <button key={c} onClick={() => setColor(c)} style={{ width: 28, height: 28, borderRadius: '50%', background: c, border: color === c ? '3px solid var(--ink)' : 'none', cursor: 'pointer' }} />)}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <input className="input-field" placeholder="Tên sự kiện" value={title} onChange={e => setTitle(e.target.value)} />
-          <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} />
-          <button onClick={() => { if (title && date) { onAdd({ title, emoji, date, color }); onClose(); } }} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Thêm</button>
-        </div>
-      </div>
     </div>
   );
 }

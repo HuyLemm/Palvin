@@ -1,46 +1,17 @@
 import { supabase } from './lib/supabaseClient';
 import type { FavCategory, FavCategoryItem, FavPlace } from './types';
 
-export interface Favorites {
-  song: string;
-  food: string;
-  movie: string;
-  cafe: string;
-  place: string;
-}
-
-const FAV_COLUMNS: Record<keyof Favorites, string> = {
-  song: 'favorite_song',
-  food: 'favorite_food',
-  movie: 'favorite_movie',
-  cafe: 'favorite_cafe',
-  place: 'favorite_place',
-};
-
-export async function fetchCoupleSettings(coupleId: string): Promise<{ favorites: Favorites; darkMode: boolean; relationshipStart: string | null } | null> {
+export async function fetchCoupleSettings(coupleId: string): Promise<{ darkMode: boolean; relationshipStart: string | null } | null> {
   const { data, error } = await supabase
     .from('couples')
-    .select('favorite_song, favorite_food, favorite_movie, favorite_cafe, favorite_place, dark_mode, relationship_start')
+    .select('dark_mode, relationship_start')
     .eq('id', coupleId)
     .maybeSingle();
   if (error || !data) return null;
   return {
-    favorites: {
-      song: data.favorite_song ?? '',
-      food: data.favorite_food ?? '',
-      movie: data.favorite_movie ?? '',
-      cafe: data.favorite_cafe ?? '',
-      place: data.favorite_place ?? '',
-    },
     darkMode: !!data.dark_mode,
     relationshipStart: data.relationship_start ?? null,
   };
-}
-
-export async function updateFavoriteField(coupleId: string, key: string, value: string) {
-  const column = FAV_COLUMNS[key as keyof Favorites];
-  if (!column) return { error: new Error(`Unknown favorite key: ${key}`) };
-  return supabase.from('couples').update({ [column]: value }).eq('id', coupleId);
 }
 
 export async function updateDarkMode(coupleId: string, darkMode: boolean) {
@@ -56,7 +27,7 @@ export async function updateRelationshipStart(coupleId: string, date: string) {
 // they're just regular rows, editable/deletable like any category the user
 // adds themselves.
 const DEFAULT_CATEGORIES: { label: string; emoji: string; color: string }[] = [
-  { label: 'Ăn uống', emoji: '🍜', color: '#E8844A' },
+  { label: 'Food',    emoji: '🍜', color: '#E8844A' },
   { label: 'Cafe',    emoji: '☕', color: '#C48A52' },
   { label: 'Bida',    emoji: '🎱', color: '#4A8AE8' },
   { label: 'Gaming',  emoji: '🎮', color: '#8B6FD4' },

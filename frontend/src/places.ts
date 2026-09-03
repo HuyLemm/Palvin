@@ -5,7 +5,8 @@ interface PlaceRow {
   id: string;
   name: string;
   flag: string | null;
-  image_url: string;
+  images: string[] | null;
+  visited_date: string | null;
   place_memories: { memory_id: string }[];
 }
 
@@ -14,7 +15,8 @@ function rowToPlace(row: PlaceRow): Place {
     id: row.id,
     name: row.name,
     flag: row.flag ?? '',
-    image: row.image_url,
+    images: row.images ?? [],
+    visitedDate: row.visited_date ?? undefined,
     memoryIds: row.place_memories.map(pm => pm.memory_id),
   };
 }
@@ -22,13 +24,17 @@ function rowToPlace(row: PlaceRow): Place {
 export async function fetchPlaces(): Promise<Place[]> {
   const { data, error } = await supabase
     .from('places')
-    .select('id, name, flag, image_url, place_memories(memory_id)');
+    .select('id, name, flag, images, visited_date, place_memories(memory_id)');
   if (error || !data) return [];
   return (data as PlaceRow[]).map(rowToPlace);
 }
 
-export async function createPlace(p: { name: string; flag?: string; image: string }) {
-  return supabase.from('places').insert({ name: p.name, flag: p.flag || null, image_url: p.image });
+export async function createPlace(p: { name: string; flag?: string; images: string[]; visitedDate?: string }) {
+  return supabase.from('places').insert({ name: p.name, flag: p.flag || null, images: p.images, visited_date: p.visitedDate || null });
+}
+
+export async function updatePlaceRow(id: string, p: { name: string; flag?: string; images: string[]; visitedDate?: string }) {
+  return supabase.from('places').update({ name: p.name, flag: p.flag || null, images: p.images, visited_date: p.visitedDate || null }).eq('id', id);
 }
 
 export async function deletePlaceRow(id: string) {

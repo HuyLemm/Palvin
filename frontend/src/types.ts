@@ -1,4 +1,7 @@
-export type User = 'Alvin' | 'Paoi';
+// A person's display name (whatever they typed at signup, or later renamed
+// to in Settings) — not a fixed pair of literal names. Kept as a named alias
+// since it's threaded through a lot of signatures (author, from, to, ...).
+export type User = string;
 
 export interface Comment {
   id: string;
@@ -109,8 +112,8 @@ export interface Goal {
   target?: number;
   current?: number;
   deadline?: string;
-  // Whose dream this is — 'both' for shared goals, or one person's own.
-  owner: 'Alvin' | 'Paoi' | 'both';
+  // Whose dream this is — 'both' for shared goals, or one person's own (a display name).
+  owner: string;
 }
 
 export interface AppNotification {
@@ -125,6 +128,7 @@ export interface AppNotification {
   targetId?: string;
   previewImageUrl?: string;
   previewText?: string;
+  category?: string;
 }
 
 export interface Mood {
@@ -136,7 +140,8 @@ export interface Place {
   id: string;
   name: string;
   flag: string;
-  image: string;
+  images: string[];
+  visitedDate?: string;
   memoryIds: string[];
 }
 
@@ -185,7 +190,7 @@ export interface Trip {
 export interface Capsule {
   id: string;
   from: User;
-  to: 'Alvin' | 'Paoi' | 'both';
+  to: string; // a display name, or 'both'
   title: string;
   occasion?: string;
   message: string;
@@ -194,12 +199,27 @@ export interface Capsule {
   createdDate: string;
 }
 
-export interface Countdown {
+export interface CycleLog {
   id: string;
-  title: string;
-  emoji: string;
+  startDate: string;
+  endDate?: string;
+}
+
+export interface StoryQuote {
+  id: string;
+  text: string;
+}
+
+export interface Debt {
+  id: string;
+  debtorName: string;
+  amount: number;
+  note?: string;
   date: string;
-  color: string;
+  dueDate?: string;
+  paid: boolean;
+  paidDate?: string;
+  createdBy: User;
 }
 
 export interface PlaylistItem {
@@ -217,8 +237,7 @@ export interface PlaylistItem {
 
 export interface MoodEntry {
   date: string;
-  Alvin?: Mood;
-  Paoi?: Mood;
+  moods: Record<string, Mood>;
 }
 
 export interface WishItem {
@@ -306,6 +325,19 @@ export interface DateIdeaDraw {
   text: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  sender: User;
+  mine: boolean;
+  text: string | null;
+  imageUrl: string | null;
+  audioUrl: string | null;
+  audioDuration: number | null;
+  createdAt: string;
+  read: boolean;
+}
+
 export interface AppState {
   posts: Post[];
   memories: Memory[];
@@ -317,14 +349,17 @@ export interface AppState {
   loveLetters: LoveLetter[];
   events: CalendarEvent[];
   goals: Goal[];
+  cycleLogs: CycleLog[];
+  storyQuotes: StoryQuote[];
+  debts: Debt[];
   notifications: AppNotification[];
-  moods: { Alvin: Mood | null; Paoi: Mood | null };
+  chatMessages: ChatMessage[];
+  unreadChatCount: number;
+  moods: Record<string, Mood | null>;
   moodHistory: MoodEntry[];
-  favorites: { song: string; food: string; movie: string; cafe: string; place: string };
   places: Place[];
   trips: Trip[];
   capsules: Capsule[];
-  countdowns: Countdown[];
   playlist: PlaylistItem[];
   wishes: WishItem[];
   dateIdeas: DateIdea[];
@@ -338,4 +373,6 @@ export interface AppState {
   favCategories: FavCategoryItem[];
   relationshipStart: string | null;
   streak: number;
+  // True once both partners have already qualified today — see streak.ts.
+  streakLitToday: boolean;
 }

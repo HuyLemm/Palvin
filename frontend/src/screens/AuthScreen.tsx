@@ -53,16 +53,16 @@ function Petals() {
           border: 1.5px solid #F0DDE4;
           border-radius: 14px;
           background: rgba(255,255,255,0.85);
-          font-family: 'Outfit', sans-serif;
+          font-family: 'Nunito', sans-serif;
           font-size: 15px;
-          color: #332A2D;
+          color: var(--ink);
           outline: none;
           transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
           -webkit-appearance: none;
         }
         .auth-input::placeholder { color: #C4ADB4; }
         .auth-input:focus {
-          border-color: #E67F9A;
+          border-color: var(--sakura-accent);
           box-shadow: 0 0 0 3px rgba(230,127,154,0.15);
           background: #fff;
         }
@@ -71,9 +71,9 @@ function Petals() {
           padding: 15px;
           border: none;
           border-radius: 16px;
-          background: linear-gradient(135deg, #F3A6B9 0%, #C95F7C 100%);
+          background: linear-gradient(135deg, var(--sakura) 0%, var(--sakura-deep) 100%);
           color: white;
-          font-family: 'Outfit', sans-serif;
+          font-family: 'Nunito', sans-serif;
           font-size: 15px;
           font-weight: 600;
           cursor: pointer;
@@ -89,8 +89,8 @@ function Petals() {
           border: 1.5px solid #F0DDE4;
           border-radius: 16px;
           background: rgba(255,255,255,0.6);
-          color: #C95F7C;
-          font-family: 'Outfit', sans-serif;
+          color: var(--sakura-deep);
+          font-family: 'Nunito', sans-serif;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
@@ -165,7 +165,7 @@ function Field({ label, placeholder, value, onChange, type = 'text', delay = '0s
         display: 'block',
         fontSize: 11,
         fontWeight: 700,
-        color: '#C95F7C',
+        color: 'var(--sakura-deep)',
         textTransform: 'uppercase',
         letterSpacing: '0.08em',
         marginBottom: 7,
@@ -188,13 +188,13 @@ function BackBtn({ onClick }: { onClick: () => void }) {
     <button onClick={onClick} style={{
       background: 'none', border: 'none', padding: '4px 0 4px',
       display: 'inline-flex', alignItems: 'center', gap: 6,
-      color: '#C95F7C', fontFamily: "'Outfit', sans-serif",
+      color: 'var(--sakura-deep)', fontFamily: "'Nunito', sans-serif",
       fontWeight: 600, fontSize: 14, cursor: 'pointer', marginBottom: 24,
     }}>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
         <path d="M19 12H5M12 5l-7 7 7 7"/>
       </svg>
-      Quay lại
+      Back
     </button>
   );
 }
@@ -219,10 +219,10 @@ export default function AuthScreen() {
 
   async function handleRegister() {
     setError('');
-    if (!email.trim() || !email.includes('@')) return setError('Nhập email hợp lệ.');
-    if (!name.trim()) return setError('Nhập tên của bạn.');
-    if (password.length < 6) return setError('Mật khẩu tối thiểu 6 ký tự.');
-    if (password !== confirmPass) return setError('Mật khẩu không khớp.');
+    if (!email.trim() || !email.includes('@')) return setError('Enter a valid email.');
+    if (!name.trim()) return setError('Enter your name.');
+    if (password.length < 6) return setError('Password must be at least 6 characters.');
+    if (password !== confirmPass) return setError("Passwords don't match.");
     setLoading(true);
     const res = await register(email.trim(), password, name.trim());
     setLoading(false);
@@ -232,7 +232,7 @@ export default function AuthScreen() {
 
   async function handleLogin() {
     setError('');
-    if (!loginUsername.trim() || !password) return setError('Vui lòng điền đầy đủ.');
+    if (!loginUsername.trim() || !password) return setError('Please fill in all fields.');
     setLoading(true);
     const res = await login(loginUsername.trim(), password);
     setLoading(false);
@@ -248,16 +248,16 @@ export default function AuthScreen() {
         <div className="auth-slide" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 20px 100px', justifyContent: 'center' }}>
           <div style={{ textAlign: 'center', marginBottom: 28 }}>
             <div className="heart-beat" style={{ lineHeight: 1, marginBottom: 16, display: 'flex', justifyContent: 'center' }}><Icon emoji="📧" size={48} /></div>
-            <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, color: '#332A2D', marginBottom: 10 }}>
-              Kiểm tra email của bạn
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', marginBottom: 10 }}>
+              Check your email
             </p>
-            <p style={{ fontSize: 13, color: '#8C7A80', lineHeight: 1.7, maxWidth: 280, margin: '0 auto' }}>
-              Chúng mình đã gửi link xác nhận tới <strong>{email}</strong>. Bấm vào link đó để hoàn tất đăng ký — app sẽ tự đăng nhập ngay sau đó.
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.7, maxWidth: 280, margin: '0 auto' }}>
+              We've sent a confirmation link to <strong>{email}</strong>. Tap it to finish signing up — you'll be logged in automatically right after.
             </p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button className="btn-ghost" onClick={() => { setFlow('welcome'); setError(''); }}>
-              Về trang chính
+              Back to home
             </button>
           </div>
         </div>
@@ -274,24 +274,24 @@ export default function AuthScreen() {
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ marginBottom: 28 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: '#332A2D', marginBottom: 6 }}>
-                Tạo tài khoản
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 27, color: 'var(--ink)', marginBottom: 6 }}>
+                Create account
               </p>
-              <p style={{ fontSize: 13, color: '#8C7A80' }}>Điền thông tin để bắt đầu hành trình cùng nhau.</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Fill in your details to start your journey together.</p>
             </div>
 
             <Card>
-              <Field label="Email" placeholder="ban@email.com" value={email} onChange={v => { setEmail(v); setError(''); }} type="email" delay="0.03s" />
-              <Field label="Tên đăng nhập" placeholder="Alvin hoặc Paoi..." value={name} onChange={v => { setName(v); setError(''); }} delay="0.06s" />
-              <Field label="Mật khẩu" placeholder="Tối thiểu 6 ký tự" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
-              <Field label="Nhập lại mật khẩu" placeholder="Xác nhận mật khẩu" value={confirmPass} onChange={v => { setConfirmPass(v); setError(''); }} type="password" delay="0.15s" />
+              <Field label="Email" placeholder="you@email.com" value={email} onChange={v => { setEmail(v); setError(''); }} type="email" delay="0.03s" />
+              <Field label="Username" placeholder="Your username" value={name} onChange={v => { setName(v); setError(''); }} delay="0.06s" />
+              <Field label="Password" placeholder="At least 6 characters" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
+              <Field label="Confirm password" placeholder="Confirm your password" value={confirmPass} onChange={v => { setConfirmPass(v); setError(''); }} type="password" delay="0.15s" />
 
               {error && <ErrorBox message={error} />}
             </Card>
 
             <div style={{ marginTop: 20 }}>
               <button className="btn-sakura" onClick={handleRegister} disabled={loading}>
-                {loading ? 'Đang xử lý...' : 'Đăng ký'}
+                {loading ? 'Processing...' : 'Sign up'}
               </button>
             </div>
           </div>
@@ -309,25 +309,25 @@ export default function AuthScreen() {
 
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
             <div style={{ marginBottom: 28 }}>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: '#332A2D', marginBottom: 6 }}>
-                Chào mừng trở lại
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 27, color: 'var(--ink)', marginBottom: 6 }}>
+                Welcome back
               </p>
-              <p style={{ fontSize: 13, color: '#8C7A80', display: 'flex', alignItems: 'center', gap: 6 }}>Chúng mình nhớ bạn. <Icon emoji="🌸" size={13} /></p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 6 }}>We've missed you. <Icon emoji="🌸" size={13} /></p>
             </div>
 
             <Card>
-              <Field label="Tên đăng nhập" placeholder="Alvin hoặc Paoi..." value={loginUsername} onChange={v => { setLoginUsername(v); setError(''); }} delay="0.05s" />
-              <Field label="Mật khẩu" placeholder="Mật khẩu" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
+              <Field label="Username" placeholder="Your username" value={loginUsername} onChange={v => { setLoginUsername(v); setError(''); }} delay="0.05s" />
+              <Field label="Password" placeholder="Password" value={password} onChange={v => { setPassword(v); setError(''); }} type="password" delay="0.1s" />
 
               {error && <ErrorBox message={error} />}
             </Card>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
               <button className="btn-sakura" onClick={handleLogin} disabled={loading}>
-                {loading ? 'Đang xử lý...' : 'Đăng nhập'}
+                {loading ? 'Processing...' : 'Log in'}
               </button>
               <button className="btn-ghost" onClick={() => { setFlow('register'); setError(''); }}>
-                Chưa có tài khoản? Đăng ký
+                Don't have an account? Sign up
               </button>
             </div>
           </div>
@@ -346,7 +346,7 @@ export default function AuthScreen() {
           {/* Outer glow ring */}
           <div style={{
             width: 100, height: 100, borderRadius: 30,
-            background: 'linear-gradient(135deg, #F9C4D3, #F3A6B9, #C95F7C)',
+            background: 'linear-gradient(135deg, #F9C4D3, var(--sakura), var(--sakura-deep))',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginBottom: 24,
             position: 'relative',
@@ -357,14 +357,14 @@ export default function AuthScreen() {
               borderRadius: '24px 24px 50% 50%',
               background: 'rgba(255,255,255,0.25)',
             }} />
-            <span style={{ fontFamily: "'DM Serif Display', serif", fontSize: 44, color: 'white', lineHeight: 1, position: 'relative', zIndex: 1 }}>P</span>
+            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 47, color: 'white', lineHeight: 1, position: 'relative', zIndex: 1 }}>P</span>
           </div>
 
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 36, color: '#332A2D', letterSpacing: '0.04em', marginBottom: 8 }}>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 38, color: 'var(--ink)', letterSpacing: '0.04em', marginBottom: 8 }}>
             PALVIN
           </p>
-          <p style={{ fontSize: 14, color: '#8C7A80', letterSpacing: '0.01em', lineHeight: 1.6, marginBottom: 8 }}>
-            Không gian riêng của hai mình
+          <p style={{ fontSize: 14, color: 'var(--ink-2)', letterSpacing: '0.01em', lineHeight: 1.6, marginBottom: 8 }}>
+            Your own little space, just for two
           </p>
           <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginTop: 4 }}>
             {['🌸', '💕', '🌸'].map((e, i) => (
@@ -378,16 +378,16 @@ export default function AuthScreen() {
           <Card style={{ padding: '24px 22px', marginBottom: 16 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button className="btn-sakura" onClick={() => { setFlow('login'); setError(''); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Icon emoji="✦" size={16} /> Đăng nhập
+                <Icon emoji="✦" size={16} /> Log in
               </button>
               <button className="btn-ghost" onClick={() => { setFlow('register'); setError(''); }}>
-                Tạo tài khoản mới
+                Create new account
               </button>
             </div>
           </Card>
 
           <p style={{ textAlign: 'center', fontSize: 11, color: '#B09AA0', lineHeight: 1.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Icon emoji="🔒" size={11} /> Đăng ký cần xác nhận qua email trước khi đăng nhập
+            <Icon emoji="🔒" size={11} /> Signing up requires email confirmation before you can log in
           </p>
         </div>
       </div>

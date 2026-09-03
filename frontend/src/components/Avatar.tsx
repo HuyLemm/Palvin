@@ -10,26 +10,26 @@ interface Props {
   onClick?: () => void;
 }
 
-const ALVIN_GRAD = 'linear-gradient(135deg, #C95F7C, #E67F9A)';
-const PAOI_GRAD  = 'linear-gradient(135deg, #F3A6B9, #FADCE4)';
-const PAOI_TEXT  = '#C95F7C';
+const ALVIN_GRAD = 'linear-gradient(135deg, var(--sakura-deep), var(--sakura-accent))';
+const PAOI_GRAD  = 'linear-gradient(135deg, var(--sakura), var(--sakura-light))';
+const PAOI_TEXT  = 'var(--sakura-deep)';
 
 export default function Avatar({ user, size = 40, ring = false, story = false, photoUrl, onClick }: Props) {
   // Every call site used to have to remember to pass photoUrl itself, and
   // most didn't — resolve it here from context so a profile photo shows up
   // everywhere automatically. An explicit photoUrl prop still wins if passed.
-  const { profilePhotos } = useApp();
+  const { profilePhotos, currentUser } = useApp();
   const resolvedPhotoUrl = photoUrl ?? profilePhotos[user as string];
-  const isAlvin = user === 'Alvin';
-  const grad = isAlvin ? ALVIN_GRAD : PAOI_GRAD;
-  const textColor = isAlvin ? '#fff' : PAOI_TEXT;
+  const isMe = user === currentUser;
+  const grad = isMe ? ALVIN_GRAD : PAOI_GRAD;
+  const textColor = isMe ? '#fff' : PAOI_TEXT;
   const initial = String(user)[0]?.toUpperCase() ?? '?';
 
   const ringStyle = ring
-    ? { outline: '2.5px solid #F3A6B9', outlineOffset: '2px' }
+    ? { outline: '2.5px solid var(--sakura)', outlineOffset: '2px' }
     : {};
   const storyStyle = story
-    ? { outline: '2.5px solid transparent', backgroundImage: 'linear-gradient(white,white), linear-gradient(135deg, #F3A6B9, #E67F9A)', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }
+    ? { outline: '2.5px solid transparent', backgroundImage: 'linear-gradient(white,white), linear-gradient(135deg, var(--sakura), var(--sakura-accent))', backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }
     : {};
 
   if (resolvedPhotoUrl) {
@@ -58,7 +58,7 @@ export default function Avatar({ user, size = 40, ring = false, story = false, p
         borderRadius: '50%',
         background: grad,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontFamily: "'Outfit', sans-serif",
+        fontFamily: "'Nunito', sans-serif",
         fontWeight: 700,
         fontSize: size * 0.38,
         color: textColor,

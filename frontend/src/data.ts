@@ -42,14 +42,24 @@ export const initialState: AppState = {
   // Loaded from Supabase (see context.tsx's refreshGoals) once the couple is linked.
   goals: [],
 
+  // Loaded from Supabase (see context.tsx's refreshCycleLogs) once the couple is linked.
+  cycleLogs: [],
+
+  // Loaded from Supabase (see context.tsx's refreshStoryQuotes) once the couple is linked.
+  storyQuotes: [],
+
+  // Loaded from Supabase (see context.tsx's refreshDebts) once the couple is linked.
+  debts: [],
+
   // Loaded from Supabase (see context.tsx's refreshNotifications) once the couple is linked.
   notifications: [],
 
-  // Loaded from Supabase (see context.tsx's refreshMoods) once the couple is linked.
-  moods: { Alvin: null, Paoi: null },
+  // Loaded from Supabase (see context.tsx's chat realtime effect) once the couple is linked.
+  chatMessages: [],
+  unreadChatCount: 0,
 
-  // Loaded from Supabase (see context.tsx's refreshFavorites) once the couple is linked.
-  favorites: { song: '', food: '', movie: '', cafe: '', place: '' },
+  // Loaded from Supabase (see context.tsx's refreshMoods) once the couple is linked.
+  moods: {},
 
   // Loaded from Supabase (see context.tsx's refreshPlaces) once the couple is linked.
   places: [],
@@ -59,9 +69,6 @@ export const initialState: AppState = {
 
   // Loaded from Supabase (see context.tsx's refreshCapsules) once the couple is linked.
   capsules: [],
-
-  // Loaded from Supabase (see context.tsx's refreshCountdowns) once the couple is linked.
-  countdowns: [],
 
   // Loaded from Supabase (see context.tsx's refreshPlaylist) once the couple is linked.
   playlist: [],
@@ -96,4 +103,5 @@ export const initialState: AppState = {
   relationshipStart: null,
   // Loaded from Supabase (see context.tsx's refreshStreak) once the couple is linked.
   streak: 0,
+  streakLitToday: false,
 };

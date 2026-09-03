@@ -16,10 +16,10 @@ interface WishRow {
   drawn: boolean;
 }
 
-function rowToWish(row: WishRow, names: ProfileNames): WishItem {
+function rowToWish(row: WishRow, names: ProfileNames, myName: string): WishItem {
   return {
     id: row.id,
-    from: names[row.from_profile_id] ?? 'Alvin',
+    from: names[row.from_profile_id] ?? myName,
     wish: row.wish,
     date: row.wish_date,
     drawn: row.drawn,
@@ -31,13 +31,13 @@ function rowToWish(row: WishRow, names: ProfileNames): WishItem {
   };
 }
 
-export async function fetchWishes(names: ProfileNames): Promise<WishItem[]> {
+export async function fetchWishes(names: ProfileNames, myName: string): Promise<WishItem[]> {
   const { data, error } = await supabase
     .from('wishes')
     .select('id, from_profile_id, wish, wish_date, price, link, link_image, link_title, link_description, drawn')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return (data as WishRow[]).map(r => rowToWish(r, names));
+  return (data as WishRow[]).map(r => rowToWish(r, names, myName));
 }
 
 export async function createWish(fromId: string, w: { wish: string; date: string; price?: string; link?: string; linkImage?: string; linkTitle?: string; linkDescription?: string }) {

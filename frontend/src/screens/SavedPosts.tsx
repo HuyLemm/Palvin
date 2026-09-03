@@ -13,8 +13,8 @@ export default function SavedPosts() {
       {saved.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 24px' }}>
           <div style={{ marginBottom: 12 }}><Icon emoji="🔖" size={40} /></div>
-          <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>Chưa lưu bài viết nào</p>
-          <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>Bấm biểu tượng bookmark trên bài viết để lưu lại đây.</p>
+          <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No saved posts yet</p>
+          <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>Tap the bookmark icon on a post to save it here.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

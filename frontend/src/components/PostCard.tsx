@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from './Avatar';
 import Icon from './Icon';
+import FadeImage from './FadeImage';
 import EditPostForm from './forms/EditPostForm';
 import type { Post } from '../types';
 
@@ -90,7 +91,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
         >
           {post.images.map((img, i) => (
             <div key={i} onClick={() => navigate('post-detail', post.id)} style={{ flex: '0 0 100%', scrollSnapAlign: 'start', aspectRatio: '1', overflow: 'hidden' }}>
-              <img src={img} alt={post.caption} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <FadeImage src={img} alt={post.caption} style={{ width: '100%', height: '100%' }} />
             </div>
           ))}
         </div>
@@ -140,7 +141,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
 
           {/* Reaction picker */}
           {reactionPickerOpen && (
-            <div className="reaction-picker" style={{ position: 'absolute', bottom: '100%', left: 60, background: 'white', borderRadius: 24, padding: '8px 12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', gap: 6, zIndex: 10, border: '1px solid var(--border)' }}>
+            <div className="reaction-picker" style={{ position: 'absolute', bottom: '100%', left: 60, background: 'var(--white)', borderRadius: 24, padding: '8px 12px', boxShadow: '0 8px 32px rgba(0,0,0,0.15)', display: 'flex', gap: 6, zIndex: 10, border: '1px solid var(--border)' }}>
               {REACTION_EMOJIS.map(emoji => {
                 const r = reactions[emoji];
                 const reacted = r?.reacted;
@@ -170,7 +171,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
 
         {/* Caption */}
         <p style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.5 }}>
-          <strong style={{ marginRight: 4 }}>{post.author}</strong>{post.caption}
+          <strong style={{ display: 'block', marginBottom: 2 }}>{post.author}</strong>{post.caption}
         </p>
 
         {/* Comments */}
@@ -213,9 +214,9 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
     {showOptions && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setShowOptions(false)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 8, width: '100%', maxWidth: 300, overflow: 'hidden', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <button onClick={() => { setShowEdit(true); setShowOptions(false); }} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', fontSize: 15, fontWeight: 600, color: 'var(--ink)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="✏️" size={16} /> Chỉnh sửa bài viết</button>
-            <button onClick={() => { setConfirmDelete(true); setShowOptions(false); }} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', fontSize: 15, fontWeight: 600, color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="🗑️" size={16} /> Xóa bài viết</button>
-            <button onClick={() => setShowOptions(false)} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', fontSize: 15, fontWeight: 500, color: 'var(--ink-2)', cursor: 'pointer' }}>Hủy</button>
+            <button onClick={() => { setShowEdit(true); setShowOptions(false); }} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', fontSize: 15, fontWeight: 600, color: 'var(--ink)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="✏️" size={16} /> Edit post</button>
+            <button onClick={() => { setConfirmDelete(true); setShowOptions(false); }} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', fontSize: 15, fontWeight: 600, color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="🗑️" size={16} /> Delete post</button>
+            <button onClick={() => setShowOptions(false)} style={{ width: '100%', textAlign: 'center', padding: '14px 8px', background: 'none', border: 'none', fontSize: 15, fontWeight: 500, color: 'var(--ink-2)', cursor: 'pointer' }}>Cancel</button>
           </div>
         </div>
       )}
@@ -226,11 +227,11 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
       {confirmDelete && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa bài viết này?</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Delete this post?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This can't be undone.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={() => { deletePost(post.id); setConfirmDelete(false); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { deletePost(post.id); setConfirmDelete(false); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>

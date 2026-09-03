@@ -17,28 +17,28 @@ interface ExpenseRow {
   type: 'expense' | 'income';
 }
 
-function rowToExpense(row: ExpenseRow, names: ProfileNames): Expense {
+function rowToExpense(row: ExpenseRow, names: ProfileNames, myName: string): Expense {
   return {
     id: row.id,
     title: row.title,
     category: row.category,
     categoryEmoji: row.category_emoji,
     amount: Number(row.amount),
-    paidBy: row.paid_by_profile_id ? (names[row.paid_by_profile_id] ?? 'Alvin') : 'Both',
+    paidBy: row.paid_by_profile_id ? (names[row.paid_by_profile_id] ?? myName) : 'Both',
     date: row.occurred_on,
     note: row.note ?? '',
     type: row.type,
   };
 }
 
-export async function fetchExpenses(names: ProfileNames): Promise<Expense[]> {
+export async function fetchExpenses(names: ProfileNames, myName: string): Promise<Expense[]> {
   const { data, error } = await supabase
     .from('expenses')
     .select('id, title, category, category_emoji, amount, paid_by_profile_id, occurred_on, note, type')
     .order('occurred_on', { ascending: false })
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return (data as ExpenseRow[]).map(r => rowToExpense(r, names));
+  return (data as ExpenseRow[]).map(r => rowToExpense(r, names, myName));
 }
 
 export async function createExpense(

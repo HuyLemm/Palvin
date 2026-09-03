@@ -5,7 +5,7 @@ import BottomSheet from '../BottomSheet';
 import Icon from '../Icon';
 
 export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
-  const { addMemory, currentUser, myProfile } = useApp();
+  const { addMemory, currentUser, myProfile, partnerProfile } = useApp();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(() => {
     const d = new Date();
@@ -29,20 +29,20 @@ export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
     uploadMemoryImage(myProfile.coupleId, file).then(url => {
       setUploading(false);
       if (url) setRemoteUrl(url);
-      else setError('Tải ảnh thất bại, thử lại nhé.');
+      else setError('Upload failed, please try again.');
     });
   };
 
   const handleSubmit = () => {
     if (!title.trim())  { setError('Please add a title.'); return; }
     if (!date)          { setError('Please select a date.'); return; }
-    if (!remoteUrl)     { setError(uploading ? 'Đợi ảnh tải xong nhé.' : 'Please choose a photo.'); return; }
+    if (!remoteUrl)     { setError(uploading ? 'Please wait for the photo to finish uploading.' : 'Please choose a photo.'); return; }
     const d = new Date(date);
     const formatted = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     addMemory({
       title, date: formatted, year: d.getFullYear(),
       location: location || 'Unknown', description, image: remoteUrl,
-      people: ['Alvin', 'Paoi']
+      people: partnerProfile ? [currentUser, partnerProfile.displayName] : [currentUser]
     });
     onClose();
   };
@@ -51,7 +51,7 @@ export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
     <BottomSheet onClose={onClose} title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>New Memory <Icon emoji="🌸" size={16} /></span>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 16 }}>
         <input className="input-field" placeholder="Memory title..." value={title} onChange={e => setTitle(e.target.value)} />
-        <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} />
+        <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
         <input className="input-field" placeholder="Location (e.g. Tokyo, Japan)" value={location} onChange={e => setLocation(e.target.value)} />
         <textarea className="input-field" placeholder="Tell the story..." value={description} onChange={e => setDescription(e.target.value)} rows={3} />
         <div>
@@ -69,7 +69,7 @@ export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
             )}
             <button
               onClick={() => fileInputRef.current?.click()}
-              style={{ width: 80, height: 80, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ width: 80, height: 80, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 27, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >{previewUrl ? '↻' : '+'}</button>
             <input
               ref={fileInputRef}

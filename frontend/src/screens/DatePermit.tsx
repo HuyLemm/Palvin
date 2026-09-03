@@ -2,34 +2,34 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
 import EditDateRequestForm from '../components/forms/EditDateRequestForm';
-import type { DateRequest, User } from '../types';
+import type { DateRequest } from '../types';
 
 const CATEGORIES = [
-  { emoji: '🎱', label: 'Đi bida' },
-  { emoji: '🍺', label: 'Đi nhậu' },
+  { emoji: '🎱', label: 'Shoot pool' },
+  { emoji: '🍺', label: 'Drinks out' },
   { emoji: '🎮', label: 'Gaming' },
-  { emoji: '👥', label: 'Đi với bạn' },
-  { emoji: '🎯', label: 'Đi chơi' },
-  { emoji: '💼', label: 'Làm thêm' },
-  { emoji: '🏋️', label: 'Tập gym' },
-  { emoji: '🛒', label: 'Đi mua sắm' },
+  { emoji: '👥', label: 'Hang with friends' },
+  { emoji: '🎯', label: 'Going out' },
+  { emoji: '💼', label: 'Overtime work' },
+  { emoji: '🏋️', label: 'Gym' },
+  { emoji: '🛒', label: 'Shopping' },
   { emoji: '🎤', label: 'Karaoke' },
-  { emoji: '🌙', label: 'Về muộn' },
-  { emoji: '✈️', label: 'Đi xa' },
-  { emoji: '🎲', label: 'Khác' },
+  { emoji: '🌙', label: 'Home late' },
+  { emoji: '✈️', label: 'Out of town' },
+  { emoji: '🎲', label: 'Other' },
 ];
 
 const STATUS_CONFIG = {
-  pending:  { label: 'CHỜ DUYỆT', bg: '#FEF9C3', border: '#FDE047', color: '#A16207', stamp: '#CA8A04' },
-  approved: { label: 'ĐÃ DUYỆT',  bg: '#F0FDF4', border: '#86EFAC', color: '#166534', stamp: '#16A34A' },
-  rejected: { label: 'TỪ CHỐI',  bg: '#FEF2F2', border: '#FCA5A5', color: '#7F1D1D', stamp: '#DC2626' },
+  pending:  { label: 'PENDING', bg: '#FEF9C3', border: '#FDE047', color: '#A16207', stamp: '#CA8A04' },
+  approved: { label: 'APPROVED',  bg: '#F0FDF4', border: '#86EFAC', color: '#166534', stamp: '#16A34A' },
+  rejected: { label: 'REJECTED',  bg: '#FEF2F2', border: '#FCA5A5', color: '#7F1D1D', stamp: '#DC2626' },
 };
 
 interface Props { onBack: () => void; initialRequestId?: string; }
 
 export default function DatePermit({ onBack, initialRequestId }: Props) {
-  const { state, currentUser, submitDateRequest, respondToRequest, toast } = useApp();
-  const partnerUser: User = currentUser === 'Alvin' ? 'Paoi' : 'Alvin';
+  const { state, currentUser, partnerProfile, submitDateRequest, respondToRequest, toast } = useApp();
+  const partnerUser = partnerProfile?.displayName ?? currentUser;
 
   // Coming from a notification tap: land on whichever tab actually holds that
   // request — "inbox" if I'm the one who needs to approve it, "mine" if I'm
@@ -63,7 +63,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
 
   function handleSubmit() {
     if (!category || !activity.trim() || !date || !time) {
-      toast('Điền đầy đủ thông tin nhé!', '⚠️');
+      toast('Fill in all the details, please!', '⚠️');
       return;
     }
     submitDateRequest({
@@ -72,10 +72,10 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
       category,
       categoryEmoji,
       activity: activity.trim(),
-      location: location.trim() || 'Chưa xác định',
+      location: location.trim() || 'Not decided yet',
       date,
       time,
-      reason: reason.trim() || 'Em/anh muốn đi lắm 🥺',
+      reason: reason.trim() || 'I really want to go 🥺',
     });
     setSubmitted(true);
     setTimeout(() => {
@@ -95,7 +95,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
   function formatDate(dateStr: string) {
     if (!dateStr) return '';
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' });
+    return d.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
   function formatCreated(isoStr: string) {
@@ -104,10 +104,10 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
     const mins = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    if (mins < 1) return 'Vừa xong';
-    if (mins < 60) return `${mins} phút trước`;
-    if (hours < 24) return `${hours} giờ trước`;
-    return `${days} ngày trước`;
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
   }
 
   // Groups by the day the request was created — same "ngày X tháng Y" header
@@ -116,7 +116,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
   function groupByDay(requests: DateRequest[]): { label: string; items: DateRequest[] }[] {
     const groups: { label: string; items: DateRequest[] }[] = [];
     for (const r of requests) {
-      const label = new Date(r.createdAt).toLocaleDateString('vi-VN', { day: 'numeric', month: 'long' });
+      const label = new Date(r.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
       const last = groups[groups.length - 1];
       if (last && last.label === label) last.items.push(r);
       else groups.push({ label, items: [r] });
@@ -147,30 +147,30 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
         .success-pop { animation: successPop 0.4s ease both; }
         .permit-input {
           width: 100%; padding: 11px 14px;
-          border: 1.5px solid #F0DDE4; border-radius: 12px;
-          background: #FFFBFC; font-family: 'Outfit', sans-serif;
+          border: 1.5px solid var(--border); border-radius: 12px;
+          background: var(--white); font-family: 'Nunito', sans-serif;
           font-size: 14px; color: var(--ink); outline: none;
           transition: border-color 0.2s, box-shadow 0.2s;
           box-sizing: border-box;
         }
         .permit-input:focus { border-color: var(--sakura-accent); box-shadow: 0 0 0 3px rgba(230,127,154,0.12); }
-        .permit-input::placeholder { color: #C4ADB4; }
+        .permit-input::placeholder { color: var(--ink-2); }
       `}</style>
 
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={15} /> Back</button>
 
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 20 }}>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 26, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Đơn Xin Phép <Icon emoji="📋" size={22} /></p>
-        <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Nộp đơn để xin phép đi chơi — người kia duyệt <Icon emoji="💕" size={13} /></p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 27, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Permission Slip <Icon emoji="📋" size={22} /></p>
+        <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Submit a request to go out — your partner approves it <Icon emoji="💕" size={13} /></p>
       </div>
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 6, background: 'var(--sakura-light)', borderRadius: 14, padding: 4, marginBottom: 20 }}>
         {[
-          { key: 'submit', emoji: '📝', label: 'Nộp đơn', count: 0 },
-          { key: 'inbox', emoji: '📥', label: 'Cần duyệt', count: pendingForMe.length },
-          { key: 'mine', emoji: '📁', label: 'Đơn của tôi', count: 0 },
+          { key: 'submit', emoji: '📝', label: 'Submit', count: 0 },
+          { key: 'inbox', emoji: '📥', label: 'To Review', count: pendingForMe.length },
+          { key: 'mine', emoji: '📁', label: 'My Requests', count: 0 },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{ flex: 1, padding: '9px 4px', borderRadius: 11, border: 'none', background: tab === t.key ? 'white' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: tab === t.key ? 700 : 500, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s', boxShadow: tab === t.key ? '0 1px 6px rgba(201,95,124,0.12)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <Icon emoji={t.emoji} size={13} /> {t.label}
@@ -186,24 +186,24 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
           {submitted ? (
             <div className="success-pop" style={{ textAlign: 'center', padding: '48px 24px' }}>
               <p style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji="📬" size={64} /></p>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)', marginBottom: 6 }}>Đơn đã nộp!</p>
-              <p style={{ fontSize: 14, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Đang chờ {partnerUser} duyệt nhé <Icon emoji="🥺" size={14} /></p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)', marginBottom: 6 }}>Request submitted!</p>
+              <p style={{ fontSize: 14, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>Waiting for {partnerUser} to approve <Icon emoji="🥺" size={14} /></p>
             </div>
           ) : (
             <div>
               {/* Permit form — styled like a document */}
-              <div style={{ background: 'white', borderRadius: 20, border: '2px dashed #F3A6B9', padding: '24px 20px', marginBottom: 16 }}>
+              <div style={{ background: 'var(--white)', borderRadius: 20, border: '2px dashed var(--sakura)', padding: '24px 20px', marginBottom: 16 }}>
                 {/* Document header */}
                 <div style={{ textAlign: 'center', borderBottom: '2px solid var(--sakura-light)', paddingBottom: 16, marginBottom: 20 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: 'var(--ink-2)', textTransform: 'uppercase' }}>CỘNG HÒA TÌNH YÊU</p>
-                  <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--sakura-deep)', marginTop: 2 }}>ĐƠN XIN PHÉP ĐI CHƠI</p>
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>Người nộp: <strong>{currentUser}</strong> → Người duyệt: <strong>{partnerUser}</strong></p>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: 'var(--ink-2)', textTransform: 'uppercase' }}>REPUBLIC OF LOVE</p>
+                  <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--sakura-deep)', marginTop: 2 }}>REQUEST FOR PERMISSION TO GO OUT</p>
+                  <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>Applicant: <strong>{currentUser}</strong> → Approver: <strong>{partnerUser}</strong></p>
                 </div>
 
                 {/* Category picker */}
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                    Loại hoạt động *
+                    Activity Type *
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                     {CATEGORIES.map(c => (
@@ -217,34 +217,34 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
 
                 {/* Activity detail */}
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Hoạt động cụ thể *</label>
-                  <input className="permit-input" placeholder="VD: Đi bida với Minh, Tuấn..." value={activity} onChange={e => setActivity(e.target.value)} />
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Specific Activity *</label>
+                  <input className="permit-input" placeholder="e.g. Pool with Minh, Tuan..." value={activity} onChange={e => setActivity(e.target.value)} />
                 </div>
 
                 {/* Location */}
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Địa điểm</label>
-                  <input className="permit-input" placeholder="VD: Q.Bình Thạnh, Saigon..." value={location} onChange={e => setLocation(e.target.value)} />
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Location</label>
+                  <input className="permit-input" placeholder="e.g. Binh Thanh District, Saigon..." value={location} onChange={e => setLocation(e.target.value)} />
                 </div>
 
                 {/* Date + Time */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
                   <div style={{ minWidth: 0 }}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Ngày đi *</label>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Date *</label>
                     <input type="date" className="permit-input" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Giờ *</label>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Time *</label>
                     <input type="time" className="permit-input" value={time} onChange={e => setTime(e.target.value)} style={{ width: '100%', minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
                   </div>
                 </div>
 
                 {/* Reason */}
                 <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Lý do / Lời hứa <Icon emoji="🥺" size={12} /></label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Reason / Promise <Icon emoji="🥺" size={12} /></label>
                   <textarea
                     className="permit-input"
-                    placeholder="VD: Em hứa về trước 10 giờ và sẽ mua bánh cho anh/em~"
+                    placeholder="e.g. I promise to be home before 10pm and bring you dessert~"
                     value={reason}
                     onChange={e => setReason(e.target.value)}
                     rows={3}
@@ -255,18 +255,18 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
                 {/* Signature area */}
                 <div style={{ borderTop: '1.5px dashed var(--sakura-light)', paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                   <div>
-                    <p style={{ fontSize: 10, color: 'var(--ink-2)', marginBottom: 2 }}>Người nộp đơn</p>
-                    <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--sakura-deep)', fontStyle: 'italic' }}>{currentUser}</p>
+                    <p style={{ fontSize: 10, color: 'var(--ink-2)', marginBottom: 2 }}>Applicant</p>
+                    <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--sakura-deep)', fontStyle: 'italic' }}>{currentUser}</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 10, color: 'var(--ink-2)', marginBottom: 2 }}>Chữ ký</p>
+                    <p style={{ fontSize: 10, color: 'var(--ink-2)', marginBottom: 2 }}>Signature</p>
                     <p style={{ display: 'flex', justifyContent: 'flex-end' }}><Icon emoji="❤️" size={22} /></p>
                   </div>
                 </div>
               </div>
 
               <button onClick={handleSubmit} style={{ width: '100%', padding: '15px', background: 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))', border: 'none', borderRadius: 16, color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 6px 20px rgba(201,95,124,0.3)', transition: 'opacity 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Icon emoji="📋" size={16} /> Nộp đơn cho {partnerUser}
+                <Icon emoji="📋" size={16} /> Submit to {partnerUser}
               </button>
             </div>
           )}
@@ -279,8 +279,8 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
           {allForMe.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 20px' }}>
               <p style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji="📭" size={48} /></p>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--ink)', marginBottom: 4 }}>Chưa có đơn nào</p>
-              <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{currentUser === 'Alvin' ? 'Paoi' : 'Alvin'} chưa nộp đơn nào cả</p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--ink)', marginBottom: 4 }}>No requests yet</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{partnerUser} hasn't submitted any requests yet</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -313,8 +313,8 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
           {myRequests.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '48px 20px' }}>
               <p style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji="📝" size={48} /></p>
-              <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 18, color: 'var(--ink)', marginBottom: 4 }}>Chưa có đơn nào</p>
-              <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Nộp đơn xin phép đầu tiên đi!</p>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--ink)', marginBottom: 4 }}>No requests yet</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Submit your first request!</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -363,7 +363,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
   const isResponding = respondingId === req.id;
 
   return (
-    <div className="permit-slide" style={{ animationDelay: `${animIndex * 0.05}s`, background: 'white', borderRadius: 20, overflow: 'hidden', border: `1.5px solid ${cfg.border}`, boxShadow: '0 2px 16px rgba(201,95,124,0.08)' }}>
+    <div className="permit-slide" style={{ animationDelay: `${animIndex * 0.05}s`, background: 'var(--white)', borderRadius: 20, overflow: 'hidden', border: `1.5px solid ${cfg.border}`, boxShadow: '0 2px 16px rgba(201,95,124,0.08)' }}>
       {/* Card top banner */}
       <div style={{ background: cfg.bg, padding: '10px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -381,7 +381,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
           {onEdit && (
             <button
               onClick={onEdit}
-              style={{ background: 'white', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
+              style={{ background: 'var(--white)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
             ><Icon emoji="✏️" size={12} /></button>
           )}
         </div>
@@ -390,19 +390,19 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
       {/* Card body */}
       <div style={{ padding: '16px 18px' }}>
         {/* Activity + location */}
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 19, color: 'var(--ink)', marginBottom: 4 }}>{req.activity}</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'var(--ink)', marginBottom: 4 }}>{req.activity}</p>
         <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={13} /> {req.location}</p>
 
         {/* Info grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
-          <InfoCell icon="📅" label="Ngày" value={formatDate(req.date)} />
-          <InfoCell icon="⏰" label="Giờ" value={req.time} />
+          <InfoCell icon="📅" label="Date" value={formatDate(req.date)} />
+          <InfoCell icon="⏰" label="Time" value={req.time} />
         </div>
 
         {/* Reason */}
         {req.reason && (
           <div style={{ background: 'var(--sakura-light)', borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="🥺" size={12} /> LÝ DO / LỜI HỨA</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="🥺" size={12} /> REASON / PROMISE</p>
             <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, fontStyle: 'italic' }}>"{req.reason}"</p>
           </div>
         )}
@@ -411,7 +411,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {req.responseNote && (
           <div style={{ background: req.status === 'approved' ? '#F0FDF4' : '#FEF2F2', borderRadius: 12, padding: '10px 14px', marginBottom: 12, border: `1px solid ${req.status === 'approved' ? '#86EFAC' : '#FCA5A5'}` }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: req.status === 'approved' ? '#16A34A' : '#DC2626', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Icon emoji={req.status === 'approved' ? '✅' : '❌'} size={12} /> {req.status === 'approved' ? 'GHI CHÚ KHI DUYỆT' : 'LÝ DO TỪ CHỐI'}
+              <Icon emoji={req.status === 'approved' ? '✅' : '❌'} size={12} /> {req.status === 'approved' ? 'APPROVAL NOTE' : 'REJECTION REASON'}
             </p>
             <p style={{ fontSize: 13, color: 'var(--ink)', fontStyle: 'italic' }}>"{req.responseNote}"</p>
           </div>
@@ -421,10 +421,10 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {showActions && !isResponding && (
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
             <button onClick={onApprove} style={{ flex: 1, padding: '11px', background: '#16A34A', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Icon emoji="✅" size={14} /> Duyệt
+              <Icon emoji="✅" size={14} /> Approve
             </button>
             <button onClick={onReject} style={{ flex: 1, padding: '11px', background: '#DC2626', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Icon emoji="❌" size={14} /> Từ chối
+              <Icon emoji="❌" size={14} /> Reject
             </button>
           </div>
         )}
@@ -432,18 +432,18 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {/* Response form */}
         {isResponding && (
           <div style={{ marginTop: 8, background: '#FAFAFA', borderRadius: 14, padding: '14px', border: '1.5px solid var(--border)' }}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 8 }}>Thêm ghi chú (không bắt buộc)</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 8 }}>Add a note (optional)</p>
             <input
               className="permit-input"
-              placeholder="VD: Ok nhưng về trước 11 giờ nhé!"
+              placeholder="e.g. Sure, but be home by 11!"
               value={responseNote}
               onChange={e => setResponseNote(e.target.value)}
               autoFocus
               style={{ marginBottom: 10 }}
             />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => handleRespond(req.id, 'approved')} style={{ flex: 1, padding: '10px', background: '#16A34A', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="✅" size={14} /> Duyệt</button>
-              <button onClick={() => handleRespond(req.id, 'rejected')} style={{ flex: 1, padding: '10px', background: '#DC2626', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="❌" size={14} /> Từ chối</button>
+              <button onClick={() => handleRespond(req.id, 'approved')} style={{ flex: 1, padding: '10px', background: '#16A34A', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="✅" size={14} /> Approve</button>
+              <button onClick={() => handleRespond(req.id, 'rejected')} style={{ flex: 1, padding: '10px', background: '#DC2626', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="❌" size={14} /> Reject</button>
             </div>
           </div>
         )}

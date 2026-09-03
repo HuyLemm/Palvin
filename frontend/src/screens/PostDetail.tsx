@@ -62,7 +62,7 @@ export default function PostDetail() {
             </button>
           </div>
           <p style={{ fontSize: 15, color: 'var(--ink)', lineHeight: 1.6, marginBottom: 16 }}>
-            <strong style={{ marginRight: 6 }}>{post.author}</strong>{post.caption}
+            <strong style={{ display: 'block', marginBottom: 2 }}>{post.author}</strong>{post.caption}
           </p>
 
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>

@@ -15,11 +15,11 @@ interface CapsuleRow {
   created_date: string;
 }
 
-function rowToCapsule(row: CapsuleRow, names: ProfileNames): Capsule {
+function rowToCapsule(row: CapsuleRow, names: ProfileNames, myName: string, partnerName: string): Capsule {
   return {
     id: row.id,
-    from: names[row.from_profile_id] ?? 'Alvin',
-    to: row.to_profile_id ? (names[row.to_profile_id] ?? 'Paoi') : 'both',
+    from: names[row.from_profile_id] ?? myName,
+    to: row.to_profile_id ? (names[row.to_profile_id] ?? partnerName) : 'both',
     title: row.title,
     occasion: row.occasion ?? undefined,
     message: row.message,
@@ -29,13 +29,13 @@ function rowToCapsule(row: CapsuleRow, names: ProfileNames): Capsule {
   };
 }
 
-export async function fetchCapsules(names: ProfileNames): Promise<Capsule[]> {
+export async function fetchCapsules(names: ProfileNames, myName: string, partnerName: string): Promise<Capsule[]> {
   const { data, error } = await supabase
     .from('capsules')
     .select('id, from_profile_id, to_profile_id, title, occasion, message, unlock_date, opened, created_date')
     .order('unlock_date', { ascending: true });
   if (error || !data) return [];
-  return (data as CapsuleRow[]).map(r => rowToCapsule(r, names));
+  return (data as CapsuleRow[]).map(r => rowToCapsule(r, names, myName, partnerName));
 }
 
 export async function createCapsule(fromId: string, toId: string | null, title: string, occasion: string | undefined, message: string, unlockDate: string) {

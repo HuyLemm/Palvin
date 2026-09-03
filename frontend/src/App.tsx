@@ -21,6 +21,7 @@ import Settings from './screens/Settings';
 import PostDetail from './screens/PostDetail';
 import SavedPosts from './screens/SavedPosts';
 import MemoryDetail from './screens/MemoryDetail';
+import Chat from './screens/Chat';
 
 type Tab = 'home' | 'feed' | 'stats' | 'us' | 'settings';
 
@@ -108,8 +109,8 @@ const SCREEN_TITLES: Record<string, string> = {
   home: 'PALVIN', feed: 'Feed', money: 'Our Money', us: 'Us',
   memories: 'Memories', 'love-notes': 'For You', calendar: 'Our Calendar',
   'future-us': 'Future Us', search: 'Search', notifications: 'Notifications',
-  settings: 'Settings', stats: 'Chi tiêu',
-  'post-detail': 'Post', 'memory-detail': 'Memory', 'saved-posts': 'Đã lưu',
+  settings: 'Settings', stats: 'Spending',
+  'post-detail': 'Post', 'memory-detail': 'Memory', 'saved-posts': 'Saved',
 };
 
 // Decorative emoji that used to be embedded inline in a few of the titles
@@ -151,8 +152,12 @@ function ScreenRouter() {
 const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 
 export default function App() {
-  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, authed, authLoading, profileLoaded, isLinked, pendingInvite, toast } = useApp();
-  const stillResolvingSession = authLoading || (authed && !profileLoaded);
+  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, partnerProfile, authed, authLoading, profileLoaded, isLinked, dataReady, pendingInvite, toast } = useApp();
+  // Also holds the loading screen up until the couple's own data has actually
+  // loaded — otherwise it used to hand off to the real screens the instant
+  // the session/profile resolved, flashing ~0.5s of "has UI, but no data yet"
+  // before each section's fetch caught up.
+  const stillResolvingSession = authLoading || (authed && !profileLoaded) || (authed && isLinked && !dataReady);
 
   // A simulated fill (no real multi-step progress exists to measure) that
   // eases toward ~90% while we wait, then snaps to 100% and holds briefly
@@ -366,7 +371,7 @@ export default function App() {
                   }} />
                 </div>
                 <p style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', letterSpacing: '0.02em', position: 'relative', zIndex: 1 }}>{Math.round(loadProgress)}%</p>
-                <p style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-2)', position: 'relative', zIndex: 1 }}>Đang tải...</p>
+                <p style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-2)', position: 'relative', zIndex: 1 }}>Loading...</p>
                 <style>{`
                   @keyframes floatBob {
                     0%, 100% { transform: translate(-50%, -50%) translateY(0) scale(1); opacity: 0.5; }
@@ -385,7 +390,7 @@ export default function App() {
 
             {/* App Header */}
             <header className="app-header" style={{
-              background: 'rgba(255,248,250,0.92)',
+              background: 'var(--header-bg)',
               backdropFilter: 'blur(12px)',
               borderBottom: '1px solid var(--border)',
               padding: '10px 16px',
@@ -399,8 +404,8 @@ export default function App() {
                 )}
                 {screen === 'home' ? (
                   <div>
-                    <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, color: 'var(--ink)', lineHeight: 1 }}>PALVIN</p>
-                    <p style={{ fontSize: 10, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>Alvin <Icon emoji="❤️" size={10} /> Paoi</p>
+                    <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', lineHeight: 1 }}>PALVIN</p>
+                    <p style={{ fontSize: 10, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>{currentUser}{partnerProfile && <><Icon emoji="❤️" size={10} /> {partnerProfile.displayName}</>}</p>
                   </div>
                 ) : (
                   <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -425,6 +430,18 @@ export default function App() {
                     </div>
                   )}
                 </button>
+                <button onClick={() => handleTabClick('chat')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                  {state.unreadChatCount > 0 && (
+                    <div key={state.unreadChatCount} className="animate-heart-pop" style={{
+                      position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, padding: '0 3px',
+                      background: '#DC2626', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: '1.5px solid var(--white)',
+                    }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, color: 'white', lineHeight: 1 }}>{state.unreadChatCount > 99 ? '99+' : state.unreadChatCount}</span>
+                    </div>
+                  )}
+                </button>
               </div>
             </header>
 
@@ -440,7 +457,7 @@ export default function App() {
             {/* Bottom Nav */}
             <nav className="app-bottom-nav" style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
-              background: 'rgba(255,248,250,0.96)',
+              background: 'var(--navbar-bg)',
               backdropFilter: 'blur(16px)',
               borderTop: '1px solid var(--border)',
               display: 'flex', alignItems: 'center',
@@ -455,7 +472,7 @@ export default function App() {
               <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <button
                   onClick={() => {
-                    if (!isLinked) { toast('Hãy liên kết với nửa kia trước 💕', '🔒'); return; }
+                    if (!isLinked) { toast('Link with your partner first 💕', '🔒', { passive: true }); return; }
                     openCreate();
                   }}
                   style={{
@@ -493,6 +510,14 @@ export default function App() {
                 </div>
               </button>
             </nav>
+
+            {/* Chat — full-screen overlay (own header + input bar), like an
+                Instagram DM thread replacing the tab bar while it's open. */}
+            {screen === 'chat' && (
+              <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: 'var(--bg)' }}>
+                <Chat onBack={goBack} />
+              </div>
+            )}
           </div>
         </div>
       </div>

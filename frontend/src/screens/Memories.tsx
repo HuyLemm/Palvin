@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import AddMemoryForm from '../components/forms/AddMemoryForm';
 import Icon from '../components/Icon';
+import FadeImage from '../components/FadeImage';
 
 type Filter = 'All' | '2026' | '2025' | '2024' | '2023';
 const FILTERS: Filter[] = ['All', '2026', '2025', '2024', '2023'];
@@ -44,7 +45,7 @@ export default function Memories() {
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(201,95,124,0.12)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = 'none'; (e.currentTarget as HTMLElement).style.boxShadow = 'none'; }}>
               <div style={{ aspectRatio: i % 3 === 0 ? '4/5' : '1', background: 'var(--sakura-light)', overflow: 'hidden' }}>
-                <img src={m.image} alt={m.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                <FadeImage src={m.image} alt={m.title} style={{ width: '100%', height: '100%' }} />
               </div>
               <div style={{ padding: '10px 12px 12px' }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3, marginBottom: 3 }}>{m.title}</p>
@@ -58,7 +59,7 @@ export default function Memories() {
 
       <button
         onClick={() => setShowAdd(true)}
-        style={{ position: 'fixed', bottom: 96, right: 20, width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', fontSize: 22, cursor: 'pointer', boxShadow: '0 4px 16px rgba(201,95,124,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
+        style={{ position: 'fixed', bottom: 96, right: 20, width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', fontSize: 23, cursor: 'pointer', boxShadow: '0 4px 16px rgba(201,95,124,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
       >+</button>
 
       {showAdd && <AddMemoryForm onClose={() => setShowAdd(false)} />}

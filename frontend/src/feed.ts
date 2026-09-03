@@ -26,13 +26,13 @@ function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-function rowToPost(row: PostRow, myId: string, names: ProfileNames): Post {
+function rowToPost(row: PostRow, myId: string, names: ProfileNames, myName: string): Post {
   const comments = [...row.post_comments]
     .sort((a, b) => a.created_at.localeCompare(b.created_at))
-    .map(c => ({ id: c.id, author: names[c.author_id] ?? 'Alvin', text: c.text, date: formatDate(c.created_at) }));
+    .map(c => ({ id: c.id, author: names[c.author_id] ?? myName, text: c.text, date: formatDate(c.created_at) }));
   return {
     id: row.id,
-    author: names[row.author_id] ?? 'Alvin',
+    author: names[row.author_id] ?? myName,
     date: formatDate(row.created_at),
     images: row.image_urls,
     caption: row.caption,
@@ -44,7 +44,7 @@ function rowToPost(row: PostRow, myId: string, names: ProfileNames): Post {
   };
 }
 
-export async function fetchPosts(myId: string, names: ProfileNames): Promise<{ posts: Post[]; reactions: ReactionMap }> {
+export async function fetchPosts(myId: string, names: ProfileNames, myName: string): Promise<{ posts: Post[]; reactions: ReactionMap }> {
   const { data, error } = await supabase
     .from('posts')
     .select(POST_SELECT)
@@ -52,7 +52,7 @@ export async function fetchPosts(myId: string, names: ProfileNames): Promise<{ p
   if (error || !data) return { posts: [], reactions: {} };
 
   const rows = data as unknown as PostRow[];
-  const posts = rows.map(r => rowToPost(r, myId, names));
+  const posts = rows.map(r => rowToPost(r, myId, names, myName));
 
   const reactions: ReactionMap = {};
   for (const r of rows) {

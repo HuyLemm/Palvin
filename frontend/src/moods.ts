@@ -15,8 +15,8 @@ function rowsToHistory(rows: MoodRow[], names: ProfileNames): MoodEntry[] {
   for (const row of rows) {
     const user = names[row.profile_id];
     if (!user) continue;
-    const entry = byDate.get(row.entry_date) ?? { date: row.entry_date };
-    entry[user] = { emoji: row.emoji, label: row.label };
+    const entry = byDate.get(row.entry_date) ?? { date: row.entry_date, moods: {} };
+    entry.moods[user] = { emoji: row.emoji, label: row.label };
     byDate.set(row.entry_date, entry);
   }
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));

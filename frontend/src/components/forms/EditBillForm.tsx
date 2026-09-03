@@ -6,17 +6,17 @@ import type { Bill } from '../../types';
 
 const EMOJIS = ['🏠', '⚡', '💧', '📡', '🎬', '🎵', '🚗', '📱', '🏋️', '🛡️', '🧾'];
 const CAT_OPTIONS: { key: Bill['category']; label: string }[] = [
-  { key: 'rent', label: 'Tiền nhà' },
-  { key: 'utilities', label: 'Điện / Nước' },
+  { key: 'rent', label: 'Rent' },
+  { key: 'utilities', label: 'Electricity / Water' },
   { key: 'internet', label: 'Internet' },
   { key: 'subscription', label: 'Subscription' },
-  { key: 'other', label: 'Khác' },
+  { key: 'other', label: 'Other' },
 ];
 const FREQUENCY_PRESETS = [1, 2, 3, 6, 12];
 function frequencyLabel(n: number): string {
-  if (n === 1) return 'Hàng tháng';
-  if (n === 12) return 'Hàng năm';
-  return `${n} tháng/lần`;
+  if (n === 1) return 'Monthly';
+  if (n === 12) return 'Yearly';
+  return `Every ${n} months`;
 }
 
 export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: () => void }) {
@@ -33,9 +33,9 @@ export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: (
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleSubmit = () => {
-    if (!title.trim())     { setError('Nhập tên hóa đơn.'); return; }
-    if (!amount || isNaN(+amount) || +amount <= 0) { setError('Nhập số tiền hợp lệ.'); return; }
-    if (!dueDay || +dueDay < 1 || +dueDay > 31) { setError('Ngày đến hạn phải từ 1 đến 31.'); return; }
+    if (!title.trim())     { setError('Please enter a bill name.'); return; }
+    if (!amount || isNaN(+amount) || +amount <= 0) { setError('Please enter a valid amount.'); return; }
+    if (!dueDay || +dueDay < 1 || +dueDay > 31) { setError('Due day must be between 1 and 31.'); return; }
     setConfirmSave(true);
   };
 
@@ -55,12 +55,12 @@ export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={onClose}>
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Sửa hóa đơn <Icon emoji="✏️" size={15} /></p>
+          <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Edit Bill <Icon emoji="✏️" size={15} /></p>
           <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <input className="input-field" placeholder="Tên hóa đơn" value={title} onChange={e => setTitle(e.target.value)} />
+          <input className="input-field" placeholder="Bill name" value={title} onChange={e => setTitle(e.target.value)} />
 
           <div>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
@@ -80,7 +80,7 @@ export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: (
           </select>
 
           <div>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Chu kỳ lặp lại</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Repeat cycle</p>
             <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
               {FREQUENCY_PRESETS.map(f => (
                 <button key={f} onClick={() => setFrequencyMonths(f)} style={{
@@ -95,21 +95,21 @@ export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: (
               <input className="input-field" type="number" min="1" max="60" value={frequencyMonths}
                 onChange={e => setFrequencyMonths(Math.min(60, Math.max(1, +e.target.value || 1)))}
                 style={{ width: 90 }} />
-              <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>tháng / lần (tùy chỉnh)</span>
+              <span style={{ fontSize: 13, color: 'var(--ink-2)' }}>months / cycle (custom)</span>
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <AmountInput placeholder="Số tiền (VND)" value={amount} onChange={setAmount} />
-            <input className="input-field" type="number" placeholder="Ngày đến hạn (1-31)" min="1" max="31" value={dueDay} onChange={e => setDueDay(e.target.value)} />
+            <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
+            <input className="input-field" type="number" placeholder="Due day (1-31)" min="1" max="31" value={dueDay} onChange={e => setDueDay(e.target.value)} />
           </div>
 
-          <input className="input-field" placeholder="Ghi chú (tùy chọn)" value={note} onChange={e => setNote(e.target.value)} />
+          <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
 
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={() => setConfirmDelete(true)} style={{ padding: '13px 16px', borderRadius: 14, border: '1.5px solid #E8524A', background: 'white', color: '#E8524A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Xóa</button>
-            <button onClick={handleSubmit} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #8B6FD4, #6A4FB8)', color: 'white', fontWeight: 700, fontSize: 15 }}>Lưu thay đổi</button>
+            <button onClick={() => setConfirmDelete(true)} style={{ padding: '13px 16px', borderRadius: 14, border: '1.5px solid #E8524A', background: 'var(--white)', color: '#E8524A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Delete</button>
+            <button onClick={handleSubmit} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #8B6FD4, #6A4FB8)', color: 'white', fontWeight: 700, fontSize: 15 }}>Save Changes</button>
           </div>
         </div>
       </div>
@@ -118,11 +118,11 @@ export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: (
       {confirmSave && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={e => e.stopPropagation()}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Lưu thay đổi này?</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Thông tin hóa đơn sẽ được cập nhật.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Save these changes?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>The bill's info will be updated.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmSave(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={confirmSubmit} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #8B6FD4, #6A4FB8)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Lưu</button>
+              <button onClick={() => setConfirmSave(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={confirmSubmit} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #8B6FD4, #6A4FB8)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Save</button>
             </div>
           </div>
         </div>
@@ -132,11 +132,11 @@ export default function EditBillForm({ bill, onClose }: { bill: Bill; onClose: (
       {confirmDelete && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={e => e.stopPropagation()}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 280, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
-            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Xóa hóa đơn này?</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Không thể hoàn tác sau khi xóa.</p>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Delete this bill?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This can't be undone once deleted.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'white', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Hủy</button>
-              <button onClick={confirmDeleteNow} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Xóa</button>
+              <button onClick={() => setConfirmDelete(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={confirmDeleteNow} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>

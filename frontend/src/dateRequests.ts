@@ -20,11 +20,11 @@ interface DateRequestRow {
   responded_at: string | null;
 }
 
-function rowToRequest(row: DateRequestRow, names: ProfileNames): DateRequest {
+function rowToRequest(row: DateRequestRow, names: ProfileNames, myName: string, partnerName: string): DateRequest {
   return {
     id: row.id,
-    from: names[row.from_profile_id] ?? 'Alvin',
-    to: names[row.to_profile_id] ?? 'Paoi',
+    from: names[row.from_profile_id] ?? myName,
+    to: names[row.to_profile_id] ?? partnerName,
     category: row.category,
     categoryEmoji: row.category_emoji,
     activity: row.activity,
@@ -39,13 +39,13 @@ function rowToRequest(row: DateRequestRow, names: ProfileNames): DateRequest {
   };
 }
 
-export async function fetchDateRequests(names: ProfileNames): Promise<DateRequest[]> {
+export async function fetchDateRequests(names: ProfileNames, myName: string, partnerName: string): Promise<DateRequest[]> {
   const { data, error } = await supabase
     .from('date_requests')
     .select('id, from_profile_id, to_profile_id, category, category_emoji, activity, location, request_date, request_time, reason, status, response_note, created_at, responded_at')
     .order('created_at', { ascending: false });
   if (error || !data) return [];
-  return (data as DateRequestRow[]).map(r => rowToRequest(r, names));
+  return (data as DateRequestRow[]).map(r => rowToRequest(r, names, myName, partnerName));
 }
 
 export async function createDateRequest(

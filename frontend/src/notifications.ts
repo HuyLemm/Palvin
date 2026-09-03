@@ -1,7 +1,16 @@
 import { supabase } from './lib/supabaseClient';
 import type { AppNotification, User } from './types';
+import type { NotifyPrefs } from './auth';
 
 type ProfileNames = Record<string, User>;
+
+// A category with no matching toggle (posts, hugs, date requests) always
+// shows. One that matches a Settings > Notifications toggle only shows while
+// that toggle is on for the viewer.
+export function passesNotifyPrefs(category: string | null | undefined, prefs: NotifyPrefs): boolean {
+  if (!category) return true;
+  return prefs[category as keyof NotifyPrefs] !== false;
+}
 
 function formatRelative(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -15,29 +24,32 @@ function formatRelative(iso: string): string {
   return `${days}d ago`;
 }
 
-export async function fetchNotifications(names: ProfileNames, myId: string): Promise<AppNotification[]> {
+export async function fetchNotifications(names: ProfileNames, myId: string, prefs: NotifyPrefs): Promise<AppNotification[]> {
   const { data, error } = await supabase
     .from('notifications')
-    .select('id, emoji, message, read, created_at, actor_profile_id, target_screen, target_id, preview_image_url, preview_text')
+    .select('id, emoji, message, read, created_at, actor_profile_id, target_screen, target_id, preview_image_url, preview_text, category')
     // The actor already knows what they just did (they got their own local
     // toast at the time) — this feed is only for telling the OTHER person.
     .neq('actor_profile_id', myId)
     .order('created_at', { ascending: false })
     .limit(50);
   if (error || !data) return [];
-  return data.map(r => ({
-    id: r.id,
-    emoji: r.emoji ?? '🔔',
-    message: r.message,
-    read: r.read,
-    date: formatRelative(r.created_at),
-    createdAt: r.created_at,
-    actor: r.actor_profile_id ? names[r.actor_profile_id] : undefined,
-    targetScreen: r.target_screen ?? undefined,
-    targetId: r.target_id ?? undefined,
-    previewImageUrl: r.preview_image_url ?? undefined,
-    previewText: r.preview_text ?? undefined,
-  }));
+  return data
+    .filter(r => passesNotifyPrefs(r.category, prefs))
+    .map(r => ({
+      id: r.id,
+      emoji: r.emoji ?? '🔔',
+      message: r.message,
+      read: r.read,
+      date: formatRelative(r.created_at),
+      createdAt: r.created_at,
+      actor: r.actor_profile_id ? names[r.actor_profile_id] : undefined,
+      targetScreen: r.target_screen ?? undefined,
+      targetId: r.target_id ?? undefined,
+      previewImageUrl: r.preview_image_url ?? undefined,
+      previewText: r.preview_text ?? undefined,
+      category: r.category ?? undefined,
+    }));
 }
 
 export async function markNotificationRead(id: string) {

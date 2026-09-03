@@ -4,7 +4,7 @@ import Icon from '../components/Icon';
 import AmountInput from '../components/AmountInput';
 import type { Goal } from '../types';
 
-const VND = (n: number) => `${Math.round(n).toLocaleString('vi-VN')} VND`;
+const VND = (n: number) => `${Math.round(n).toLocaleString('en-US')} VND`;
 const EMOJIS = ['💍', '🏠', '✈️', '🚗', '🎓', '👶', '💻', '🎉', '💰', '🐶'];
 
 // A goal's deadline is set as a rough "in N months/years" duration, not a
@@ -37,23 +37,24 @@ function formatRemaining(deadline: string): string {
   today.setHours(0, 0, 0, 0);
   const target = new Date(deadline + 'T00:00:00');
   const days = Math.round((target.getTime() - today.getTime()) / 86400000);
-  if (days <= 0) return 'Đã tới hạn';
+  if (days <= 0) return 'Past due';
   // Days-based, not a calendar month/year-field diff — a duration like
   // "8 năm" is really ~2922 days, and diffing by month/year fields first
   // then re-deriving loses precision (rounds to "7.9 năm" instead of 8).
   if (days >= 330) {
     const years = Math.round((days / 365.25) * 10) / 10;
-    return `Còn ~${years % 1 === 0 ? years.toFixed(0) : years} năm`;
+    return `~${years % 1 === 0 ? years.toFixed(0) : years} years left`;
   }
   const months = Math.round(days / 30.44);
-  return `Còn ~${months} tháng`;
+  return `~${months} months left`;
 }
 
 export default function FutureUs() {
-  const { state, toggleGoal, deleteGoal, contributeToGoal, addGoal, updateGoal, celebration } = useApp();
+  const { state, currentUser, partnerProfile, toggleGoal, deleteGoal, contributeToGoal, addGoal, updateGoal, celebration } = useApp();
+  const partnerName = partnerProfile?.displayName;
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<Goal | null>(null);
-  const [filter, setFilter] = useState<'both' | 'Alvin' | 'Paoi'>('both');
+  const [filter, setFilter] = useState<string>('both');
 
   const filtered = state.goals.filter(g => g.owner === filter);
   const pending   = filtered.filter(g => !g.completed);
@@ -79,7 +80,7 @@ export default function FutureUs() {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Future Us <Icon emoji="✨" size={18} /></p>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Future Us <Icon emoji="✨" size={18} /></p>
           <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{completed.length}/{filtered.length} dreams achieved</p>
         </div>
         <button onClick={() => setShowAdd(true)} className="btn-primary" style={{ padding: '9px 16px', fontSize: 13 }}>+ Add Goal</button>
@@ -87,9 +88,9 @@ export default function FutureUs() {
 
       {/* Filter — whose dreams to show */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {(['both', 'Alvin', 'Paoi'] as const).map(f => (
+        {['both', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            <Icon emoji={f === 'both' ? '💑' : f === 'Alvin' ? '💙' : '💗'} size={14} /> {f === 'both' ? 'Chung' : f}
+            <Icon emoji={f === 'both' ? '💑' : f === currentUser ? '💙' : '💗'} size={14} /> {f === 'both' ? 'Both' : f}
           </button>
         ))}
       </div>
@@ -179,8 +180,8 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
           {!g.completed && hasTarget && g.deadline && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatRemaining(g.deadline)}</p>}
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button onClick={() => onEdit(g)} title="Chỉnh sửa" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-          <button onClick={() => onDelete(g.id)} title="Xóa" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+          <button onClick={() => onEdit(g)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+          <button onClick={() => onDelete(g.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
         </div>
       </div>
 
@@ -194,13 +195,13 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
             <div className="progress-fill" style={{ width: `${pct}%` }} />
           </div>
           {!g.completed && !showContribute && (
-            <button onClick={() => setShowContribute(true)} style={{ marginTop: 8, background: 'none', border: '1.5px dashed var(--sakura-accent)', borderRadius: 8, padding: '6px 10px', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Góp tiền</button>
+            <button onClick={() => setShowContribute(true)} style={{ marginTop: 8, background: 'none', border: '1.5px dashed var(--sakura-accent)', borderRadius: 8, padding: '6px 10px', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Add funds</button>
           )}
           {showContribute && (
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <AmountInput placeholder="Số tiền góp (VND)" value={amount} onChange={setAmount} style={{ flex: 1, padding: '8px 12px', fontSize: 13 }} />
-              <button onClick={submitContribute} style={{ background: 'var(--sakura-accent)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Góp</button>
-              <button onClick={() => { setShowContribute(false); setAmount(''); }} style={{ background: 'var(--bg)', color: 'var(--ink-2)', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Hủy</button>
+              <AmountInput placeholder="Contribution amount (VND)" value={amount} onChange={setAmount} style={{ flex: 1, padding: '8px 12px', fontSize: 13 }} />
+              <button onClick={submitContribute} style={{ background: 'var(--sakura-accent)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>Add</button>
+              <button onClick={() => { setShowContribute(false); setAmount(''); }} style={{ background: 'var(--bg)', color: 'var(--ink-2)', border: 'none', borderRadius: 10, padding: '8px 12px', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Cancel</button>
             </div>
           )}
         </div>
@@ -212,12 +213,14 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
 function AddFutureGoalForm({ onClose, onAdd, defaultOwner, existing }: {
   onClose: () => void;
   onAdd: (g: Omit<Goal, 'id' | 'completed' | 'current'>) => void;
-  defaultOwner: 'both' | 'Alvin' | 'Paoi';
+  defaultOwner: string;
   existing?: Goal;
 }) {
+  const { currentUser, partnerProfile } = useApp();
+  const partnerName = partnerProfile?.displayName;
   const isEdit = !!existing;
   const [kind, setKind] = useState<'simple' | 'savings'>(existing?.target != null ? 'savings' : 'simple');
-  const [owner, setOwner] = useState<'both' | 'Alvin' | 'Paoi'>(defaultOwner);
+  const [owner, setOwner] = useState<string>(defaultOwner);
   const [title, setTitle] = useState(existing?.title ?? '');
   const [emoji, setEmoji] = useState(existing?.emoji || EMOJIS[0]);
   const [target, setTarget] = useState(existing?.target != null ? String(existing.target) : '');
@@ -227,8 +230,8 @@ function AddFutureGoalForm({ onClose, onAdd, defaultOwner, existing }: {
   const [error, setError] = useState('');
 
   const handleSubmit = () => {
-    if (!title.trim()) { setError('Nhập tên mục tiêu.'); return; }
-    if (kind === 'savings' && (!target || isNaN(+target) || +target <= 0)) { setError('Nhập số tiền mục tiêu hợp lệ.'); return; }
+    if (!title.trim()) { setError('Enter a goal name.'); return; }
+    if (kind === 'savings' && (!target || isNaN(+target) || +target <= 0)) { setError('Enter a valid target amount.'); return; }
     const n = parseInt(deadlineAmount, 10);
     onAdd({
       title: title.trim(), emoji, owner,
@@ -242,25 +245,25 @@ function AddFutureGoalForm({ onClose, onAdd, defaultOwner, existing }: {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={onClose}>
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 400, maxHeight: '80vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="✨" size={20} /> {isEdit ? 'Chỉnh sửa mục tiêu' : 'Thêm mục tiêu'}</p>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="✨" size={20} /> {isEdit ? 'Edit Goal' : 'Add Goal'}</p>
           <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" onClick={() => setKind('simple')} style={{ flex: 1, padding: '8px', borderRadius: 10, border: kind === 'simple' ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: kind === 'simple' ? 'var(--sakura-light)' : 'var(--bg)', color: 'var(--ink)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Việc cần làm</button>
-            <button type="button" onClick={() => setKind('savings')} style={{ flex: 1, padding: '8px', borderRadius: 10, border: kind === 'savings' ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: kind === 'savings' ? 'var(--sakura-light)' : 'var(--bg)', color: 'var(--ink)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Mục tiêu tiết kiệm</button>
+            <button type="button" onClick={() => setKind('simple')} style={{ flex: 1, padding: '8px', borderRadius: 10, border: kind === 'simple' ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: kind === 'simple' ? 'var(--sakura-light)' : 'var(--bg)', color: 'var(--ink)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>To-do</button>
+            <button type="button" onClick={() => setKind('savings')} style={{ flex: 1, padding: '8px', borderRadius: 10, border: kind === 'savings' ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: kind === 'savings' ? 'var(--sakura-light)' : 'var(--bg)', color: 'var(--ink)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Savings goal</button>
           </div>
           <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>CỦA AI</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>WHOSE GOAL</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              {(['both', 'Alvin', 'Paoi'] as const).map(o => (
+              {['both', currentUser, ...(partnerName ? [partnerName] : [])].map(o => (
                 <button key={o} type="button" onClick={() => setOwner(o)} style={{ flex: 1, padding: '8px', border: owner === o ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: owner === o ? 'var(--sakura-light)' : 'var(--bg)', color: owner === o ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                  <Icon emoji={o === 'both' ? '💑' : o === 'Alvin' ? '💙' : '💗'} size={14} /> {o === 'both' ? 'Chung' : o}
+                  <Icon emoji={o === 'both' ? '💑' : o === currentUser ? '💙' : '💗'} size={14} /> {o === 'both' ? 'Both' : o}
                 </button>
               ))}
             </div>
           </div>
-          <input className="input-field" placeholder={kind === 'savings' ? 'VD: Đám cưới' : 'VD: Đi du lịch Nhật Bản'} value={title} onChange={e => setTitle(e.target.value)} />
+          <input className="input-field" placeholder={kind === 'savings' ? 'e.g. Wedding' : 'e.g. Trip to Japan'} value={title} onChange={e => setTitle(e.target.value)} />
           <div>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -271,14 +274,14 @@ function AddFutureGoalForm({ onClose, onAdd, defaultOwner, existing }: {
           </div>
           {kind === 'savings' && (
             <>
-              <AmountInput placeholder="Mục tiêu tiết kiệm (VND)" value={target} onChange={setTarget} />
+              <AmountInput placeholder="Savings target (VND)" value={target} onChange={setTarget} />
               <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>HẠN — TRONG KHOẢNG (tùy chọn, để 0 nếu không cần)</p>
+                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>DEADLINE — ROUGHLY (optional, leave at 0 if none)</p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input className="input-field" type="number" min={0} value={deadlineAmount} onChange={e => setDeadlineAmount(e.target.value)} style={{ width: 80, flexShrink: 0 }} />
                   <div style={{ display: 'flex', gap: 8, flex: 1 }}>
                     {(['month', 'year'] as const).map(u => (
-                      <button key={u} type="button" onClick={() => setDeadlineUnit(u)} style={{ flex: 1, padding: '8px', border: deadlineUnit === u ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: deadlineUnit === u ? 'var(--sakura-light)' : 'var(--bg)', color: deadlineUnit === u ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{u === 'month' ? 'Tháng' : 'Năm'}</button>
+                      <button key={u} type="button" onClick={() => setDeadlineUnit(u)} style={{ flex: 1, padding: '8px', border: deadlineUnit === u ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: deadlineUnit === u ? 'var(--sakura-light)' : 'var(--bg)', color: deadlineUnit === u ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{u === 'month' ? 'Months' : 'Years'}</button>
                     ))}
                   </div>
                 </div>
@@ -286,7 +289,7 @@ function AddFutureGoalForm({ onClose, onAdd, defaultOwner, existing }: {
             </>
           )}
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-          <button onClick={handleSubmit} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{isEdit ? 'Lưu thay đổi' : 'Thêm mục tiêu'}</button>
+          <button onClick={handleSubmit} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{isEdit ? 'Save changes' : 'Add Goal'}</button>
         </div>
       </div>
     </div>

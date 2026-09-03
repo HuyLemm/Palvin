@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Nunito:wght@300;400;500;600;700;800;900&display=swap');
 @import 'tailwindcss';
 
 :root {
@@ -12,6 +12,14 @@
   --white: #FFFFFF;
   --card: #FFFFFF;
   --border: #F0E4E8;
+  --pink-glow: #FFF0F4;
+  --lavender-glow: #F5F0FF;
+  --lavender-light: #EDE6FF;
+  --lavender: #8B6FD4;
+  --glass: rgba(255,255,255,0.7);
+  --glass-strong: rgba(255,255,255,0.9);
+  --header-bg: rgba(255,248,250,0.92);
+  --navbar-bg: rgba(255,248,250,0.96);
 }
 
 /* Dark mode */
@@ -26,6 +34,14 @@
   --white: #241318;
   --card: #241318;
   --border: #3D2230;
+  --pink-glow: #2A1620;
+  --lavender-glow: #241A30;
+  --lavender-light: #2A2038;
+  --lavender: #B39DDB;
+  --glass: rgba(0,0,0,0.35);
+  --glass-strong: rgba(0,0,0,0.55);
+  --header-bg: rgba(26,15,18,0.92);
+  --navbar-bg: rgba(26,15,18,0.96);
 }
 [data-theme="dark"] html,
 [data-theme="dark"] body,
@@ -37,7 +53,8 @@ body[data-theme="dark"] {
 html, body {
   height: 100%;
   background: linear-gradient(135deg, #f7d4df 0%, #fce8f0 40%, #ede0f5 100%);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   transition: background 0.3s ease, color 0.3s ease;
@@ -126,6 +143,10 @@ html, body {
      top offset applied directly — .app-header's padding never reaches it. */
   .auth-slide { padding-top: 4rem !important; }
   .app-bottom-nav { padding-bottom: calc(3px + env(safe-area-inset-bottom)) !important; }
+  /* Chat's input bar only — independent from .app-bottom-nav above so it can
+     be tuned separately for how it sits above the keyboard. Fill in the
+     number (currently 0px) to add extra clearance below the input row. */
+  .chat-input-bar { padding-bottom: calc(-30px + env(safe-area-inset-bottom)) !important; }
 }
 
 * { box-sizing: border-box; }
@@ -206,7 +227,7 @@ html, body {
 }
 .heart-beat { display: inline-flex; animation: heartBeat 1.1s ease-in-out infinite; }
 
-.font-display { font-family: 'DM Serif Display', serif; }
+.font-display { font-family: 'Playfair Display', serif; }
 
 .card {
   background: var(--white);
@@ -248,7 +269,7 @@ html, body {
   border-radius: 12px;
   padding: 12px 16px;
   font-size: 15px;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Nunito', sans-serif;
   color: var(--ink);
   outline: none;
   transition: border-color 0.15s;

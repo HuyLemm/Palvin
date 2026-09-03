@@ -5,25 +5,37 @@ if (import.meta.hot) {
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { initialState } from './data';
-import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, Mood, Bill, Trip, Capsule, Countdown, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea } from './types';
+import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage } from './types';
+import { fetchChatMessages, sendChatMessageRow, markChatReadFrom, fetchUnreadChatCount, uploadChatFile } from './chat';
+import type { NewChatMessage } from './chat';
 import { supabase } from './lib/supabaseClient';
 import {
   updatePhoto as authUpdatePhoto, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
   sendInvite as apiSendInvite, respondInvite as apiRespondInvite, cancelInvite as apiCancelInvite, getMyInvites,
+  updateDisplayName as authUpdateDisplayName, changePassword as authChangePassword, touchLastActive,
   type PendingInvite, type AuthProfile, type NotifyPrefs,
 } from './auth';
 import {
   fetchPosts, createPost, addPostComment, setLiked, setSaved, toggleReaction, updatePostRow, deletePostRow,
 } from './feed';
 import {
-  fetchNotifications, markNotificationRead, markAllNotificationsRead, deleteNotificationRow,
+  fetchNotifications, markNotificationRead, markAllNotificationsRead, deleteNotificationRow, passesNotifyPrefs,
 } from './notifications';
 import {
   fetchMemories, createMemory, setMemoryFavorite,
 } from './memories';
 import {
-  fetchEvents, createEvent, deleteEventRow,
+  fetchEvents, createEvent, updateEventRow, deleteEventRow,
 } from './calendar';
+import {
+  fetchCycleLogs, createCycleLog, updateCycleLogRow, deleteCycleLogRow,
+} from './cycle';
+import {
+  fetchStoryQuotes, createStoryQuote, updateStoryQuoteRow, deleteStoryQuoteRow,
+} from './storyQuotes';
+import {
+  fetchDebts, createDebt, updateDebtRow, setDebtPaidRow, deleteDebtRow,
+} from './debts';
 import {
   fetchExpenses, createExpense, updateExpenseRow, deleteExpenseRow,
   fetchBills, createBill, updateBillRow, setBillPaid, deleteBillRow, rollBillsForward,
@@ -38,12 +50,12 @@ import {
   fetchGoals, createGoal, setGoalCompleted, setGoalCurrent, updateGoalRow, deleteGoalRow,
 } from './futureUs';
 import {
-  fetchCoupleSettings, updateFavoriteField, updateDarkMode, updateRelationshipStart,
+  fetchCoupleSettings, updateDarkMode, updateRelationshipStart,
   fetchFavPlaces, createFavPlace, updateFavPlaceRow, deleteFavPlace,
   fetchFavCategories, createFavCategory, updateFavCategoryRow, deleteFavCategoryRow,
 } from './favourites';
 import {
-  fetchPlaces, createPlace, deletePlaceRow,
+  fetchPlaces, createPlace, updatePlaceRow, deletePlaceRow,
 } from './places';
 import {
   fetchPlaylist, createPlaylistItem, updatePlaylistItemRow, deletePlaylistItemRow,
@@ -69,13 +81,10 @@ import {
   fetchDateRequests, createDateRequest, respondToDateRequest, updateDateRequestRow, deleteDateRequestRow,
 } from './dateRequests';
 import {
-  fetchCountdowns, createCountdown, deleteCountdownRow,
-} from './countdowns';
-import {
   fetchMoodHistory, upsertMood,
 } from './moods';
 import { createHug } from './hugs';
-import { bumpStreak } from './streak';
+import { fetchStreak, markActiveToday } from './streak';
 
 interface ToastItem { id: string; message: string; emoji: string; leaving?: boolean; }
 
@@ -88,6 +97,7 @@ interface AppContextType {
   authLoading: boolean;
   profileLoaded: boolean;   // true once refreshAuthProfile() has resolved at least once — gates isLinked from flashing false
   isLinked: boolean;
+  dataReady: boolean;       // true once the couple's initial data fetches have settled (or timed out) — see BOOT_DOMAIN_COUNT below
   myProfile: AuthProfile | null;
   partnerProfile: AuthProfile | null;
   refreshAuthProfile: () => Promise<void>;
@@ -116,7 +126,7 @@ interface AppContextType {
 
   // Toast
   toasts: ToastItem[];
-  toast: (msg: string, emoji?: string) => void;
+  toast: (msg: string, emoji?: string, opts?: { passive?: boolean }) => void;
 
   // Create modal
   createModal: boolean;
@@ -156,7 +166,22 @@ interface AppContextType {
 
   // Events
   addEvent: (e: Omit<CalendarEvent, 'id'>) => void;
+  updateEvent: (id: string, e: Omit<CalendarEvent, 'id'>) => void;
   deleteEvent: (id: string) => void;
+
+  // Cycle tracker
+  addCycleLog: (l: Omit<CycleLog, 'id'>) => void;
+  updateCycleLog: (id: string, l: Omit<CycleLog, 'id'>) => void;
+  deleteCycleLog: (id: string) => void;
+
+  // Story quotes
+  addStoryQuote: (text: string) => void;
+  updateStoryQuote: (id: string, text: string) => void;
+  deleteStoryQuote: (id: string) => void;
+  addDebt: (d: Omit<Debt, 'id' | 'paid' | 'paidDate'>) => void;
+  updateDebt: (id: string, d: Omit<Debt, 'id' | 'paid' | 'paidDate'>) => void;
+  toggleDebtPaid: (id: string) => void;
+  deleteDebt: (id: string) => void;
 
   // Goals
   addGoal: (g: Omit<Goal, 'id' | 'completed' | 'current'>) => void;
@@ -168,14 +193,14 @@ interface AppContextType {
   // Mood
   setMood: (user: User, mood: Mood) => void;
 
-  // Favorites
-  updateFavorite: (key: string, val: string) => void;
 
   // Notifications
   markNotifRead: (id: string) => void;
   markAllRead: () => void;
   deleteNotification: (id: string) => void;
   updateNotifyPrefs: (prefs: NotifyPrefs) => void;
+  updateDisplayName: (name: string) => Promise<{ ok: boolean; error?: string }>;
+  changePassword: (newPassword: string) => Promise<{ ok: boolean; error?: string }>;
 
   // Bills
   addBill: (b: Omit<Bill, 'id' | 'seriesId' | 'billMonth'>) => void;
@@ -195,13 +220,9 @@ interface AppContextType {
   updateCapsule: (c: Capsule) => void;
   deleteCapsule: (id: string) => void;
 
-  // Countdowns
-  addCountdown: (c: Omit<Countdown, 'id'>) => void;
-  deleteCountdown: (id: string) => void;
-
   // Playlist
   addToPlaylist: (p: Omit<PlaylistItem, 'id'>) => void;
-  updatePlaylist: (id: string, p: { title: string; artist: string; emoji: string; image?: string; durationSeconds?: number; releaseDate?: string; previewUrl?: string; note?: string }) => void;
+  updatePlaylist: (id: string, p: { title: string; artist: string; emoji: string; image?: string; durationSeconds?: number; releaseDate?: string; previewUrl?: string; note?: string; addedBy?: User }) => void;
   removeFromPlaylist: (id: string) => void;
 
   // Wishes
@@ -248,7 +269,8 @@ interface AppContextType {
   removeFavCategory: (id: string) => void;
 
   // Places
-  addPlace: (p: { name: string; flag?: string; image: string }) => void;
+  addPlace: (p: { name: string; flag?: string; images: string[]; visitedDate?: string }) => void;
+  updatePlace: (id: string, p: { name: string; flag?: string; images: string[]; visitedDate?: string }) => void;
   deletePlace: (id: string) => void;
 
   // Dark mode
@@ -260,6 +282,11 @@ interface AppContextType {
   // Profile photos
   profilePhotos: Record<string, string>;
   updateProfilePhoto: (photoUrl: string) => void;
+
+  // Chat
+  sendChatMessage: (msg: NewChatMessage) => void;
+  markChatRead: () => void;
+  uploadChatMedia: (file: File | Blob, ext: string) => Promise<string | null>;
 }
 
 const Ctx = createContext<AppContextType>(null!);
@@ -270,7 +297,7 @@ const uid = () => String(++idCounter);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(initialState);
-  const [currentUser, setCurrentUser] = useState<User>('Alvin');
+  const [currentUser, setCurrentUser] = useState<User>('');
   const [authed, setAuthed] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -294,6 +321,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const screen = current.screen;
   const selectedId = current.id ?? null;
 
+  // Read inside the chat realtime subscription below without forcing that
+  // effect to re-subscribe on every single navigation.
+  const screenRef = useRef(screen);
+  useEffect(() => { screenRef.current = screen; }, [screen]);
+
   const navigate = useCallback((s: string, id?: string) => {
     setStack(prev => [...prev, { screen: s, id }]);
     setNavSeq(n => n + 1);
@@ -305,7 +337,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLastNavWasPop(true);
   }, []);
 
-  const toast = useCallback((msg: string, emoji = '🌸') => {
+  // Fire-and-forget: logs "I did something today" for the streak. The RPC
+  // itself only advances couples.streak_count once EVERY profile in the
+  // couple has logged today — see mark_active_today() in
+  // 0050_streak_activity.sql. Re-fetches full streak info afterward (rather
+  // than trusting the RPC's returned count alone) so streakLitToday — which
+  // controls the flame's color — stays accurate too.
+  const markActive = useCallback(() => {
+    markActiveToday().then(() => {
+      fetchStreak().then(({ count, litToday }) => setState(s => ({ ...s, streak: count, streakLitToday: litToday })));
+    });
+  }, []);
+
+  const toast = useCallback((msg: string, emoji = '🌸', opts?: { passive?: boolean }) => {
     const id = uid();
     if (toastTimer.current) clearTimeout(toastTimer.current);
     if (toastExitTimer.current) clearTimeout(toastExitTimer.current);
@@ -316,7 +360,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setToasts(prev => prev.map(t => t.id === id ? { ...t, leaving: true } : t));
       toastExitTimer.current = setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 200);
     }, 3000);
-  }, []);
+    // Every success toast in this file marks a real user action — except
+    // error toasts ('⚠️') and toasts fired passively from a realtime
+    // subscription (e.g. seeing the partner's own action), which pass
+    // { passive: true } explicitly.
+    if (emoji !== '⚠️' && !opts?.passive) markActive();
+  }, [markActive]);
 
   const openCreate = (step?: string) => { setCreateModal(true); setCreateStep(step ?? null); };
   const closeCreate = () => { setCreateModal(false); setCreateStep(null); };
@@ -332,7 +381,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       posts: s.posts.map(p => p.id === id ? { ...p, liked: nextLiked, likes: nextLiked ? p.likes + 1 : p.likes - 1 } : p),
     }));
     const { error } = await setLiked(id, myProfile.id, nextLiked);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); }
+    if (error) { toast('Something went wrong', '⚠️'); refreshPosts(); }
   };
 
   const toggleSave = async (id: string) => {
@@ -342,20 +391,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const nextSaved = !post.saved;
     setState(s => ({ ...s, posts: s.posts.map(p => p.id === id ? { ...p, saved: nextSaved } : p) }));
     const { error } = await setSaved(id, myProfile.id, nextSaved);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); }
+    if (error) { toast('Something went wrong', '⚠️'); refreshPosts(); }
   };
 
   const addComment = async (postId: string, text: string) => {
     if (!myProfile) return;
     const { error } = await addPostComment(postId, myProfile.id, text);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     refreshPosts();
   };
 
   const addPost = async (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments'>) => {
     if (!myProfile) return;
     const { error } = await createPost(myProfile.id, { images: p.images, caption: p.caption, location: p.location });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshPosts();
     // No manual success toast here — the realtime `notifications` subscription
     // above pops one for both accounts (including the poster) a moment later.
@@ -364,15 +413,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const editPost = async (id: string, data: { caption: string; location?: string }) => {
     setState(s => ({ ...s, posts: s.posts.map(p => p.id === id ? { ...p, caption: data.caption, location: data.location } : p) }));
     const { error } = await updatePostRow(id, data);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); return; }
-    toast('Đã cập nhật bài viết ✏️');
+    if (error) { toast('Something went wrong', '⚠️'); refreshPosts(); return; }
+    toast('Post updated ✏️');
   };
 
   const deletePost = async (id: string) => {
     setState(s => ({ ...s, posts: s.posts.filter(p => p.id !== id) }));
     const { error } = await deletePostRow(id);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); return; }
-    toast('Đã xóa bài viết 🗑️');
+    if (error) { toast('Something went wrong', '⚠️'); refreshPosts(); return; }
+    toast('Post deleted 🗑️');
   };
 
   // Memories — backed by Supabase
@@ -382,7 +431,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await createMemory(myProfile.id, [myProfile.id, partnerProfile.id], {
       title: m.title, occurredOn, location: m.location, description: m.description, image: m.image,
     });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshMemories();
     // No manual toast — the realtime `notifications` subscription pops one for both accounts.
   };
@@ -393,7 +442,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const nextFav = !mem.favorite;
     setState(s => ({ ...s, memories: s.memories.map(x => x.id === id ? { ...x, favorite: nextFav } : x) }));
     const { error } = await setMemoryFavorite(id, nextFav);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMemories(); }
+    if (error) { toast('Something went wrong', '⚠️'); refreshMemories(); }
   };
 
   // Expenses — backed by Supabase
@@ -408,7 +457,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await createExpense(resolveProfileId(e.paidBy), {
       title: e.title, category: e.category, categoryEmoji: e.categoryEmoji, amount: e.amount, date: e.date, note: e.note, type: e.type,
     });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshMoney();
     toast('Expense saved.', '💰');
   };
@@ -419,21 +468,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await updateExpenseRow(id, resolveProfileId(e.paidBy), {
       title: e.title, category: e.category, categoryEmoji: e.categoryEmoji, amount: e.amount, date: e.date, note: e.note, type: e.type,
     });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, expenses: prev })); return; }
-    toast('Đã cập nhật giao dịch.', '✏️');
+    if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, expenses: prev })); return; }
+    toast('Transaction updated.', '✏️');
   };
 
   const deleteExpense = async (id: string) => {
     setState(s => ({ ...s, expenses: s.expenses.filter(e => e.id !== id) }));
     const { error } = await deleteExpenseRow(id);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
+    if (error) { toast('Something went wrong', '⚠️'); refreshMoney(); return; }
     toast('Expense removed.', '🗑️');
   };
 
   // Savings — backed by Supabase
   const addSavingsGoal = async (g: Omit<SavingsGoal, 'id'>) => {
     const { error } = await createSavingsGoal(g);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshMoney();
     toast('Savings goal added! 💰');
   };
@@ -442,15 +491,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const prev = state.savingsGoals;
     setState(s => ({ ...s, savingsGoals: s.savingsGoals.map(x => x.id === id ? { ...x, ...g } : x) }));
     const { error } = await updateSavingsGoalRow(id, g);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, savingsGoals: prev })); return; }
-    toast('Đã cập nhật quỹ.', '✏️');
+    if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, savingsGoals: prev })); return; }
+    toast('Fund updated.', '✏️');
   };
 
   const deleteSavingsGoal = async (id: string) => {
     setState(s => ({ ...s, savingsGoals: s.savingsGoals.filter(g => g.id !== id) }));
     const { error } = await deleteSavingsGoalRow(id);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
-    toast('Đã xóa quỹ.', '🗑️');
+    if (error) { toast('Something went wrong', '⚠️'); refreshMoney(); return; }
+    toast('Fund deleted.', '🗑️');
   };
 
   const addToGoal = async (id: string, amount: number) => {
@@ -461,14 +510,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (delta <= 0) return;
     setState(s => ({ ...s, savingsGoals: s.savingsGoals.map(g => g.id === id ? { ...g, current: nextCurrent } : g) }));
     const { error } = await updateSavingsGoalCurrent(id, nextCurrent);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
-    // Deposits move money out of everyday spending, so mirror it as an expense in Thu chi.
+    if (error) { toast('Something went wrong', '⚠️'); refreshMoney(); return; }
+    // Deposits move money out of everyday spending, so mirror it as an expense in Money.
     await createExpense(resolveProfileId(currentUser), {
-      title: `Nạp vào quỹ ${goal.title}`, category: 'Tiết kiệm', categoryEmoji: goal.emoji || '💰',
-      amount: delta, date: new Date().toISOString().split('T')[0], note: `Nạp tiền vào quỹ "${goal.title}"`, type: 'expense',
+      title: `Deposit to ${goal.title}`, category: 'Savings', categoryEmoji: goal.emoji || '💰',
+      amount: delta, date: new Date().toISOString().split('T')[0], note: `Deposited into "${goal.title}"`, type: 'expense',
     });
     await refreshMoney();
-    toast('Đã nạp vào quỹ! 🎉');
+    toast('Deposited into the fund! 🎉');
   };
 
   const withdrawFromGoal = async (id: string, amount: number) => {
@@ -479,14 +528,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (delta <= 0) return;
     setState(s => ({ ...s, savingsGoals: s.savingsGoals.map(g => g.id === id ? { ...g, current: nextCurrent } : g) }));
     const { error } = await updateSavingsGoalCurrent(id, nextCurrent);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
-    // Withdrawals bring money back into everyday spending, so mirror it as income in Thu chi.
+    if (error) { toast('Something went wrong', '⚠️'); refreshMoney(); return; }
+    // Withdrawals bring money back into everyday spending, so mirror it as income in Money.
     await createExpense(resolveProfileId(currentUser), {
-      title: `Rút từ quỹ ${goal.title}`, category: 'Tiết kiệm', categoryEmoji: goal.emoji || '💰',
-      amount: delta, date: new Date().toISOString().split('T')[0], note: `Rút tiền từ quỹ "${goal.title}"`, type: 'income',
+      title: `Withdraw from ${goal.title}`, category: 'Savings', categoryEmoji: goal.emoji || '💰',
+      amount: delta, date: new Date().toISOString().split('T')[0], note: `Withdrew from "${goal.title}"`, type: 'income',
     });
     await refreshMoney();
-    toast('Đã rút quỹ! 💸');
+    toast('Withdrawn from the fund! 💸');
   };
 
   // Love notes / secret notes — backed by Supabase
@@ -495,7 +544,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const toId = resolveProfileId(n.to);
     if (!fromId || !toId) return;
     const { error } = await createLoveNote(fromId, toId, n.message, n.mood);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshLoveStuff();
     // No manual toast — the realtime `notifications` subscription pops one for both accounts.
   };
@@ -510,30 +559,109 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const fromId = resolveProfileId(n.from);
     if (!fromId) return;
     const { error } = await createSecretNote(fromId, n.message, n.unlockDate);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshLoveStuff();
-    toast('Đã lưu ghi chú bí mật 🔐');
+    toast('Secret note saved 🔐');
   };
 
   // Events — backed by Supabase
   const addEvent = async (e: Omit<CalendarEvent, 'id'>) => {
     const { error } = await createEvent(e);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshEvents();
     toast('Event added to calendar 📅');
+  };
+
+  const updateEvent = async (id: string, e: Omit<CalendarEvent, 'id'>) => {
+    setState(s => ({ ...s, events: s.events.map(x => x.id === id ? { ...x, ...e } : x) }));
+    const { error } = await updateEventRow(id, e);
+    if (error) { toast('Something went wrong', '⚠️'); refreshEvents(); return; }
+    toast('Event updated ✏️');
   };
 
   const deleteEvent = async (id: string) => {
     setState(s => ({ ...s, events: s.events.filter(e => e.id !== id) }));
     const { error } = await deleteEventRow(id);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshEvents(); }
+    if (error) { toast('Something went wrong', '⚠️'); refreshEvents(); }
+  };
+
+  // Cycle tracker — backed by Supabase
+  const addCycleLog = async (l: Omit<CycleLog, 'id'>) => {
+    const { error } = await createCycleLog(l);
+    if (error) { toast('Something went wrong', '⚠️'); return; }
+    await refreshCycleLogs();
+    toast('Cycle logged 🌸');
+  };
+
+  const updateCycleLog = async (id: string, l: Omit<CycleLog, 'id'>) => {
+    setState(s => ({ ...s, cycleLogs: s.cycleLogs.map(x => x.id === id ? { ...x, ...l } : x) }));
+    const { error } = await updateCycleLogRow(id, l);
+    if (error) { toast('Something went wrong', '⚠️'); refreshCycleLogs(); }
+  };
+
+  const deleteCycleLog = async (id: string) => {
+    setState(s => ({ ...s, cycleLogs: s.cycleLogs.filter(l => l.id !== id) }));
+    const { error } = await deleteCycleLogRow(id);
+    if (error) { toast('Something went wrong', '⚠️'); refreshCycleLogs(); }
+  };
+
+  // Story quotes — backed by Supabase
+  const addStoryQuote = async (text: string) => {
+    const { error } = await createStoryQuote(text);
+    if (error) { toast('Something went wrong', '⚠️'); return; }
+    await refreshStoryQuotes();
+    toast('Quote added ✨');
+  };
+
+  const updateStoryQuote = async (id: string, text: string) => {
+    setState(s => ({ ...s, storyQuotes: s.storyQuotes.map(q => q.id === id ? { ...q, text } : q) }));
+    const { error } = await updateStoryQuoteRow(id, text);
+    if (error) { toast('Something went wrong', '⚠️'); refreshStoryQuotes(); }
+  };
+
+  const deleteStoryQuote = async (id: string) => {
+    setState(s => ({ ...s, storyQuotes: s.storyQuotes.filter(q => q.id !== id) }));
+    const { error } = await deleteStoryQuoteRow(id);
+    if (error) { toast('Something went wrong', '⚠️'); refreshStoryQuotes(); }
+  };
+
+  // Debts ("Sổ nợ") — backed by Supabase
+  const addDebt = async (d: Omit<Debt, 'id' | 'paid' | 'paidDate'>) => {
+    const { error } = await createDebt(resolveProfileId(d.createdBy), d);
+    if (error) { toast('Something went wrong', '⚠️'); return; }
+    await refreshDebts();
+    toast('Debt recorded 📝');
+  };
+
+  const updateDebt = async (id: string, d: Omit<Debt, 'id' | 'paid' | 'paidDate'>) => {
+    setState(s => ({ ...s, debts: s.debts.map(x => x.id === id ? { ...x, ...d } : x) }));
+    const { error } = await updateDebtRow(id, resolveProfileId(d.createdBy), d);
+    if (error) { toast('Something went wrong', '⚠️'); refreshDebts(); return; }
+    toast('Debt updated ✏️');
+  };
+
+  const toggleDebtPaid = async (id: string) => {
+    const debt = state.debts.find(x => x.id === id);
+    if (!debt) return;
+    const nextPaid = !debt.paid;
+    const paidDate = nextPaid ? new Date().toISOString().slice(0, 10) : undefined;
+    setState(s => ({ ...s, debts: s.debts.map(x => x.id === id ? { ...x, paid: nextPaid, paidDate } : x) }));
+    const { error } = await setDebtPaidRow(id, nextPaid);
+    if (error) { toast('Something went wrong', '⚠️'); refreshDebts(); return; }
+    toast(nextPaid ? 'Marked as paid 🎉' : 'Marked as unpaid');
+  };
+
+  const deleteDebt = async (id: string) => {
+    setState(s => ({ ...s, debts: s.debts.filter(x => x.id !== id) }));
+    const { error } = await deleteDebtRow(id);
+    if (error) refreshDebts();
   };
 
   // Goals
   const addGoal = async (g: Omit<Goal, 'id' | 'completed' | 'current'>) => {
     const ownerId = g.owner === 'both' ? null : resolveProfileId(g.owner);
     const { error } = await createGoal({ title: g.title, emoji: g.emoji, target: g.target, deadline: g.deadline, ownerId });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshGoals();
     toast('Goal added ✨');
   };
@@ -542,8 +670,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const ownerId = g.owner === 'both' ? null : resolveProfileId(g.owner);
     setState(s => ({ ...s, goals: s.goals.map(x => x.id === id ? { ...x, title: g.title, emoji: g.emoji, owner: g.owner, target: g.target, deadline: g.deadline } : x) }));
     const { error } = await updateGoalRow(id, { title: g.title, emoji: g.emoji, target: g.target, deadline: g.deadline, ownerId });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshGoals(); return; }
-    toast('Đã cập nhật mục tiêu ✏️');
+    if (error) { toast('Something went wrong', '⚠️'); refreshGoals(); return; }
+    toast('Goal updated ✏️');
   };
 
   // Contributing enough to reach the target auto-completes the goal — the
@@ -562,10 +690,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setTimeout(() => setCelebration(false), 2000);
       toast('Goal completed! ❤️', '🎉');
     } else {
-      toast('Đã góp vào mục tiêu 💪');
+      toast('Contributed to the goal 💪');
     }
     const { error } = await setGoalCurrent(id, nextCurrent);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshGoals(); return; }
+    if (error) { toast('Something went wrong', '⚠️'); refreshGoals(); return; }
     if (reachedTarget) {
       const { error: err2 } = await setGoalCompleted(id, true, completedDate);
       if (err2) refreshGoals();
@@ -584,7 +712,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       toast('Goal completed! ❤️', '🎉');
     }
     const { error } = await setGoalCompleted(id, nextCompleted, completedDate);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshGoals(); }
+    if (error) { toast('Something went wrong', '⚠️'); refreshGoals(); }
   };
 
   const deleteGoal = async (id: string) => {
@@ -598,18 +726,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const profileId = resolveProfileId(user);
     if (!profileId) return;
     const { error } = await upsertMood(profileId, mood.emoji, mood.label);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshMoods();
     toast(`Mood updated!`, mood.emoji);
-  };
-
-  // Favorites
-  const updateFavorite = async (key: string, val: string) => {
-    if (!myProfile?.coupleId) return;
-    setState(s => ({ ...s, favorites: { ...s.favorites, [key]: val } }));
-    const { error } = await updateFavoriteField(myProfile.coupleId, key, val);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
-    toast('Updated!', '✨');
   };
 
   // Notifications — backed by Supabase (shared couple activity feed)
@@ -634,17 +753,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Bills — backed by Supabase
   const addBill = async (b: Omit<Bill, 'id' | 'seriesId' | 'billMonth'>) => {
     const { error } = await createBill({ ...b, seriesId: crypto.randomUUID(), billMonth: new Date().toISOString().slice(0, 7) });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshMoney();
-    toast('Hóa đơn đã thêm!', '🧾');
+    toast('Bill added!', '🧾');
   };
 
   const updateBill = async (id: string, b: Omit<Bill, 'id' | 'seriesId' | 'billMonth' | 'paid' | 'paidDate'>) => {
     const prev = state.bills;
     setState(s => ({ ...s, bills: s.bills.map(x => x.id === id ? { ...x, ...b } : x) }));
     const { error } = await updateBillRow(id, b);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, bills: prev })); return; }
-    toast('Đã cập nhật hóa đơn.', '✏️');
+    if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, bills: prev })); return; }
+    toast('Bill updated.', '✏️');
   };
 
   const toggleBillPaid = async (id: string) => {
@@ -654,16 +773,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const paidDate = nextPaid ? new Date().toISOString().slice(0, 10) : null;
     setState(s => ({ ...s, bills: s.bills.map(x => x.id === id ? { ...x, paid: nextPaid, paidDate: paidDate ?? undefined } : x) }));
     const { error } = await setBillPaid(id, nextPaid, paidDate);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
+    if (error) { toast('Something went wrong', '⚠️'); refreshMoney(); return; }
     // Mirror the payment (or its reversal) into Thu chi, same as goal deposit/withdraw.
     // Tagged with billId so deleting the bill later also removes these (on delete cascade).
     const today = new Date().toISOString().slice(0, 10);
     await createExpense(resolveProfileId(currentUser), nextPaid ? {
-      title: `Thanh toán hóa đơn ${bill.title}`, category: 'Hóa đơn', categoryEmoji: bill.emoji || '🧾',
-      amount: bill.amount, date: today, note: `Thanh toán hóa đơn "${bill.title}"`, type: 'expense', billId: bill.id,
+      title: `Paid bill: ${bill.title}`, category: 'Bills', categoryEmoji: bill.emoji || '🧾',
+      amount: bill.amount, date: today, note: `Paid the "${bill.title}" bill`, type: 'expense', billId: bill.id,
     } : {
-      title: `Hủy thanh toán hóa đơn ${bill.title}`, category: 'Hóa đơn', categoryEmoji: bill.emoji || '🧾',
-      amount: bill.amount, date: today, note: `Hủy thanh toán hóa đơn "${bill.title}"`, type: 'income', billId: bill.id,
+      title: `Unpaid bill: ${bill.title}`, category: 'Bills', categoryEmoji: bill.emoji || '🧾',
+      amount: bill.amount, date: today, note: `Marked the "${bill.title}" bill unpaid`, type: 'income', billId: bill.id,
     });
     await refreshMoney();
   };
@@ -671,24 +790,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteBill = async (id: string) => {
     setState(s => ({ ...s, bills: s.bills.filter(b => b.id !== id) }));
     const { error } = await deleteBillRow(id);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshMoney(); return; }
+    if (error) { toast('Something went wrong', '⚠️'); refreshMoney(); return; }
     // The bill's linked Thu chi transactions are removed by the DB's on-delete
     // cascade — refresh so the local expenses list reflects that too.
     await refreshMoney();
-    toast('Đã xóa hóa đơn.', '🗑️');
+    toast('Bill deleted.', '🗑️');
   };
 
   // Trips — backed by Supabase
   const addTrip = async (t: Omit<Trip, 'id'>) => {
     const { error } = await createTripRow(t);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshTrips();
     toast('Trip added! ✈️');
   };
   const updateTrip = async (t: Trip) => {
     setState(s => ({ ...s, trips: s.trips.map(x => x.id === t.id ? t : x) }));
     const { error } = await updateTripRow(t.id, t);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshTrips(); }
+    if (error) { toast('Something went wrong', '⚠️'); refreshTrips(); }
   };
   const deleteTrip = async (id: string) => {
     setState(s => ({ ...s, trips: s.trips.filter(t => t.id !== id) }));
@@ -708,7 +827,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const toId = c.to === 'both' ? null : resolveProfileId(c.to);
     if (!fromId) return;
     const { error } = await createCapsule(fromId, toId, c.title, c.occasion, c.message, c.unlockDate);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshCapsules();
     toast('Capsule sealed! 💌');
   };
@@ -721,7 +840,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, capsules: s.capsules.map(x => x.id === c.id ? c : x) }));
     const toId = c.to === 'both' ? null : resolveProfileId(c.to);
     const { error } = await updateCapsuleRow(c.id, toId, c.title, c.occasion, c.message, c.unlockDate);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshCapsules(); }
+    if (error) { toast('Something went wrong', '⚠️'); refreshCapsules(); }
   };
   const deleteCapsule = async (id: string) => {
     setState(s => ({ ...s, capsules: s.capsules.filter(c => c.id !== id) }));
@@ -729,30 +848,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) refreshCapsules();
   };
 
-  // Countdowns — backed by Supabase
-  const addCountdown = async (c: Omit<Countdown, 'id'>) => {
-    const { error } = await createCountdown(c);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
-    await refreshCountdowns();
-    toast('Countdown added!', '⏳');
-  };
-  const deleteCountdown = async (id: string) => {
-    setState(s => ({ ...s, countdowns: s.countdowns.filter(c => c.id !== id) }));
-    const { error } = await deleteCountdownRow(id);
-    if (error) refreshCountdowns();
-  };
-
-  // Playlist — backed by Supabase
+// Playlist — backed by Supabase
   const addToPlaylist = async (p: Omit<PlaylistItem, 'id'>) => {
-    if (!myProfile) return;
-    const { error } = await createPlaylistItem(myProfile.id, { title: p.title, artist: p.artist, emoji: p.emoji, image: p.image, durationSeconds: p.durationSeconds, releaseDate: p.releaseDate, previewUrl: p.previewUrl, note: p.note });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    const addedById = resolveProfileId(p.addedBy) ?? myProfile?.id;
+    if (!addedById) return;
+    const { error } = await createPlaylistItem(addedById, { title: p.title, artist: p.artist, emoji: p.emoji, image: p.image, durationSeconds: p.durationSeconds, releaseDate: p.releaseDate, previewUrl: p.previewUrl, note: p.note });
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshPlaylist();
     toast('Added to playlist! 🎵');
   };
-  const updatePlaylist = async (id: string, p: { title: string; artist: string; emoji: string; image?: string; durationSeconds?: number; releaseDate?: string; previewUrl?: string; note?: string }) => {
-    setState(s => ({ ...s, playlist: s.playlist.map(x => x.id === id ? { ...x, ...p } : x) }));
-    const { error } = await updatePlaylistItemRow(id, p);
+  const updatePlaylist = async (id: string, p: { title: string; artist: string; emoji: string; image?: string; durationSeconds?: number; releaseDate?: string; previewUrl?: string; note?: string; addedBy?: User }) => {
+    const addedById = p.addedBy ? resolveProfileId(p.addedBy) : null;
+    setState(s => ({ ...s, playlist: s.playlist.map(x => x.id === id ? { ...x, ...p, addedBy: p.addedBy ?? x.addedBy } : x) }));
+    const { error } = await updatePlaylistItemRow(id, addedById, p);
     if (error) refreshPlaylist();
   };
   const removeFromPlaylist = async (id: string) => {
@@ -766,14 +874,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const fromId = resolveProfileId(w.from);
     if (!fromId) return;
     const { error } = await createWish(fromId, { wish: w.wish, date: w.date, price: w.price, link: w.link, linkImage: w.linkImage, linkTitle: w.linkTitle, linkDescription: w.linkDescription });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshWishes();
-    toast('Ước nguyện đã vào hũ! 🫙', '✨');
+    toast('Wish dropped in the jar! 🫙', '✨');
   };
   const updateWish = async (id: string, w: { wish: string; price?: string; link?: string; linkImage?: string; linkTitle?: string; linkDescription?: string }) => {
     setState(s => ({ ...s, wishes: s.wishes.map(x => x.id === id ? { ...x, ...w } : x) }));
     const { error } = await updateWishRow(id, w);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshWishes(); }
+    if (error) { toast('Something went wrong', '⚠️'); refreshWishes(); }
   };
   const drawWish = async (id: string, drawn: boolean = true) => {
     setState(s => ({ ...s, wishes: s.wishes.map(w => w.id === id ? { ...w, drawn } : w) }));
@@ -790,9 +898,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addDateIdea = async (i: Omit<DateIdea, 'id'>) => {
     if (!myProfile) return;
     const { error } = await createDateIdea(myProfile.id, { emoji: i.emoji, text: i.text });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshDateIdeas();
-    toast('Đã thêm ý tưởng! ✨');
+    toast('Idea added! ✨');
   };
   const removeDateIdea = async (id: string) => {
     setState(s => ({ ...s, dateIdeas: s.dateIdeas.filter(i => i.id !== id) }));
@@ -803,16 +911,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const prev = state.dateIdeas;
     setState(s => ({ ...s, dateIdeas: s.dateIdeas.map(x => x.id === id ? { ...x, ...i } : x) }));
     const { error } = await updateDateIdeaRow(id, i);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, dateIdeas: prev })); return; }
-    toast('Đã cập nhật ý tưởng.', '✏️');
+    if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, dateIdeas: prev })); return; }
+    toast('Idea updated.', '✏️');
   };
   // Presets — same shape as custom ideas, just their own table (see 0032).
   const updateDateIdeaPreset = async (id: string, i: { emoji: string; text: string }) => {
     const prev = state.dateIdeaPresets;
     setState(s => ({ ...s, dateIdeaPresets: s.dateIdeaPresets.map(x => x.id === id ? { ...x, ...i } : x) }));
     const { error } = await updateDateIdeaPresetRow(id, i);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, dateIdeaPresets: prev })); return; }
-    toast('Đã cập nhật ý tưởng.', '✏️');
+    if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, dateIdeaPresets: prev })); return; }
+    toast('Idea updated.', '✏️');
   };
   const removeDateIdeaPreset = async (id: string) => {
     setState(s => ({ ...s, dateIdeaPresets: s.dateIdeaPresets.filter(i => i.id !== id) }));
@@ -831,7 +939,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const toId = resolveProfileId(l.to);
     if (!fromId || !toId) return;
     const { error } = await createLoveLetter(fromId, toId, { title: l.title, body: l.body, stationery: l.stationery, font: l.font });
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshLoveStuff();
     // No manual toast — the realtime `notifications` subscription pops one for both accounts.
   };
@@ -844,12 +952,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Hugs — backed by Supabase (notify_new_hug trigger pushes the shared
   // notification via the existing realtime subscription).
   const sendHug = async (from: User, message: string, kind: 'hug' | 'thinking' = 'hug') => {
-    const to = from === 'Alvin' ? 'Paoi' : 'Alvin';
+    const to = (myProfile?.displayName === from ? partnerProfile?.displayName : myProfile?.displayName) ?? from;
     const fromId = resolveProfileId(from);
     if (!fromId) return;
     const { error } = await createHug(fromId, message, kind);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
-    toast(kind === 'thinking' ? `${from} đang nghĩ đến ${to} 💭` : `${from} đã gửi ôm cho ${to} 🫂`, '🌸');
+    if (error) { toast('Something went wrong', '⚠️'); return; }
+    toast(kind === 'thinking' ? `${from} is thinking of ${to} 💭` : `${from} sent ${to} a hug 🫂`, '🌸');
   };
 
   // Date requests — backed by Supabase (notify_new_date_request/notify_date_request_response
@@ -859,9 +967,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const toId = resolveProfileId(req.to);
     if (!fromId || !toId) return;
     const { error } = await createDateRequest(fromId, toId, req);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshDateRequests();
-    toast(`Đơn đã nộp! Chờ ${req.to} duyệt nhé 📋`, '✨');
+    toast(`Request submitted! Waiting on ${req.to} to approve 📋`, '✨');
   };
 
   const respondToRequest = async (id: string, status: 'approved' | 'rejected', note: string) => {
@@ -873,7 +981,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
     const { error } = await respondToDateRequest(id, status, note);
     if (error) { refreshDateRequests(); return; }
-    toast(status === 'approved' ? 'Đã duyệt đơn! 🎉' : 'Đã từ chối đơn', status === 'approved' ? '✅' : '❌');
+    toast(status === 'approved' ? 'Request approved! 🎉' : 'Request rejected', status === 'approved' ? '✅' : '❌');
   };
 
   // Only ever called from the "mine" tab on a still-pending request — once
@@ -882,15 +990,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const prev = state.dateRequests;
     setState(s => ({ ...s, dateRequests: s.dateRequests.map(r => r.id === id ? { ...r, ...req } : r) }));
     const { error } = await updateDateRequestRow(id, req);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, dateRequests: prev })); return; }
-    toast('Đã cập nhật đơn.', '✏️');
+    if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, dateRequests: prev })); return; }
+    toast('Request updated.', '✏️');
   };
 
   const deleteDateRequest = async (id: string) => {
     setState(s => ({ ...s, dateRequests: s.dateRequests.filter(r => r.id !== id) }));
     const { error } = await deleteDateRequestRow(id);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshDateRequests(); return; }
-    toast('Đã xóa đơn.', '🗑️');
+    if (error) { toast('Something went wrong', '⚠️'); refreshDateRequests(); return; }
+    toast('Request deleted.', '🗑️');
   };
 
   // Gratitude
@@ -898,24 +1006,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const fromId = resolveProfileId(entry.from);
     if (!fromId) return;
     const { error } = await createGratitude(fromId, entry.text, entry.date);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshGratitude();
-    toast('Biết ơn đã ghi lại 🌸', '💕');
+    toast('Gratitude saved 🌸', '💕');
   };
 
   const updateGratitude = async (id: string, text: string) => {
     const prev = state.gratitude;
     setState(s => ({ ...s, gratitude: s.gratitude.map(g => g.id === id ? { ...g, text } : g) }));
     const { error } = await updateGratitudeRow(id, text);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); setState(s => ({ ...s, gratitude: prev })); return; }
-    toast('Đã cập nhật.', '✏️');
+    if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, gratitude: prev })); return; }
+    toast('Updated.', '✏️');
   };
 
   const deleteGratitude = async (id: string) => {
     setState(s => ({ ...s, gratitude: s.gratitude.filter(g => g.id !== id) }));
     const { error } = await deleteGratitudeRow(id);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshGratitude(); return; }
-    toast('Đã xóa.', '🗑️');
+    if (error) { toast('Something went wrong', '⚠️'); refreshGratitude(); return; }
+    toast('Deleted.', '🗑️');
   };
 
   // Reactions
@@ -934,15 +1042,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       },
     }));
     const { error } = await toggleReaction(postId, myProfile.id, emoji, reacted);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshPosts(); }
+    if (error) { toast('Something went wrong', '⚠️'); refreshPosts(); }
   };
 
   // Fav places
   const addFavPlace = async (cat: FavCategory, place: Omit<FavPlace, 'id'>) => {
     const { error } = await createFavPlace(cat, place);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshFavorites();
-    toast('Đã thêm!', '✨');
+    toast('Added!', '✨');
   };
   const updateFavPlace = async (cat: FavCategory, id: string, place: { name: string; note?: string; image?: string }) => {
     setState(s => ({ ...s, favPlaces: { ...s.favPlaces, [cat]: (s.favPlaces[cat] ?? []).map(p => p.id === id ? { ...p, ...place } : p) } }));
@@ -957,7 +1065,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addFavCategory = async (cat: { label: string; emoji: string; color: string }) => {
     const { data, error } = await createFavCategory(cat);
-    if (error || !data) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error || !data) { toast('Something went wrong', '⚠️'); return; }
     setState(s => ({ ...s, favCategories: [...s.favCategories, data as FavCategoryItem] }));
   };
   const updateFavCategory = async (id: string, cat: { label: string; emoji: string; color: string }) => {
@@ -975,11 +1083,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Places
-  const addPlace = async (p: { name: string; flag?: string; image: string }) => {
+  const addPlace = async (p: { name: string; flag?: string; images: string[]; visitedDate?: string }) => {
     const { error } = await createPlace(p);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); return; }
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshPlaces();
-    toast('Đã thêm địa điểm!', '📍');
+    toast('Place added!', '📍');
+  };
+  const updatePlace = async (id: string, p: { name: string; flag?: string; images: string[]; visitedDate?: string }) => {
+    setState(s => ({ ...s, places: s.places.map(x => x.id === id ? { ...x, name: p.name, flag: p.flag ?? '', images: p.images, visitedDate: p.visitedDate } : x) }));
+    const { error } = await updatePlaceRow(id, p);
+    if (error) { toast('Something went wrong', '⚠️'); refreshPlaces(); return; }
+    toast('Place updated ✏️');
   };
   const deletePlace = async (id: string) => {
     setState(s => ({ ...s, places: s.places.filter(p => p.id !== id) }));
@@ -1000,7 +1114,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, darkMode: next }));
     if (myProfile?.coupleId) {
       const { error } = await updateDarkMode(myProfile.coupleId, next);
-      if (error) toast('Có lỗi xảy ra', '⚠️');
+      if (error) toast('Something went wrong', '⚠️');
     }
   };
 
@@ -1009,8 +1123,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!myProfile?.coupleId) return;
     setState(s => ({ ...s, relationshipStart: date }));
     const { error } = await updateRelationshipStart(myProfile.coupleId, date);
-    if (error) { toast('Có lỗi xảy ra', '⚠️'); refreshFavorites(); return; }
-    toast('Đã cập nhật ngày kỷ niệm 📅', '💕');
+    if (error) { toast('Something went wrong', '⚠️'); refreshFavorites(); return; }
+    toast('Anniversary date updated 📅', '💕');
   };
 
   const refreshProfiles = useCallback(async () => {
@@ -1028,7 +1142,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (me.photoUrl) photos[me.displayName] = me.photoUrl;
     if (partner?.photoUrl) photos[partner.displayName] = partner.photoUrl;
     setProfilePhotos(photos);
-    if (me.displayName === 'Alvin' || me.displayName === 'Paoi') setCurrentUser(me.displayName);
+    setCurrentUser(me.displayName);
     setProfileLoaded(true);
   }, []);
 
@@ -1059,14 +1173,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(t);
   }, [authed, isLinked, refreshInvites]);
 
+  // Tracks which of the couple's initial-load fetches below have completed
+  // at least once, purely so the loading screen (App.tsx) can wait for real
+  // data instead of hiding the instant the session/profile resolves — that
+  // gap used to show ~0.5s of "has UI, but no data yet" on every launch.
+  const BOOT_DOMAIN_COUNT = 24;
+  const [loadedDomains, setLoadedDomains] = useState<Set<string>>(new Set());
+  const markLoaded = useCallback((key: string) => {
+    setLoadedDomains(prev => prev.has(key) ? prev : new Set(prev).add(key));
+  }, []);
+  // Safety valve: never let one stuck/slow fetch hold the loading screen up
+  // forever — a few seconds after linking, treat the data as ready regardless.
+  const [dataTimedOut, setDataTimedOut] = useState(false);
+  useEffect(() => {
+    if (!isLinked) { setDataTimedOut(false); return; }
+    const t = setTimeout(() => setDataTimedOut(true), 6000);
+    return () => clearTimeout(t);
+  }, [isLinked]);
+  const dataReady = !isLinked || dataTimedOut || loadedDomains.size >= BOOT_DOMAIN_COUNT;
+
   const refreshPosts = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const { posts, reactions } = await fetchPosts(myProfile.id, names);
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const { posts, reactions } = await fetchPosts(myProfile.id, names, myProfile.displayName);
     setState(s => ({ ...s, posts, postReactions: reactions }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('posts');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshPosts();
@@ -1075,11 +1209,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshMemories = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
     const memories = await fetchMemories(names);
     setState(s => ({ ...s, memories }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('memories');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshMemories();
@@ -1088,21 +1223,57 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshEvents = useCallback(async () => {
     const events = await fetchEvents();
     setState(s => ({ ...s, events }));
-  }, []);
+    markLoaded('events');
+  }, [markLoaded]);
 
   useEffect(() => {
     if (isLinked) refreshEvents();
   }, [isLinked, refreshEvents]);
 
+  const refreshCycleLogs = useCallback(async () => {
+    const cycleLogs = await fetchCycleLogs();
+    setState(s => ({ ...s, cycleLogs }));
+    markLoaded('cycleLogs');
+  }, [markLoaded]);
+
+  useEffect(() => {
+    if (isLinked) refreshCycleLogs();
+  }, [isLinked, refreshCycleLogs]);
+
+  const refreshStoryQuotes = useCallback(async () => {
+    const storyQuotes = await fetchStoryQuotes();
+    setState(s => ({ ...s, storyQuotes }));
+    markLoaded('storyQuotes');
+  }, [markLoaded]);
+
+  useEffect(() => {
+    if (isLinked) refreshStoryQuotes();
+  }, [isLinked, refreshStoryQuotes]);
+
+  const refreshDebts = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const debts = await fetchDebts(names, myProfile.displayName);
+    setState(s => ({ ...s, debts }));
+    markLoaded('debts');
+  }, [myProfile, partnerProfile, markLoaded]);
+
+  useEffect(() => {
+    if (isLinked && myProfile) refreshDebts();
+  }, [isLinked, myProfile, refreshDebts]);
+
   const refreshMoney = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const [expenses, billsRaw, savingsGoals] = await Promise.all([fetchExpenses(names), fetchBills(), fetchSavingsGoals()]);
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const [expenses, billsRaw, savingsGoals] = await Promise.all([fetchExpenses(names, myProfile.displayName), fetchBills(), fetchSavingsGoals()]);
     const bills = await rollBillsForward(billsRaw, new Date().toISOString().slice(0, 7));
     setState(s => ({ ...s, expenses, bills, savingsGoals }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('money');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshMoney();
@@ -1111,11 +1282,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshLoveStuff = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const [loveNotes, loveLetters, secretNotes] = await Promise.all([fetchLoveNotes(names), fetchLoveLetters(names), fetchSecretNotes(names)]);
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const partnerName = partnerProfile?.displayName ?? myProfile.displayName;
+    const [loveNotes, loveLetters, secretNotes] = await Promise.all([fetchLoveNotes(names, myProfile.displayName, partnerName), fetchLoveLetters(names, myProfile.displayName, partnerName), fetchSecretNotes(names, myProfile.displayName)]);
     setState(s => ({ ...s, loveNotes, loveLetters, secretNotes }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('loveStuff');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshLoveStuff();
@@ -1124,11 +1297,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshGoals = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
     const goals = await fetchGoals(names);
     setState(s => ({ ...s, goals }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('goals');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile) refreshGoals();
@@ -1148,13 +1322,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     setState(s => ({
       ...s,
-      favorites: settings?.favorites ?? s.favorites,
       darkMode: settings?.darkMode ?? s.darkMode,
       relationshipStart: settings?.relationshipStart ?? s.relationshipStart,
       favPlaces,
       favCategories,
     }));
-  }, [myProfile?.coupleId]);
+    markLoaded('favorites');
+  }, [myProfile?.coupleId, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile) refreshFavorites();
@@ -1163,7 +1337,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshPlaces = useCallback(async () => {
     const places = await fetchPlaces();
     setState(s => ({ ...s, places }));
-  }, []);
+    markLoaded('places');
+  }, [markLoaded]);
 
   useEffect(() => {
     if (isLinked) refreshPlaces();
@@ -1172,11 +1347,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshPlaylist = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const playlist = await fetchPlaylist(names);
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const playlist = await fetchPlaylist(names, myProfile.displayName);
     setState(s => ({ ...s, playlist }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('playlist');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshPlaylist();
@@ -1185,7 +1361,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshTrips = useCallback(async () => {
     const trips = await fetchTrips();
     setState(s => ({ ...s, trips }));
-  }, []);
+    markLoaded('trips');
+  }, [markLoaded]);
 
   useEffect(() => {
     if (isLinked) refreshTrips();
@@ -1194,11 +1371,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshCapsules = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const capsules = await fetchCapsules(names);
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const capsules = await fetchCapsules(names, myProfile.displayName, partnerProfile?.displayName ?? myProfile.displayName);
     setState(s => ({ ...s, capsules }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('capsules');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshCapsules();
@@ -1207,11 +1385,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshWishes = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const wishes = await fetchWishes(names);
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const wishes = await fetchWishes(names, myProfile.displayName);
     setState(s => ({ ...s, wishes }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('wishes');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshWishes();
@@ -1220,7 +1399,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshDateIdeas = useCallback(async () => {
     const dateIdeas = await fetchDateIdeas();
     setState(s => ({ ...s, dateIdeas }));
-  }, []);
+    markLoaded('dateIdeas');
+  }, [markLoaded]);
 
   useEffect(() => {
     if (isLinked) refreshDateIdeas();
@@ -1229,7 +1409,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshDateIdeaPresets = useCallback(async () => {
     const dateIdeaPresets = await fetchDateIdeaPresets();
     setState(s => ({ ...s, dateIdeaPresets }));
-  }, []);
+    markLoaded('dateIdeaPresets');
+  }, [markLoaded]);
 
   useEffect(() => {
     if (isLinked) refreshDateIdeaPresets();
@@ -1238,7 +1419,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshDateIdeaHistory = useCallback(async () => {
     const dateIdeaHistory = await fetchDateIdeaHistory();
     setState(s => ({ ...s, dateIdeaHistory }));
-  }, []);
+    markLoaded('dateIdeaHistory');
+  }, [markLoaded]);
 
   useEffect(() => {
     if (isLinked) refreshDateIdeaHistory();
@@ -1247,11 +1429,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshGratitude = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const gratitude = await fetchGratitude(names);
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const gratitude = await fetchGratitude(names, myProfile.displayName);
     setState(s => ({ ...s, gratitude }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('gratitude');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshGratitude();
@@ -1260,44 +1443,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshDateRequests = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const dateRequests = await fetchDateRequests(names);
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const dateRequests = await fetchDateRequests(names, myProfile.displayName, partnerProfile?.displayName ?? myProfile.displayName);
     setState(s => ({ ...s, dateRequests }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('dateRequests');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshDateRequests();
   }, [isLinked, myProfile, partnerProfile, refreshDateRequests]);
 
-  const refreshCountdowns = useCallback(async () => {
-    const countdowns = await fetchCountdowns();
-    setState(s => ({ ...s, countdowns }));
-  }, []);
-
-  useEffect(() => {
-    if (isLinked) refreshCountdowns();
-  }, [isLinked, refreshCountdowns]);
-
-  const refreshMoods = useCallback(async () => {
+const refreshMoods = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
     const moodHistory = await fetchMoodHistory(names);
     const today = new Date().toISOString().slice(0, 10);
     const todayEntry = moodHistory.find(e => e.date === today);
-    setState(s => ({ ...s, moodHistory, moods: { Alvin: todayEntry?.Alvin ?? null, Paoi: todayEntry?.Paoi ?? null } }));
-  }, [myProfile, partnerProfile]);
+    const moods: Record<string, Mood | null> = {};
+    moods[myProfile.displayName] = todayEntry?.moods[myProfile.displayName] ?? null;
+    if (partnerProfile) moods[partnerProfile.displayName] = todayEntry?.moods[partnerProfile.displayName] ?? null;
+    setState(s => ({ ...s, moodHistory, moods }));
+    markLoaded('moods');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshMoods();
   }, [isLinked, myProfile, partnerProfile, refreshMoods]);
 
   const refreshStreak = useCallback(async () => {
-    const streak = await bumpStreak();
-    setState(s => ({ ...s, streak }));
-  }, []);
+    const { count, litToday } = await fetchStreak();
+    setState(s => ({ ...s, streak: count, streakLitToday: litToday }));
+    markLoaded('streak');
+  }, [markLoaded]);
 
   useEffect(() => {
     if (isLinked) refreshStreak();
@@ -1306,11 +1486,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const refreshNotifications = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
-    const notifications = await fetchNotifications(names, myProfile.id);
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const notifications = await fetchNotifications(names, myProfile.id, myProfile.notifyPrefs);
     setState(s => ({ ...s, notifications }));
-  }, [myProfile, partnerProfile]);
+    markLoaded('notifications');
+  }, [myProfile, partnerProfile, markLoaded]);
 
   // Realtime: pop a toast + prepend the item the instant a notification row is
   // inserted for this couple, instead of waiting on a poll interval.
@@ -1320,18 +1501,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const coupleId = myProfile.coupleId;
     const myId = myProfile.id;
     const names: Record<string, User> = {};
-    if (myProfile.displayName === 'Alvin' || myProfile.displayName === 'Paoi') names[myProfile.id] = myProfile.displayName;
-    if (partnerProfile && (partnerProfile.displayName === 'Alvin' || partnerProfile.displayName === 'Paoi')) names[partnerProfile.id] = partnerProfile.displayName;
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
     const channel = supabase
       .channel(`notifications-${coupleId}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'notifications', filter: `couple_id=eq.${coupleId}` },
         (payload) => {
-          const row = payload.new as { id: string; emoji: string | null; message: string; read: boolean; actor_profile_id: string | null; target_screen: string | null; target_id: string | null; preview_image_url: string | null; preview_text: string | null };
+          const row = payload.new as { id: string; emoji: string | null; message: string; read: boolean; actor_profile_id: string | null; target_screen: string | null; target_id: string | null; preview_image_url: string | null; preview_text: string | null; category: string | null };
           // Skip your own actions — you already got a local toast for those
           // when you did them; this feed is only meant to tell the partner.
           if (row.actor_profile_id === myId) return;
+          // Skip categories this viewer has muted in Settings > Notifications.
+          if (!passesNotifyPrefs(row.category, myProfile.notifyPrefs)) return;
           setState(s => {
             if (s.notifications.some(n => n.id === row.id)) return s;
             const notif = {
@@ -1344,7 +1527,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             };
             return { ...s, notifications: [notif, ...s.notifications] };
           });
-          toast(row.message, row.emoji ?? '🔔');
+          toast(row.message, row.emoji ?? '🔔', { passive: true });
         }
       )
       .subscribe();
@@ -1370,31 +1553,133 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => { supabase.removeChannel(channel); };
   }, [isLinked, myProfile, refreshDateRequests]);
 
+  // Chat — one live DM thread per couple, Instagram-style. Realtime covers
+  // both new messages (INSERT) and read receipts (UPDATE sets read_at).
+  const refreshChat = useCallback(async () => {
+    if (!myProfile) return;
+    const rows = await fetchChatMessages();
+    const messages: ChatMessage[] = rows.map(r => ({
+      id: r.id,
+      senderId: r.sender_profile_id,
+      sender: r.sender_profile_id === myProfile.id ? myProfile.displayName : (partnerProfile?.displayName ?? 'Partner'),
+      mine: r.sender_profile_id === myProfile.id,
+      text: r.text,
+      imageUrl: r.image_url,
+      audioUrl: r.audio_url,
+      audioDuration: r.audio_duration,
+      createdAt: r.created_at,
+      read: !!r.read_at,
+    }));
+    setState(s => ({ ...s, chatMessages: messages }));
+    markLoaded('chat');
+  }, [myProfile, partnerProfile, markLoaded]);
+
+  useEffect(() => {
+    if (!isLinked || !myProfile?.coupleId || !partnerProfile) return;
+    refreshChat();
+    fetchUnreadChatCount(partnerProfile.id).then(count => setState(s => ({ ...s, unreadChatCount: count })));
+    const coupleId = myProfile.coupleId;
+    const myId = myProfile.id;
+    const partnerId = partnerProfile.id;
+    const partnerName = partnerProfile.displayName;
+    const channel = supabase
+      .channel(`chat-${coupleId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `couple_id=eq.${coupleId}` },
+        (payload) => {
+          const row = payload.new as { id: string; sender_profile_id: string; text: string | null; image_url: string | null; audio_url: string | null; audio_duration: number | null; created_at: string; read_at: string | null };
+          const mine = row.sender_profile_id === myId;
+          const onChatScreen = screenRef.current === 'chat';
+          setState(s => {
+            if (s.chatMessages.some(m => m.id === row.id)) return s;
+            const msg: ChatMessage = { id: row.id, senderId: row.sender_profile_id, sender: mine ? myProfile.displayName : partnerName, mine, text: row.text, imageUrl: row.image_url, audioUrl: row.audio_url, audioDuration: row.audio_duration, createdAt: row.created_at, read: !!row.read_at };
+            return { ...s, chatMessages: [...s.chatMessages, msg], unreadChatCount: !mine && !onChatScreen ? s.unreadChatCount + 1 : s.unreadChatCount };
+          });
+          if (!mine) {
+            if (onChatScreen) markChatReadFrom(partnerId);
+            else {
+              const preview = row.image_url ? '📷 Sent a photo' : row.audio_url ? '🎤 Sent a voice message' : (row.text ?? '').length > 60 ? row.text!.slice(0, 60) + '…' : (row.text ?? '');
+              toast(`${partnerName}: ${preview}`, '💬', { passive: true });
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chat_messages', filter: `couple_id=eq.${coupleId}` },
+        (payload) => {
+          const row = payload.new as { id: string; read_at: string | null };
+          setState(s => ({ ...s, chatMessages: s.chatMessages.map(m => m.id === row.id ? { ...m, read: !!row.read_at } : m) }));
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isLinked, myProfile, partnerProfile, refreshChat]);
+
+  const sendChatMessage = async (msg: NewChatMessage) => {
+    if (!myProfile) return;
+    if (!msg.text?.trim() && !msg.imageUrl && !msg.audioUrl) return;
+    const { error } = await sendChatMessageRow(myProfile.id, { ...msg, text: msg.text?.trim() });
+    if (error) toast('Something went wrong', '⚠️');
+  };
+
+  const uploadChatMedia = async (file: File | Blob, ext: string): Promise<string | null> => {
+    if (!myProfile?.coupleId) return null;
+    return uploadChatFile(myProfile.coupleId, file, ext);
+  };
+
+  const markChatRead = useCallback(() => {
+    if (!partnerProfile) return;
+    markChatReadFrom(partnerProfile.id);
+    setState(s => (s.unreadChatCount === 0 && s.chatMessages.every(m => m.mine || m.read)
+      ? s
+      : { ...s, unreadChatCount: 0, chatMessages: s.chatMessages.map(m => m.mine ? m : { ...m, read: true }) }));
+  }, [partnerProfile]);
+
   const updateNotifyPrefs = async (prefs: NotifyPrefs) => {
     const res = await authUpdateNotifyPrefs(prefs);
-    if (!res.ok) { toast(res.error || 'Có lỗi xảy ra', '⚠️'); return; }
+    if (!res.ok) { toast(res.error || 'Something went wrong', '⚠️'); return; }
     await refreshProfiles();
-    toast('Đã cập nhật', '✓');
+    toast('Updated', '✓');
   };
+
+  const updateDisplayName = async (name: string) => {
+    const res = await authUpdateDisplayName(name);
+    if (res.ok) { await refreshProfiles(); toast('Name updated 👤'); }
+    return res;
+  };
+
+  const changePassword = async (newPassword: string) => {
+    const res = await authChangePassword(newPassword);
+    if (res.ok) toast('Password changed 🔒');
+    return res;
+  };
+
+  // Simply opening the app counts as activity — fires once per session
+  // (myProfile.id only changes on login/logout, not on every profile edit).
+  useEffect(() => {
+    if (myProfile?.id) touchLastActive();
+  }, [myProfile?.id]);
 
   const invitePartner = useCallback(async (username: string) => {
     const res = await apiSendInvite(username);
-    if (res.ok) { toast('Đã gửi lời mời 💌'); refreshInvites(); }
+    if (res.ok) { toast('Invite sent 💌'); refreshInvites(); }
     return res;
   }, [refreshInvites]);
 
   const acceptInvite = useCallback(async (id: string) => {
     const res = await apiRespondInvite(id, true);
-    if (!res.ok) { toast(res.error || 'Có lỗi xảy ra', '⚠️'); return; }
-    toast('Đã kết nối! 💕', '🎉');
+    if (!res.ok) { toast(res.error || 'Something went wrong', '⚠️'); return; }
+    toast('Connected! 💕', '🎉');
     await refreshProfiles();
     refreshInvites();
   }, [refreshProfiles, refreshInvites]);
 
   const rejectInvite = useCallback(async (id: string) => {
     const res = await apiRespondInvite(id, false);
-    if (!res.ok) { toast(res.error || 'Có lỗi xảy ra', '⚠️'); return; }
-    toast('Đã từ chối lời mời');
+    if (!res.ok) { toast(res.error || 'Something went wrong', '⚠️'); return; }
+    toast('Invite declined');
     refreshInvites();
   }, [refreshInvites]);
 
@@ -1405,9 +1690,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfilePhoto = async (photoUrl: string) => {
     const res = await authUpdatePhoto(photoUrl);
-    if (!res.ok) { toast(res.error || 'Có lỗi xảy ra', '⚠️'); return; }
+    if (!res.ok) { toast(res.error || 'Something went wrong', '⚠️'); return; }
     await refreshProfiles();
-    toast('Ảnh đã được cập nhật! ✨');
+    toast('Photo updated! ✨');
   };
 
   const logout = useCallback(() => {
@@ -1417,7 +1702,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <Ctx.Provider value={{
       state, currentUser,
-      authed, authLoading, profileLoaded, isLinked, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
+      authed, authLoading, profileLoaded, isLinked, dataReady, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
       pendingInvite, sentInvite, invitePartner, acceptInvite, rejectInvite, cancelSentInvite,
       screen, selectedId, navigate, goBack, navSeq, lastNavWasPop,
       toasts, toast,
@@ -1427,15 +1712,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addExpense, updateExpense, deleteExpense,
       addSavingsGoal, updateSavingsGoal, deleteSavingsGoal, addToGoal, withdrawFromGoal,
       addLoveNote, markNoteRead, addSecretNote,
-      addEvent, deleteEvent,
+      addEvent, updateEvent, deleteEvent,
+      addCycleLog, updateCycleLog, deleteCycleLog,
+      addStoryQuote, updateStoryQuote, deleteStoryQuote,
+      addDebt, updateDebt, toggleDebtPaid, deleteDebt,
       addGoal, updateGoal, toggleGoal, deleteGoal, contributeToGoal,
       setMood,
-      updateFavorite,
-      markNotifRead, markAllRead, deleteNotification, updateNotifyPrefs,
+      markNotifRead, markAllRead, deleteNotification, updateNotifyPrefs, updateDisplayName, changePassword,
       addBill, updateBill, toggleBillPaid, deleteBill,
       addTrip, updateTrip, deleteTrip, toggleTripCheck,
       addCapsule, openCapsule, updateCapsule, deleteCapsule,
-      addCountdown, deleteCountdown,
       addToPlaylist, updatePlaylist, removeFromPlaylist,
       addWish, updateWish, drawWish, removeWish,
       addDateIdea, updateDateIdea, removeDateIdea, updateDateIdeaPreset, removeDateIdeaPreset, drawDateIdea,
@@ -1450,10 +1736,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteGratitude,
       addReaction,
       addFavPlace, updateFavPlace, removeFavPlace, addFavCategory, updateFavCategory, removeFavCategory,
-      addPlace, deletePlace,
+      addPlace, updatePlace, deletePlace,
       toggleDarkMode,
       setRelationshipStart,
       profilePhotos, updateProfilePhoto,
+      sendChatMessage, markChatRead, uploadChatMedia,
     }}>
       {children}
     </Ctx.Provider>

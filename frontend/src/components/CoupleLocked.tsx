@@ -27,11 +27,11 @@ export default function CoupleLocked() {
         maxWidth: 280,
         boxShadow: '0 4px 24px rgba(201,95,124,0.08)',
       }}>
-        <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 21, color: 'var(--ink)', marginBottom: 10 }}>
-          Chưa liên kết với nửa kia
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: 'var(--ink)', marginBottom: 10 }}>
+          Not linked with your partner yet
         </p>
         <p style={{ fontSize: 13.5, color: 'var(--ink-2)', lineHeight: 1.7, marginBottom: 20 }}>
-          Tính năng này chỉ mở khi hai người đã liên kết tài khoản. Mời nửa kia ngay trong Settings để bắt đầu <Icon emoji="💕" size={13} style={{ verticalAlign: -2 }} />
+          This feature unlocks once you're both linked up. Invite your partner in Settings to get started <Icon emoji="💕" size={13} style={{ verticalAlign: -2 }} />
         </p>
         <button
           onClick={() => navigate('settings')}
@@ -42,7 +42,7 @@ export default function CoupleLocked() {
             boxShadow: '0 6px 18px rgba(201,95,124,0.3)',
           }}
         >
-          Mời nửa kia trong Settings
+          Invite your partner in Settings
         </button>
       </div>
     </div>
