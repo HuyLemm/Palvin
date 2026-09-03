@@ -710,7 +710,22 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   // without a paid headless-browser/residential-proxy service) workaround
   // for a site that blocks scrapers this deliberately; the wish can still
   // be saved with the link and no preview.
+  // Shopee's own raw HTML has NO extractable title/meta at all (confirmed —
+  // it's 100% client-JS-rendered, even the homepage), so real per-product
+  // data can only ever come from Microlink's headless-browser render — but
+  // that render isn't perfectly reliable against Shopee's anti-bot system:
+  // sometimes it captures the page before the real product data finishes
+  // hydrating in and gets Shopee's own generic app-shell title/description
+  // instead (a legitimate, well-formed "success" as far as the API is
+  // concerned, just describing the SITE, not the product). Since this
+  // exact generic title recurs verbatim across totally unrelated products,
+  // matching it here means showing an honest "couldn't fetch a preview"
+  // instead of confidently displaying Shopee's own branding under the
+  // wrong wish.
+  const GENERIC_SHELL_TITLE = /^shopee việt nam\s*[|-]/i;
+
   function looksBlockedPreview(title: string | undefined, image: string | undefined): boolean {
+    if (title && GENERIC_SHELL_TITLE.test(title)) return true;
     return !image && (!title || /page (not found|unavailable)/i.test(title));
   }
 

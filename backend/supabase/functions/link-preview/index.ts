@@ -115,12 +115,54 @@ Deno.serve(async (req: Request) => {
     const full = await res.text();
     const html = full.slice(0, 200_000);
 
-    const title = extractMeta(html, 'og:title') ?? extractMeta(html, 'twitter:title', 'name') ?? extractTitleTag(html);
-    const description = extractMeta(html, 'og:description') ?? extractMeta(html, 'twitter:description', 'name') ?? extractMeta(html, 'description', 'name');
-    const image = resolveUrl(
+    let title = extractMeta(html, 'og:title') ?? extractMeta(html, 'twitter:title', 'name') ?? extractTitleTag(html);
+    let description = extractMeta(html, 'og:description') ?? extractMeta(html, 'twitter:description', 'name') ?? extractMeta(html, 'description', 'name');
+    let image = resolveUrl(
       extractMeta(html, 'og:image') ?? extractMeta(html, 'twitter:image', 'name') ?? extractJsonLdImage(html),
       targetUrl,
     );
+
+    // Some SPA storefronts (Shopee's own share/token links in particular)
+    // serve the exact same generic app-shell markup — complete with a real,
+    // well-formed og:title/og:image, just describing the SITE, not the
+    // product — for a URL whose real per-product data only gets filled in
+    // client-side by JS a plain fetch can't run. That reads as a perfectly
+    // confident "success" with nothing to flag it as wrong... except that
+    // it's identical to what the bare domain root itself returns. One extra
+    // fetch (short-timeout, best-effort — a slow/failed check just means
+    // this path is skipped, not that the whole preview fails) catches that
+    // generically, without hardcoding which sites do this.
+    try {
+      const targetPath = new URL(targetUrl).pathname;
+      if (title && targetPath !== '' && targetPath !== '/') {
+        const rootController = new AbortController();
+        const rootTimer = setTimeout(() => rootController.abort(), 4000);
+        try {
+          const rootUrl = new URL(targetUrl).origin + '/';
+          const rootRes = await fetch(rootUrl, {
+            signal: rootController.signal,
+            headers: { 'User-Agent': BROWSER_UA, Accept: 'text/html,application/xhtml+xml' },
+          });
+          const rootHtml = (await rootRes.text()).slice(0, 200_000);
+          const rootTitle = extractMeta(rootHtml, 'og:title') ?? extractMeta(rootHtml, 'twitter:title', 'name') ?? extractTitleTag(rootHtml);
+          if (rootTitle && rootTitle === title) {
+            title = undefined;
+            description = undefined;
+            image = undefined;
+          }
+        } finally {
+          clearTimeout(rootTimer);
+        }
+      }
+    } catch {
+      // Best-effort — an error here just skips the generic-shell check.
+    }
+
+    if (!title && !image) {
+      return new Response(JSON.stringify({ status: 'fail', error: 'No usable preview data found' }), {
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      });
+    }
 
     return new Response(JSON.stringify({ status: 'success', data: { title, description, image } }), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
