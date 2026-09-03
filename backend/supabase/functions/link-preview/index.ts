@@ -66,6 +66,20 @@ function extractTitleTag(html: string): string | undefined {
   return m?.[1] ? decodeEntities(m[1].trim()) : undefined;
 }
 
+// A last-resort fallback for a page with no <meta> tags at all describing
+// itself, but that does embed Schema.org Product/ImageObject JSON-LD (many
+// storefronts do, purely for Google's rich-result snippets) — pulls the
+// first "image" value out of the first <script type="application/ld+json">
+// block without needing a full JSON-LD parser.
+function extractJsonLdImage(html: string): string | undefined {
+  const scripts = html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  for (const s of scripts) {
+    const m = s[1].match(/"image"\s*:\s*"([^"]+)"/) ?? s[1].match(/"image"\s*:\s*\[\s*"([^"]+)"/);
+    if (m?.[1]) return decodeEntities(m[1]);
+  }
+  return undefined;
+}
+
 function resolveUrl(maybeRelative: string | undefined, base: string): string | undefined {
   if (!maybeRelative) return undefined;
   try {
@@ -101,9 +115,12 @@ Deno.serve(async (req: Request) => {
     const full = await res.text();
     const html = full.slice(0, 200_000);
 
-    const title = extractMeta(html, 'og:title') ?? extractTitleTag(html);
-    const description = extractMeta(html, 'og:description') ?? extractMeta(html, 'description', 'name');
-    const image = resolveUrl(extractMeta(html, 'og:image'), targetUrl);
+    const title = extractMeta(html, 'og:title') ?? extractMeta(html, 'twitter:title', 'name') ?? extractTitleTag(html);
+    const description = extractMeta(html, 'og:description') ?? extractMeta(html, 'twitter:description', 'name') ?? extractMeta(html, 'description', 'name');
+    const image = resolveUrl(
+      extractMeta(html, 'og:image') ?? extractMeta(html, 'twitter:image', 'name') ?? extractJsonLdImage(html),
+      targetUrl,
+    );
 
     return new Response(JSON.stringify({ status: 'success', data: { title, description, image } }), {
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },

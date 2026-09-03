@@ -755,8 +755,22 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     }
   }
 
+  // Our own proxy only reads the page's OWN static HTML — it can't run
+  // JavaScript. Microlink's free tier actually does (it prerenders the page
+  // in a real headless browser before reading its meta tags), so on a
+  // JS-heavy site that injects its real title/image client-side, our proxy
+  // sees only the generic app-shell markup (a real, present, but WRONG
+  // title, and no image) — that used to read as a confident "success" and
+  // skip Microlink entirely, silently downgrading a link Microlink alone
+  // could actually resolve. Only trust our proxy outright when it found an
+  // image; otherwise treat it as likely incomplete and try Microlink next,
+  // falling back to whatever our proxy did get only if Microlink also
+  // comes up empty (e.g. its quota is used up).
   async function fetchLinkPreview(url: string): Promise<LinkPreview | null> {
-    return (await fetchFromOurProxy(url)) ?? (await fetchFromMicrolink(url));
+    const ours = await fetchFromOurProxy(url);
+    if (ours?.image) return ours;
+    const micro = await fetchFromMicrolink(url);
+    return micro ?? ours;
   }
 
   // Tracks whichever fetch the debounce below currently has in flight, so
