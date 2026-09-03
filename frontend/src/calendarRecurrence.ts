@@ -4,6 +4,18 @@ import type { CalendarEvent } from './types';
 // mutated afterward — everything else derives an actual occurrence from it
 // on the fly, so editing/deleting always targets that one real row by id.
 
+// Formats a Date's own LOCAL y/m/d — never `.toISOString().slice(0, 10)`,
+// which converts to UTC first and silently shifts the date back a day for
+// any positive-UTC-offset timezone (e.g. Vietnam, UTC+7): a yearly event
+// anchored on local midnight July 3rd is `2026-07-02T17:00:00.000Z` in UTC,
+// so `.toISOString()` reported it as July 2nd.
+export function toDateStr(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function eventOccursOn(e: CalendarEvent, dateStr: string): boolean {
   if (!e.recurrence || e.recurrence === 'none') return e.date === dateStr;
   const anchor = new Date(e.date + 'T00:00:00');
@@ -19,7 +31,7 @@ export function eventOccursOn(e: CalendarEvent, dateStr: string): boolean {
 // own `date` for a one-off, or the next repeat forward from `date` for a
 // recurring one.
 export function nextOccurrence(e: CalendarEvent, from: Date): string {
-  const fromStr = from.toISOString().slice(0, 10);
+  const fromStr = toDateStr(from);
   if (!e.recurrence || e.recurrence === 'none') return e.date;
   const anchor = new Date(e.date + 'T00:00:00');
   const cursor = new Date(from);
@@ -37,6 +49,6 @@ export function nextOccurrence(e: CalendarEvent, from: Date): string {
   } else {
     while (d < cursor) d.setDate(d.getDate() + 7);
   }
-  const result = d.toISOString().slice(0, 10);
+  const result = toDateStr(d);
   return result >= fromStr ? result : e.date;
 }

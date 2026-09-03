@@ -4,7 +4,7 @@ import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
 import { getDaysTogether, getDuration } from '../data';
-import { nextOccurrence } from '../calendarRecurrence';
+import { nextOccurrence, toDateStr } from '../calendarRecurrence';
 import type { FavCategory, FavPlace, StoryQuote } from '../types';
 
 // Picks a quote that looks random day to day (not a fixed 0,1,2... queue
@@ -145,7 +145,7 @@ export default function Home() {
     if (!state.favCategories.some(c => c.id === selectedFavCat)) setSelectedFavCat(state.favCategories[0].id);
   }, [state.favCategories, selectedFavCat]);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = toDateStr(new Date());
   const upcoming = [...state.events]
     .map(e => ({ event: e, displayDate: nextOccurrence(e, new Date()) }))
     .filter(({ displayDate }) => displayDate >= todayStr)
@@ -447,7 +447,7 @@ export default function Home() {
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12 }}>Upcoming</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {upcoming.map(({ event: ev, displayDate }) => {
-              const d = new Date(displayDate);
+              const d = new Date(displayDate + 'T12:00:00');
               const mon = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
               return (
                 <div key={ev.id} onClick={() => navigate('calendar')} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 12px', background: 'var(--bg)', borderRadius: 12, transition: 'background 0.15s' }}
