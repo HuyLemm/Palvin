@@ -4,7 +4,7 @@ import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
 import { getDaysTogether, getDuration } from '../data';
-import { nextOccurrence, toDateStr } from '../calendarRecurrence';
+import { nextOccurrence, toDateStr, oneMonthFrom } from '../calendarRecurrence';
 import type { FavCategory, FavPlace, StoryQuote } from '../types';
 
 // Picks a quote that looks random day to day (not a fixed 0,1,2... queue
@@ -145,10 +145,11 @@ export default function Home() {
     if (!state.favCategories.some(c => c.id === selectedFavCat)) setSelectedFavCat(state.favCategories[0].id);
   }, [state.favCategories, selectedFavCat]);
 
-  const todayStr = toDateStr(new Date());
+  const homeNow = new Date();
+  const todayStr = toDateStr(homeNow);
   const upcoming = [...state.events]
-    .map(e => ({ event: e, displayDate: nextOccurrence(e, new Date()) }))
-    .filter(({ displayDate }) => displayDate >= todayStr)
+    .map(e => ({ event: e, displayDate: nextOccurrence(e, homeNow) }))
+    .filter(({ displayDate }) => displayDate >= todayStr && displayDate <= oneMonthFrom(homeNow))
     .sort((a, b) => a.displayDate.localeCompare(b.displayDate))
     .slice(0, 3);
 

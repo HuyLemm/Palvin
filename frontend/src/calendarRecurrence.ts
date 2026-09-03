@@ -16,6 +16,17 @@ export function toDateStr(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+// Exactly one calendar month out from `from` (e.g. Sep 3 -> Oct 3), used to
+// cap the "Upcoming" widgets on the Dashboard and in Calendar to things
+// actually coming up soon — an event further out than that just shows up
+// normally once browsed to on the calendar grid, instead of permanently
+// occupying an "Upcoming" slot months in advance.
+export function oneMonthFrom(from: Date): string {
+  const d = new Date(from);
+  d.setMonth(d.getMonth() + 1);
+  return toDateStr(d);
+}
+
 export function eventOccursOn(e: CalendarEvent, dateStr: string): boolean {
   if (!e.recurrence || e.recurrence === 'none') return e.date === dateStr;
   const anchor = new Date(e.date + 'T00:00:00');

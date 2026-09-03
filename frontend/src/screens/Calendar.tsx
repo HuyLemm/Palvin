@@ -3,7 +3,7 @@ import { useApp } from '../context';
 import AddEventForm from '../components/forms/AddEventForm';
 import Icon from '../components/Icon';
 import type { CalendarEvent, CycleLog } from '../types';
-import { eventOccursOn, nextOccurrence, toDateStr } from '../calendarRecurrence';
+import { eventOccursOn, nextOccurrence, toDateStr, oneMonthFrom } from '../calendarRecurrence';
 
 const CAT_EMOJI: Record<CalendarEvent['category'], string> = { anniversary: '💕', birthday: '🎂', trip: '✈️', date: '❤️', reminder: '📅' };
 const CAT_COLOR: Record<CalendarEvent['category'], string> = { anniversary: 'var(--sakura-accent)', birthday: 'var(--sakura)', trip: 'var(--ink-2)', date: 'var(--sakura-deep)', reminder: 'var(--sakura-light)' };
@@ -56,7 +56,7 @@ function SpecialDatesTab() {
   // the event's own `date` (editing/deleting still target the real anchor).
   const upcoming = [...state.events]
     .map(e => ({ event: e, displayDate: nextOccurrence(e, now) }))
-    .filter(({ displayDate }) => displayDate >= toDateStr(now))
+    .filter(({ displayDate }) => displayDate >= toDateStr(now) && displayDate <= oneMonthFrom(now))
     .sort((a, b) => a.displayDate.localeCompare(b.displayDate))
     .slice(0, 5);
 
