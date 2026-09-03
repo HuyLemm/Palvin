@@ -727,16 +727,25 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     }
   }
 
+  // Tracks whichever fetch the debounce below currently has in flight, so
+  // hitting "Add to wishlist" before it resolves can hand the SAME promise
+  // to the background-patch logic instead of starting a second fetch for
+  // the identical URL.
+  const pendingPreviewRef = useRef<{ url: string; promise: Promise<LinkPreview | null> } | null>(null);
+
   useEffect(() => {
     const url = wishLink.trim();
-    if (!/^https?:\/\/.+/i.test(url)) { setLinkPreview(null); setPreviewLoading(false); setPreviewFailed(false); return; }
+    if (!/^https?:\/\/.+/i.test(url)) { setLinkPreview(null); setPreviewLoading(false); setPreviewFailed(false); pendingPreviewRef.current = null; return; }
     setPreviewLoading(true);
     setPreviewFailed(false);
-    const timer = setTimeout(async () => {
-      const preview = await fetchLinkPreview(url);
-      setLinkPreview(preview);
-      setPreviewFailed(!preview);
-      setPreviewLoading(false);
+    const timer = setTimeout(() => {
+      const promise = fetchLinkPreview(url);
+      pendingPreviewRef.current = { url, promise };
+      promise.then(preview => {
+        setLinkPreview(preview);
+        setPreviewFailed(!preview);
+        setPreviewLoading(false);
+      });
     }, 700);
     return () => clearTimeout(timer);
   }, [wishLink]);
@@ -758,19 +767,24 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   // before this feature existed) — so opening edit on a legacy item
   // backfills it, but saving other fields on an already-previewed item
   // never wastes an API call.
+  const editPendingPreviewRef = useRef<{ url: string; promise: Promise<LinkPreview | null> } | null>(null);
+
   useEffect(() => {
     if (!editingWish) return;
     const url = editLink.trim();
     const unchanged = url === editOriginalLink.trim();
     if (unchanged && editLinkPreview) { setEditPreviewLoading(false); return; }
-    if (!/^https?:\/\/.+/i.test(url)) { if (!unchanged) setEditLinkPreview(null); setEditPreviewLoading(false); setEditPreviewFailed(false); return; }
+    if (!/^https?:\/\/.+/i.test(url)) { if (!unchanged) setEditLinkPreview(null); setEditPreviewLoading(false); setEditPreviewFailed(false); editPendingPreviewRef.current = null; return; }
     setEditPreviewLoading(true);
     setEditPreviewFailed(false);
-    const timer = setTimeout(async () => {
-      const preview = await fetchLinkPreview(url);
-      setEditLinkPreview(preview);
-      setEditPreviewFailed(!preview);
-      setEditPreviewLoading(false);
+    const timer = setTimeout(() => {
+      const promise = fetchLinkPreview(url);
+      editPendingPreviewRef.current = { url, promise };
+      promise.then(preview => {
+        setEditLinkPreview(preview);
+        setEditPreviewFailed(!preview);
+        setEditPreviewLoading(false);
+      });
     }, unchanged ? 0 : 700);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -778,14 +792,26 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
 
   function saveEditWish() {
     if (!editingWish || !editText.trim()) return;
-    updateWish(editingWish.id, {
-      wish: editText.trim(),
-      price: editPrice || undefined,
-      link: editLink || undefined,
-      linkImage: editLink ? editLinkPreview?.image : undefined,
-      linkTitle: editLink ? editLinkPreview?.title : undefined,
-      linkDescription: editLink ? editLinkPreview?.description : undefined,
+    const id = editingWish.id;
+    const savedText = editText.trim();
+    const savedPrice = editPrice;
+    const linkArg = editLink.trim() || undefined;
+    updateWish(id, {
+      wish: savedText,
+      price: savedPrice || undefined,
+      link: linkArg,
+      linkImage: linkArg ? editLinkPreview?.image : undefined,
+      linkTitle: linkArg ? editLinkPreview?.title : undefined,
+      linkDescription: linkArg ? editLinkPreview?.description : undefined,
     });
+    // Same as Add: if the link changed and its preview wasn't ready yet,
+    // patch it in once/if it resolves instead of losing it.
+    if (linkArg && !editLinkPreview) {
+      const pending = editPendingPreviewRef.current?.url === linkArg ? editPendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
+      pending.then(preview => {
+        if (preview) updateWish(id, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
+      });
+    }
     closeEditWish();
   }
 
@@ -924,18 +950,31 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                   onClick={async () => {
                     if (wishText.trim()) {
                       setAddingWish(true);
-                      await addWish({
+                      const savedText = wishText.trim();
+                      const savedPrice = wishPrice;
+                      const linkArg = wishLink.trim() || undefined;
+                      const newId = await addWish({
                         from: currentUser,
-                        wish: wishText.trim(),
+                        wish: savedText,
                         date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
-                        ...(wishPrice ? { price: wishPrice } : {}),
-                        ...(wishLink ? { link: wishLink } : {}),
+                        ...(savedPrice ? { price: savedPrice } : {}),
+                        ...(linkArg ? { link: linkArg } : {}),
                         ...(linkPreview?.image ? { linkImage: linkPreview.image } : {}),
                         ...(linkPreview?.title ? { linkTitle: linkPreview.title } : {}),
                         ...(linkPreview?.description ? { linkDescription: linkPreview.description } : {}),
                       });
                       setAddingWish(false);
                       closeAdd();
+                      // Preview wasn't ready when Add was pressed — patch this
+                      // same wish in place once/if it does resolve, instead of
+                      // making the user wait for it (or losing it) just
+                      // because they didn't wait around.
+                      if (newId && linkArg && !linkPreview) {
+                        const pending = pendingPreviewRef.current?.url === linkArg ? pendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
+                        pending.then(preview => {
+                          if (preview) updateWish(newId, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
+                        });
+                      }
                     }
                   }}
                   disabled={addingWish}

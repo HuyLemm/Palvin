@@ -44,7 +44,7 @@ export async function createWish(fromId: string, w: { wish: string; date: string
   return supabase.from('wishes').insert({
     from_profile_id: fromId, wish: w.wish, wish_date: w.date, price: w.price || null, link: w.link || null,
     link_image: w.linkImage || null, link_title: w.linkTitle || null, link_description: w.linkDescription || null,
-  });
+  }).select('id').single();
 }
 
 export async function updateWishRow(id: string, w: { wish: string; price?: string; link?: string; linkImage?: string; linkTitle?: string; linkDescription?: string }) {

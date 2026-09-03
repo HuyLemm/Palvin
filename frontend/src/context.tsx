@@ -233,7 +233,7 @@ interface AppContextType {
   removeFromPlaylist: (id: string) => void;
 
   // Wishes
-  addWish: (w: Omit<WishItem, 'id' | 'drawn'>) => void;
+  addWish: (w: Omit<WishItem, 'id' | 'drawn'>) => Promise<string | undefined>;
   updateWish: (id: string, w: { wish: string; price?: string; link?: string; linkImage?: string; linkTitle?: string; linkDescription?: string }) => void;
   drawWish: (id: string, drawn?: boolean) => void;
   removeWish: (id: string) => void;
@@ -943,13 +943,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Wishes — backed by Supabase
-  const addWish = async (w: Omit<WishItem, 'id' | 'drawn'>) => {
+  // Returns the new wish's id (or undefined on failure) — lets a caller that
+  // saved before a link preview finished fetching patch that same row in
+  // place once/if the preview arrives later, instead of blocking Add on it.
+  const addWish = async (w: Omit<WishItem, 'id' | 'drawn'>): Promise<string | undefined> => {
     const fromId = resolveProfileId(w.from);
-    if (!fromId) return;
-    const { error } = await createWish(fromId, { wish: w.wish, date: w.date, price: w.price, link: w.link, linkImage: w.linkImage, linkTitle: w.linkTitle, linkDescription: w.linkDescription });
-    if (error) { toast('Something went wrong', '⚠️'); return; }
+    if (!fromId) return undefined;
+    const { data, error } = await createWish(fromId, { wish: w.wish, date: w.date, price: w.price, link: w.link, linkImage: w.linkImage, linkTitle: w.linkTitle, linkDescription: w.linkDescription });
+    if (error) { toast('Something went wrong', '⚠️'); return undefined; }
     await refreshWishes();
     toast('Wish dropped in the jar! 🫙', '✨');
+    return data?.id;
   };
   const updateWish = async (id: string, w: { wish: string; price?: string; link?: string; linkImage?: string; linkTitle?: string; linkDescription?: string }) => {
     setState(s => ({ ...s, wishes: s.wishes.map(x => x.id === id ? { ...x, ...w } : x) }));
