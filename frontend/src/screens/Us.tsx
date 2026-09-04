@@ -650,11 +650,13 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   const [wishImageUrl, setWishImageUrl] = useState('');
   const [wishImageUploading, setWishImageUploading] = useState(false);
   // A wishlist notification tap lands on whichever filter tab actually shows
-  // that wish — "bought" if it's already been marked bought, "all" (which
-  // already includes both people's not-yet-bought wishes) otherwise.
+  // that wish — "bought" if it's already been marked bought, otherwise
+  // whichever person's list it's actually on. No target (a plain visit)
+  // defaults to the viewer's own list.
   const [filter, setFilter] = useState<string>(() => {
     const target = initialWishId ? state.wishes.find(w => w.id === initialWishId) : null;
-    return target?.drawn ? 'bought' : 'all';
+    if (target) return target.drawn ? 'bought' : target.from;
+    return currentUser;
   });
   const [highlightId, setHighlightId] = useState(initialWishId);
   const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
@@ -683,7 +685,6 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   const filtered = state.wishes.filter(w => {
     if (filter === 'bought') return w.drawn;
     if (w.drawn) return false;
-    if (filter === 'all') return true;
     return w.from === filter;
   });
 
@@ -974,7 +975,6 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
-          { k: 'all', label: 'All', count: state.wishes.filter(w => !w.drawn).length },
           { k: currentUser, label: `${currentUser}'s list`, count: state.wishes.filter(w => !w.drawn && w.from === currentUser).length },
           ...(other !== currentUser ? [{ k: other, label: `${other}'s list`, count: state.wishes.filter(w => !w.drawn && w.from === other).length }] : []),
           { k: 'bought', label: 'Bought', count: state.wishes.filter(w => w.drawn).length },
