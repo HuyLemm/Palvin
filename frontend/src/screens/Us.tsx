@@ -788,6 +788,36 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     return micro ?? ours;
   }
 
+  // Real browser automation (via Apify's `apify/web-scraper` actor, run
+  // server-side through backend/supabase/functions/link-preview-apify) —
+  // waits for a JS-heavy storefront to actually finish hydrating before
+  // reading its meta tags, unlike our own static-HTML proxy, and doesn't
+  // depend on Microlink's own free-render reliability. A real actor run can
+  // take anywhere from ~10 to 60+ seconds (spinning up a browser, proxying,
+  // waiting), so this is ONLY ever called from the background-retry chain
+  // below (after the fast path already came back empty) — never from the
+  // live "while you're typing" preview.
+  async function fetchFromApify(url: string): Promise<LinkPreview | null> {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    if (!supabaseUrl) return null;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 90_000);
+    try {
+      const res = await fetch(`${supabaseUrl}/functions/v1/link-preview-apify?url=${encodeURIComponent(url)}`, { signal: controller.signal });
+      const json = await res.json();
+      if (json.status !== 'success') return null;
+      const title: string | undefined = json.data?.title ?? undefined;
+      const image: string | undefined = json.data?.image ?? undefined;
+      const description: string | undefined = json.data?.description ?? undefined;
+      if (looksBlockedPreview(title, image)) return null;
+      return { title, image, description };
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   // Tracks whichever fetch the debounce below currently has in flight, so
   // hitting "Add to wishlist" before it resolves can hand the SAME promise
   // to the background-patch logic instead of starting a second fetch for
@@ -869,8 +899,9 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     // patch it in once/if it resolves instead of losing it.
     if (linkArg && !editLinkPreview) {
       const pending = editPendingPreviewRef.current?.url === linkArg ? editPendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
-      pending.then(preview => {
-        if (preview) updateWish(id, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
+      pending.then(async preview => {
+        const finalPreview = preview ?? await fetchFromApify(linkArg);
+        if (finalPreview) updateWish(id, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: finalPreview.image, linkTitle: finalPreview.title, linkDescription: finalPreview.description });
       });
     }
     closeEditWish();
@@ -1032,8 +1063,9 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                       // because they didn't wait around.
                       if (newId && linkArg && !linkPreview) {
                         const pending = pendingPreviewRef.current?.url === linkArg ? pendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
-                        pending.then(preview => {
-                          if (preview) updateWish(newId, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
+                        pending.then(async preview => {
+                          const finalPreview = preview ?? await fetchFromApify(linkArg);
+                          if (finalPreview) updateWish(newId, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: finalPreview.image, linkTitle: finalPreview.title, linkDescription: finalPreview.description });
                         });
                       }
                     }
