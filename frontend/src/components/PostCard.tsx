@@ -72,7 +72,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
         <Avatar user={post.author} size={38} ring />
         <div style={{ flex: 1 }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{post.author}</p>
-          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{post.date}{post.location ? <> · <Icon emoji="📍" size={12} style={{ verticalAlign: 'middle' }} /> {post.location}</> : null}</p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{post.date}{post.location ? <> · <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }}><Icon emoji="📍" size={12} />{post.location}</span></> : null}</p>
         </div>
         {isMine && (
           <button onClick={() => setShowOptions(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', padding: 4, display: 'flex' }}><MoreIcon /></button>
