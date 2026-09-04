@@ -81,9 +81,14 @@ export default function EditDateRequestForm({ req, onClose }: { req: DateRequest
           <input className="input-field" placeholder="Specific activity" value={activity} onChange={e => setActivity(e.target.value)} />
           <input className="input-field" placeholder="Location" value={location} onChange={e => setLocation(e.target.value)} />
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <input type="date" className="input-field editreq-date-input" value={date} onChange={e => setDate(e.target.value)} style={{ minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
-            <input type="time" className="input-field editreq-date-input" value={time} onChange={e => setTime(e.target.value)} style={{ minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
+          {/* Stacked, not side-by-side — a native date input renders its
+              value in the device's own locale format (e.g. Vietnamese
+              "ngày 4 thg 9, 2026"), which is OS chrome that can't be
+              shrunk/truncated with CSS, so splitting the row in half left
+              it overflowing into the Time field beside it. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <input type="date" className="input-field editreq-date-input" value={date} onChange={e => setDate(e.target.value)} />
+            <input type="time" className="input-field editreq-date-input" value={time} onChange={e => setTime(e.target.value)} />
           </div>
 
           <textarea

@@ -229,15 +229,22 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
                   <input className="permit-input" placeholder="e.g. Binh Thanh District, Saigon..." value={location} onChange={e => setLocation(e.target.value)} />
                 </div>
 
-                {/* Date + Time */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
-                  <div style={{ minWidth: 0 }}>
+                {/* Date + Time — stacked, not side-by-side: a native date
+                    input renders its value in the device's own locale
+                    format (e.g. Vietnamese "ngày 4 thg 9, 2026"), which is
+                    OS chrome no amount of font-size/padding can shrink or
+                    truncate. Splitting the row in half left it with too
+                    little room and overflowing into the Time field next to
+                    it; full-width stacked fields have enough room for any
+                    locale's formatting regardless of length. */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+                  <div>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Date *</label>
-                    <input type="date" className="permit-input" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%', minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
+                    <input type="date" className="permit-input" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%' }} />
                   </div>
-                  <div style={{ minWidth: 0 }}>
+                  <div>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Time *</label>
-                    <input type="time" className="permit-input" value={time} onChange={e => setTime(e.target.value)} style={{ width: '100%', minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
+                    <input type="time" className="permit-input" value={time} onChange={e => setTime(e.target.value)} style={{ width: '100%' }} />
                   </div>
                 </div>
 
