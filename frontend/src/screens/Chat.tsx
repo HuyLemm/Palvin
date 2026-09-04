@@ -107,6 +107,38 @@ function ChatImage({ src, pending }: { src: string; pending?: boolean }) {
 // style — no image assets or storage needed, just a distinct message kind.
 const STICKERS = ['❤️', '😍', '🥰', '😘', '🎉', '😂', '😭', '👍', '🙏', '🔥', '🥳', '😴', '🌸', '💐', '🍰', '☕'];
 
+// A grid tile for a sticker thumbnail. Deliberately NOT the more obvious
+// `aspectRatio: '1'` box + `<img width="100%" height="100%" objectFit="cover">`
+// — that combination clips fine for ordinary photos, but on iOS Safari an
+// *animated* image (Klipy's stickers are animated gif/webp) ignores the
+// percentage height and paints at its own intrinsic size, so tiles bleed
+// into the row below and the grid looks like a pile of overlapping stickers.
+// The classic padding-top trick sidesteps it: the image is absolutely
+// positioned inside a box whose size is fixed by layout before the image
+// ever needs to report an intrinsic size, so there's nothing for it to
+// ignore.
+function StickerTile({ src, onClick }: { src: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
+        <img src={src} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+      </div>
+    </button>
+  );
+}
+
+// Square crop viewport for turning an arbitrary photo into a sticker — see
+// the "Ours" tab: pasting a whole rectangular photo in as a "sticker" isn't
+// what a sticker is, so uploading one now goes through this pan/zoom crop
+// step first instead of uploading the raw file untouched.
+const CROP_VIEW = 260;
+const CROP_OUTPUT = 480;
+function clampCropOffset(offset: { x: number; y: number }, dispW: number, dispH: number): { x: number; y: number } {
+  const maxX = Math.max(0, (dispW - CROP_VIEW) / 2);
+  const maxY = Math.max(0, (dispH - CROP_VIEW) / 2);
+  return { x: Math.min(maxX, Math.max(-maxX, offset.x)), y: Math.min(maxY, Math.max(-maxY, offset.y)) };
+}
+
 type KlipyResult = { id: string; url: string; thumbnail: string };
 
 // Klipy is Tenor's near-identical successor after Google shut Tenor's API
@@ -158,6 +190,12 @@ export default function Chat({ onBack }: Props) {
   const [stickerTab, setStickerTab] = useState<'emoji' | 'ours' | 'search'>('emoji');
   const [customStickerUploading, setCustomStickerUploading] = useState(false);
   const customStickerInputRef = useRef<HTMLInputElement>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const [cropNatural, setCropNatural] = useState<{ w: number; h: number } | null>(null);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
+  const cropImgRef = useRef<HTMLImageElement>(null);
+  const cropDragRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
   const [klipyQuery, setKlipyQuery] = useState('');
   const [klipyResults, setKlipyResults] = useState<KlipyResult[]>([]);
   const [klipyLoading, setKlipyLoading] = useState(false);
@@ -252,11 +290,68 @@ export default function Chat({ onBack }: Props) {
     setShowStickers(false);
   };
 
-  const handleUploadCustomSticker = async (fileList: FileList | null) => {
+  const openStickerCrop = (fileList: FileList | null) => {
     const file = fileList?.[0];
     if (!file) return;
+    setCropZoom(1);
+    setCropOffset({ x: 0, y: 0 });
+    setCropNatural(null);
+    setCropSrc(URL.createObjectURL(file));
+  };
+
+  const closeStickerCrop = () => {
+    if (cropSrc) URL.revokeObjectURL(cropSrc);
+    setCropSrc(null);
+    setCropNatural(null);
+  };
+
+  const cropDisplaySize = (() => {
+    if (!cropNatural) return null;
+    const baseScale = Math.max(CROP_VIEW / cropNatural.w, CROP_VIEW / cropNatural.h);
+    const scale = baseScale * cropZoom;
+    return { w: cropNatural.w * scale, h: cropNatural.h * scale, scale };
+  })();
+
+  // Zooming back out after panning to an edge shrinks the valid pan range —
+  // re-clamp so a stale offset from the more-zoomed-in view can't point
+  // outside the image and sample garbage into the crop.
+  useEffect(() => {
+    if (!cropDisplaySize) return;
+    setCropOffset(o => clampCropOffset(o, cropDisplaySize.w, cropDisplaySize.h));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cropZoom, cropNatural]);
+
+  const handleCropPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    cropDragRef.current = { startX: e.clientX, startY: e.clientY, ox: cropOffset.x, oy: cropOffset.y };
+  };
+  const handleCropPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = cropDragRef.current;
+    if (!drag || !cropDisplaySize) return;
+    const next = { x: drag.ox + (e.clientX - drag.startX), y: drag.oy + (e.clientY - drag.startY) };
+    setCropOffset(clampCropOffset(next, cropDisplaySize.w, cropDisplaySize.h));
+  };
+  const handleCropPointerUp = () => { cropDragRef.current = null; };
+
+  const confirmStickerCrop = async () => {
+    const img = cropImgRef.current;
+    if (!img || !cropNatural || !cropDisplaySize) return;
+    const topLeftX = CROP_VIEW / 2 - cropDisplaySize.w / 2 + cropOffset.x;
+    const topLeftY = CROP_VIEW / 2 - cropDisplaySize.h / 2 + cropOffset.y;
+    const srcX = -topLeftX / cropDisplaySize.scale;
+    const srcY = -topLeftY / cropDisplaySize.scale;
+    const srcSize = CROP_VIEW / cropDisplaySize.scale;
+    const canvas = document.createElement('canvas');
+    canvas.width = CROP_OUTPUT;
+    canvas.height = CROP_OUTPUT;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, CROP_OUTPUT, CROP_OUTPUT);
+    const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+    closeStickerCrop();
+    if (!blob) return;
     setCustomStickerUploading(true);
-    await addCustomSticker(file);
+    await addCustomSticker(new File([blob], 'sticker.jpg', { type: 'image/jpeg' }));
     setCustomStickerUploading(false);
   };
 
@@ -470,6 +565,9 @@ export default function Chat({ onBack }: Props) {
       {showStickers && (
         <div style={{ borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 4, padding: '8px 10px 0' }}>
+            <button onClick={() => setShowStickers(false)} title="Back to keyboard" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon emoji="⌨️" size={18} />
+            </button>
             {([['emoji', '😊', 'Emoji'], ['ours', '📸', 'Ours'], ['search', '🔍', 'Search']] as const).map(([key, emoji, label]) => (
               <button key={key} onClick={() => setStickerTab(key)} style={{ flex: 1, padding: '7px', borderRadius: 10, border: 'none', background: stickerTab === key ? 'var(--sakura-light)' : 'none', color: stickerTab === key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                 <Icon emoji={emoji} size={14} /> {label}
@@ -489,15 +587,13 @@ export default function Chat({ onBack }: Props) {
 
           {stickerTab === 'ours' && (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, padding: '10px', maxHeight: 200, overflowY: 'auto' }}>
-              <input ref={customStickerInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { handleUploadCustomSticker(e.target.files); e.target.value = ''; }} />
+              <input ref={customStickerInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { openStickerCrop(e.target.files); e.target.value = ''; }} />
               <button onClick={() => customStickerInputRef.current?.click()} disabled={customStickerUploading} style={{ aspectRatio: '1', borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {customStickerUploading ? <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2.5px solid rgba(201,95,124,0.3)', borderTopColor: 'var(--sakura-deep)', animation: 'palvin-spin 0.7s linear infinite' }} /> : '+'}
               </button>
               {state.customStickers.map(s => (
                 <div key={s.id} style={{ position: 'relative' }}>
-                  <button onClick={() => handleSendStickerImage(s.imageUrl)} style={{ width: '100%', aspectRatio: '1', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', padding: 0, cursor: 'pointer', overflow: 'hidden' }}>
-                    <img src={s.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </button>
+                  <StickerTile src={s.imageUrl} onClick={() => handleSendStickerImage(s.imageUrl)} />
                   <button onClick={() => removeCustomSticker(s.id)} title="Remove" style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon emoji="✕" size={9} />
                   </button>
@@ -522,9 +618,7 @@ export default function Chat({ onBack }: Props) {
               />
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
                 {klipyResults.map(r => (
-                  <button key={r.id} onClick={() => handleSendStickerImage(r.url)} style={{ width: '100%', aspectRatio: '1', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', padding: 0, cursor: 'pointer', overflow: 'hidden' }}>
-                    <img src={r.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </button>
+                  <StickerTile key={r.id} src={r.thumbnail} onClick={() => handleSendStickerImage(r.url)} />
                 ))}
               </div>
               {klipyLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>Searching...</p>}
@@ -533,6 +627,42 @@ export default function Chat({ onBack }: Props) {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Crop-to-sticker step — a whole rectangular photo isn't a sticker,
+          so a fresh upload is pinch/drag-cropped to a square subject first. */}
+      {cropSrc && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
+          <p style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>Crop your sticker</p>
+          <div
+            onPointerDown={handleCropPointerDown}
+            onPointerMove={handleCropPointerMove}
+            onPointerUp={handleCropPointerUp}
+            onPointerCancel={handleCropPointerUp}
+            style={{ position: 'relative', width: CROP_VIEW, height: CROP_VIEW, borderRadius: 20, overflow: 'hidden', background: '#111', touchAction: 'none', cursor: 'grab' }}
+          >
+            <img
+              ref={cropImgRef}
+              src={cropSrc}
+              alt=""
+              draggable={false}
+              onLoad={e => setCropNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+              style={cropDisplaySize ? {
+                position: 'absolute', left: '50%', top: '50%', width: cropDisplaySize.w, height: cropDisplaySize.h,
+                transform: `translate(calc(-50% + ${cropOffset.x}px), calc(-50% + ${cropOffset.y}px))`,
+              } : { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', visibility: 'hidden' }}
+            />
+          </div>
+          <input
+            type="range" min={1} max={3} step={0.01} value={cropZoom}
+            onChange={e => setCropZoom(Number(e.target.value))}
+            style={{ width: CROP_VIEW }}
+          />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={closeStickerCrop} style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+            <button onClick={confirmStickerCrop} disabled={!cropDisplaySize} style={{ padding: '10px 24px', borderRadius: 12, border: 'none', background: 'var(--sakura-accent)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: cropDisplaySize ? 1 : 0.5 }}>Use as sticker</button>
+          </div>
         </div>
       )}
 
@@ -560,11 +690,15 @@ export default function Chat({ onBack }: Props) {
         </div>
       )}
 
-      {/* Input bar — while the text field is focused (keyboard up), this uses
-          .chat-input-bar's own tunable real-device padding-bottom (index.css)
-          instead of the shared .app-bottom-nav's, so it can sit right above
-          the keyboard without affecting the main tab bar elsewhere. Once
-          unfocused it falls back to plain .app-bottom-nav, unchanged. */}
+      {/* Input bar — hidden while the sticker panel is open (that panel takes
+          its place at the bottom entirely, rather than sitting below it) so
+          opening stickers doesn't also raise the text field/keyboard. While
+          the text field is focused (keyboard up), this uses .chat-input-bar's
+          own tunable real-device padding-bottom (index.css) instead of the
+          shared .app-bottom-nav's, so it can sit right above the keyboard
+          without affecting the main tab bar elsewhere. Once unfocused it
+          falls back to plain .app-bottom-nav, unchanged. */}
+      {!showStickers && (
       <div className={inputFocused ? 'chat-input-bar' : 'app-bottom-nav'} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px', borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0 }}>
         <input ref={galleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFilePicked} />
         <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFilePicked} />
@@ -621,6 +755,7 @@ export default function Chat({ onBack }: Props) {
           </>
         )}
       </div>
+      )}
     </div>
   );
 }
