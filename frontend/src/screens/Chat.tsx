@@ -110,20 +110,26 @@ const STICKERS = ['❤️', '😍', '🥰', '😘', '🎉', '😂', '😭', '�
 type KlipyResult = { id: string; url: string; thumbnail: string };
 
 // Klipy is Tenor's near-identical successor after Google shut Tenor's API
-// down — see backend/supabase/functions/klipy-search. Its response fields
-// are reconstructed from third-party docs (not yet verified against a real
-// API key/response), so this reads a couple of plausible field names
-// defensively rather than assuming one exact shape.
+// down — see backend/supabase/functions/klipy-search. Verified against a
+// real response: each item is `{ id, slug, title, file: { hd|md|sm|xs: {
+// gif|webp|webm|png: { url, width, height, size } } } }` — a size tier
+// (resolution) containing multiple format options, not a single url/
+// thumbnail pair. `<img>` renders animated gif/webp natively, so either
+// works as the src; gif is picked first for the widest compatibility.
+function pickFormatUrl(sizeTier: Record<string, { url?: string }> | undefined): string | undefined {
+  return sizeTier?.gif?.url ?? sizeTier?.webp?.url ?? sizeTier?.png?.url;
+}
+
 function parseKlipyResults(json: unknown): KlipyResult[] {
-  const root = json as { data?: { data?: unknown[] } | unknown[] } | undefined;
-  const items = Array.isArray(root?.data) ? root!.data : (root?.data as { data?: unknown[] })?.data;
+  const root = json as { data?: { data?: unknown[] } };
+  const items = root?.data?.data;
   if (!Array.isArray(items)) return [];
   return items.map((raw): KlipyResult | null => {
-    const item = raw as { id?: string; files?: { url?: string; thumbnail?: string; original?: { url?: string }; preview?: { url?: string } } };
-    const url = item.files?.url ?? item.files?.original?.url;
-    const thumbnail = item.files?.thumbnail ?? item.files?.preview?.url ?? url;
-    if (!url || !item.id) return null;
-    return { id: item.id, url, thumbnail: thumbnail ?? url };
+    const item = raw as { id?: number | string; file?: { hd?: Record<string, { url?: string }>; md?: Record<string, { url?: string }>; sm?: Record<string, { url?: string }> } };
+    const url = pickFormatUrl(item.file?.md) ?? pickFormatUrl(item.file?.hd) ?? pickFormatUrl(item.file?.sm);
+    const thumbnail = pickFormatUrl(item.file?.sm) ?? url;
+    if (!url || item.id == null) return null;
+    return { id: String(item.id), url, thumbnail: thumbnail ?? url };
   }).filter((r): r is KlipyResult => r !== null);
 }
 
