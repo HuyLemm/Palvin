@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { removeBackground } from '@imgly/background-removal';
+import { removeBackground, preload, type Config as BgRemovalConfig } from '@imgly/background-removal';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
@@ -145,6 +145,13 @@ function CategoryTile({ label, previewUrl, onClick }: { label: string; previewUr
 // somewhere inside it) and turns that into a tight, centered square sticker
 // by trimming to the subject's own opaque bounding box and padding it onto
 // a square transparent canvas.
+//
+// 'isnet_quint8' (~40MB) instead of the ~80MB default model — quantized, so
+// it downloads and runs faster; this is a couple's sticker maker, not a
+// professional photo editor, so the occasional rougher edge is a fine trade.
+// Assets are fetched from IMG.LY's CDN and cached by the browser afterward,
+// so only the very first cutout (per device) pays the download cost.
+const BG_REMOVAL_CONFIG: BgRemovalConfig = { model: 'isnet_quint8' };
 const STICKER_OUTPUT = 480;
 async function loadImageBitmap(blob: Blob): Promise<HTMLImageElement> {
   const url = URL.createObjectURL(blob);
@@ -281,7 +288,9 @@ export default function Chat({ onBack }: Props) {
   // 'preview' -> cutout ready, waiting on Cancel/Use. 'error' -> it failed.
   const [importStage, setImportStage] = useState<'idle' | 'processing' | 'preview' | 'error'>('idle');
   const [importPreviewUrl, setImportPreviewUrl] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState<number | null>(null);
   const importBlobRef = useRef<Blob | null>(null);
+  const bgRemovalPreloadedRef = useRef(false);
   const [klipyQuery, setKlipyQuery] = useState('');
   const [klipyResults, setKlipyResults] = useState<KlipyResult[]>([]);
   const [klipyLoading, setKlipyLoading] = useState(false);
@@ -393,8 +402,12 @@ export default function Chat({ onBack }: Props) {
     const file = fileList?.[0];
     if (!file) return;
     setImportStage('processing');
+    setImportProgress(null);
     try {
-      const cutout = await removeBackground(file);
+      const cutout = await removeBackground(file, {
+        ...BG_REMOVAL_CONFIG,
+        progress: (_key, current, total) => setImportProgress(total > 0 ? Math.round((current / total) * 100) : null),
+      });
       const sticker = await cutoutToSquareSticker(cutout);
       importBlobRef.current = sticker;
       setImportPreviewUrl(URL.createObjectURL(sticker));
@@ -466,6 +479,16 @@ export default function Chat({ onBack }: Props) {
       }
     })();
   }, [stickerTab, klipyCategories.length, klipyCategoriesLoading]);
+
+  // Warm the background-removal model/wasm as soon as the "Ours" tab opens
+  // (a decent signal they're about to add a photo), so by the time they've
+  // actually picked one, the ~40MB one-time download is already underway or
+  // done instead of only starting after they tap +.
+  useEffect(() => {
+    if (stickerTab !== 'ours' || bgRemovalPreloadedRef.current) return;
+    bgRemovalPreloadedRef.current = true;
+    preload(BG_REMOVAL_CONFIG).catch(() => { bgRemovalPreloadedRef.current = false; });
+  }, [stickerTab]);
 
   const handleFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -741,7 +764,8 @@ export default function Chat({ onBack }: Props) {
           {importStage === 'processing' && (
             <>
               <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3.5px solid rgba(255,255,255,0.25)', borderTopColor: 'white', animation: 'palvin-spin 0.8s linear infinite' }} />
-              <p style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>Cutting out your sticker...</p>
+              <p style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>Cutting out your sticker{importProgress != null ? `... ${importProgress}%` : '...'}</p>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, textAlign: 'center' }}>First time takes longer — it's remembered after that.</p>
             </>
           )}
           {importStage === 'error' && (
