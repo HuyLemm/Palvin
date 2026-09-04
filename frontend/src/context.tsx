@@ -5,8 +5,9 @@ if (import.meta.hot) {
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { initialState } from './data';
-import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage } from './types';
+import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage, CustomSticker } from './types';
 import { fetchChatMessages, sendChatMessageRow, markChatReadFrom, fetchUnreadChatCount, uploadChatFile } from './chat';
+import { fetchCustomStickers, createCustomSticker, deleteCustomStickerRow, uploadCustomStickerImage } from './customStickers';
 import type { NewChatMessage } from './chat';
 import { readBootCache, writeBootCache, clearBootCache } from './bootCache';
 import { supabase } from './lib/supabaseClient';
@@ -294,6 +295,8 @@ interface AppContextType {
   sendChatMessage: (msg: NewChatMessage) => void;
   markChatRead: () => void;
   uploadChatMedia: (file: File | Blob, ext: string) => Promise<string | null>;
+  addCustomSticker: (file: File) => Promise<void>;
+  removeCustomSticker: (id: string) => void;
 }
 
 const Ctx = createContext<AppContextType>(null!);
@@ -1299,7 +1302,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // at least once, purely so the loading screen (App.tsx) can wait for real
   // data instead of hiding the instant the session/profile resolves — that
   // gap used to show ~0.5s of "has UI, but no data yet" on every launch.
-  const BOOT_DOMAIN_COUNT = 24;
+  const BOOT_DOMAIN_COUNT = 25;
   const [loadedDomains, setLoadedDomains] = useState<Set<string>>(new Set());
   const markLoaded = useCallback((key: string) => {
     setLoadedDomains(prev => prev.has(key) ? prev : new Set(prev).add(key));
@@ -1751,12 +1754,44 @@ const refreshMoods = useCallback(async () => {
       audioUrl: r.audio_url,
       audioDuration: r.audio_duration,
       sticker: r.sticker,
+      stickerImageUrl: r.sticker_image_url,
       createdAt: r.created_at,
       read: !!r.read_at,
     }));
     setState(s => ({ ...s, chatMessages: messages }));
     markLoaded('chat');
   }, [myProfile, partnerProfile, markLoaded]);
+
+  // Custom stickers — the couple's own uploaded image pack, alongside the
+  // built-in emoji stickers and Klipy search (see Chat.tsx's picker tabs).
+  const refreshCustomStickers = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const customStickers = await fetchCustomStickers(names, myProfile.displayName);
+    setState(s => ({ ...s, customStickers }));
+    markLoaded('customStickers');
+  }, [myProfile, partnerProfile, markLoaded]);
+
+  useEffect(() => {
+    if (isLinked && myProfile) refreshCustomStickers();
+  }, [isLinked, myProfile, refreshCustomStickers]);
+
+  const addCustomSticker = async (file: File): Promise<void> => {
+    if (!myProfile?.coupleId) return;
+    const url = await uploadCustomStickerImage(myProfile.coupleId, file);
+    if (!url) { toast('Something went wrong', '⚠️'); return; }
+    const { error } = await createCustomSticker(myProfile.id, url);
+    if (error) { toast('Something went wrong', '⚠️'); return; }
+    await refreshCustomStickers();
+  };
+
+  const removeCustomSticker = async (id: string) => {
+    setState(s => ({ ...s, customStickers: s.customStickers.filter(c => c.id !== id) }));
+    const { error } = await deleteCustomStickerRow(id);
+    if (error) refreshCustomStickers();
+  };
 
   useEffect(() => {
     if (!isLinked || !myProfile?.coupleId || !partnerProfile) return;
@@ -1772,7 +1807,7 @@ const refreshMoods = useCallback(async () => {
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `couple_id=eq.${coupleId}` },
         (payload) => {
-          const row = payload.new as { id: string; sender_profile_id: string; text: string | null; image_url: string | null; audio_url: string | null; audio_duration: number | null; sticker: string | null; created_at: string; read_at: string | null };
+          const row = payload.new as { id: string; sender_profile_id: string; text: string | null; image_url: string | null; audio_url: string | null; audio_duration: number | null; sticker: string | null; sticker_image_url: string | null; created_at: string; read_at: string | null };
           const mine = row.sender_profile_id === myId;
           // Own messages are already shown optimistically (and reconciled to
           // this same real id) by sendChatMessage the moment it's sent — an
@@ -1782,12 +1817,12 @@ const refreshMoods = useCallback(async () => {
           const onChatScreen = screenRef.current === 'chat';
           setState(s => {
             if (s.chatMessages.some(m => m.id === row.id)) return s;
-            const msg: ChatMessage = { id: row.id, senderId: row.sender_profile_id, sender: partnerName, mine: false, text: row.text, imageUrl: row.image_url, audioUrl: row.audio_url, audioDuration: row.audio_duration, sticker: row.sticker, createdAt: row.created_at, read: !!row.read_at };
+            const msg: ChatMessage = { id: row.id, senderId: row.sender_profile_id, sender: partnerName, mine: false, text: row.text, imageUrl: row.image_url, audioUrl: row.audio_url, audioDuration: row.audio_duration, sticker: row.sticker, stickerImageUrl: row.sticker_image_url, createdAt: row.created_at, read: !!row.read_at };
             return { ...s, chatMessages: [...s.chatMessages, msg], unreadChatCount: !onChatScreen ? s.unreadChatCount + 1 : s.unreadChatCount };
           });
           if (onChatScreen) markChatReadFrom(partnerId);
           else {
-            const preview = row.sticker ? `${row.sticker} Sent a sticker` : row.image_url ? '📷 Sent a photo' : row.audio_url ? '🎤 Sent a voice message' : (row.text ?? '').length > 60 ? row.text!.slice(0, 60) + '…' : (row.text ?? '');
+            const preview = row.sticker ? `${row.sticker} Sent a sticker` : row.sticker_image_url ? '🎉 Sent a sticker' : row.image_url ? '📷 Sent a photo' : row.audio_url ? '🎤 Sent a voice message' : (row.text ?? '').length > 60 ? row.text!.slice(0, 60) + '…' : (row.text ?? '');
             toast(`${partnerName}: ${preview}`, '💬', { passive: true });
           }
         }
@@ -1811,7 +1846,7 @@ const refreshMoods = useCallback(async () => {
   const sendChatMessage = async (msg: NewChatMessage) => {
     if (!myProfile) return;
     const text = msg.text?.trim();
-    if (!text && !msg.imageUrl && !msg.audioUrl && !msg.sticker) return;
+    if (!text && !msg.imageUrl && !msg.audioUrl && !msg.sticker && !msg.stickerImageUrl) return;
     const tempId = `temp-${uid()}`;
     const optimistic: ChatMessage = {
       id: tempId,
@@ -1823,6 +1858,7 @@ const refreshMoods = useCallback(async () => {
       audioUrl: msg.audioUrl ?? null,
       audioDuration: msg.audioDuration ?? null,
       sticker: msg.sticker ?? null,
+      stickerImageUrl: msg.stickerImageUrl ?? null,
       createdAt: new Date().toISOString(),
       read: false,
       pending: true,
@@ -1995,7 +2031,7 @@ const refreshMoods = useCallback(async () => {
       toggleDarkMode,
       setRelationshipStart,
       profilePhotos, updateProfilePhoto,
-      sendChatMessage, markChatRead, uploadChatMedia,
+      sendChatMessage, markChatRead, uploadChatMedia, addCustomSticker, removeCustomSticker,
     }}>
       {children}
     </Ctx.Provider>

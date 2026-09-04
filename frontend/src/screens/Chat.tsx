@@ -107,6 +107,26 @@ function ChatImage({ src, pending }: { src: string; pending?: boolean }) {
 // style — no image assets or storage needed, just a distinct message kind.
 const STICKERS = ['❤️', '😍', '🥰', '😘', '🎉', '😂', '😭', '👍', '🙏', '🔥', '🥳', '😴', '🌸', '💐', '🍰', '☕'];
 
+type KlipyResult = { id: string; url: string; thumbnail: string };
+
+// Klipy is Tenor's near-identical successor after Google shut Tenor's API
+// down — see backend/supabase/functions/klipy-search. Its response fields
+// are reconstructed from third-party docs (not yet verified against a real
+// API key/response), so this reads a couple of plausible field names
+// defensively rather than assuming one exact shape.
+function parseKlipyResults(json: unknown): KlipyResult[] {
+  const root = json as { data?: { data?: unknown[] } | unknown[] } | undefined;
+  const items = Array.isArray(root?.data) ? root!.data : (root?.data as { data?: unknown[] })?.data;
+  if (!Array.isArray(items)) return [];
+  return items.map((raw): KlipyResult | null => {
+    const item = raw as { id?: string; files?: { url?: string; thumbnail?: string; original?: { url?: string }; preview?: { url?: string } } };
+    const url = item.files?.url ?? item.files?.original?.url;
+    const thumbnail = item.files?.thumbnail ?? item.files?.preview?.url ?? url;
+    if (!url || !item.id) return null;
+    return { id: item.id, url, thumbnail: thumbnail ?? url };
+  }).filter((r): r is KlipyResult => r !== null);
+}
+
 // Chat wallpaper is a personal display preference (like WhatsApp's per-chat
 // wallpaper), not couple data — kept in localStorage per profile so picking
 // one never affects what the partner sees on their own device.
@@ -123,12 +143,19 @@ function chatThemeKey(profileId: string) { return `palvin_chat_theme_${profileId
 interface Props { onBack: () => void; }
 
 export default function Chat({ onBack }: Props) {
-  const { state, screen, myProfile, partnerProfile, sendChatMessage, markChatRead, uploadChatMedia } = useApp();
+  const { state, screen, myProfile, partnerProfile, sendChatMessage, markChatRead, uploadChatMedia, addCustomSticker, removeCustomSticker } = useApp();
   const messages = state.chatMessages;
   const partnerName = partnerProfile?.displayName ?? 'Partner';
   const [text, setText] = useState('');
   const [sendingMedia, setSendingMedia] = useState(false);
   const [showStickers, setShowStickers] = useState(false);
+  const [stickerTab, setStickerTab] = useState<'emoji' | 'ours' | 'search'>('emoji');
+  const [customStickerUploading, setCustomStickerUploading] = useState(false);
+  const customStickerInputRef = useRef<HTMLInputElement>(null);
+  const [klipyQuery, setKlipyQuery] = useState('');
+  const [klipyResults, setKlipyResults] = useState<KlipyResult[]>([]);
+  const [klipyLoading, setKlipyLoading] = useState(false);
+  const [klipyFailed, setKlipyFailed] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [chatThemeKeyValue, setChatThemeKeyValue] = useState(() => {
     if (!myProfile?.id) return 'default';
@@ -213,6 +240,45 @@ export default function Chat({ onBack }: Props) {
     sendChatMessage({ sticker: emoji });
     setShowStickers(false);
   };
+
+  const handleSendStickerImage = (url: string) => {
+    sendChatMessage({ stickerImageUrl: url });
+    setShowStickers(false);
+  };
+
+  const handleUploadCustomSticker = async (fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (!file) return;
+    setCustomStickerUploading(true);
+    await addCustomSticker(file);
+    setCustomStickerUploading(false);
+  };
+
+  // Debounced Klipy search — an empty query fetches trending instead (see
+  // the edge function), so the tab never opens on a blank grid.
+  useEffect(() => {
+    if (stickerTab !== 'search') return;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    if (!supabaseUrl) { setKlipyFailed(true); return; }
+    setKlipyLoading(true);
+    setKlipyFailed(false);
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/klipy-search?q=${encodeURIComponent(klipyQuery.trim())}`, { signal: controller.signal });
+        const json = await res.json();
+        const results = parseKlipyResults(json);
+        setKlipyResults(results);
+        setKlipyFailed(results.length === 0);
+      } catch {
+        setKlipyResults([]);
+        setKlipyFailed(true);
+      } finally {
+        setKlipyLoading(false);
+      }
+    }, 400);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [stickerTab, klipyQuery]);
 
   const handleFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -331,7 +397,7 @@ export default function Chat({ onBack }: Props) {
             const newDay = !prev || dayLabel(prev.createdAt) !== dayLabel(m.createdAt);
             const startOfGroup = newDay || !prev || prev.mine !== m.mine;
             const endOfGroup = !next || next.mine !== m.mine || dayLabel(next.createdAt) !== dayLabel(m.createdAt);
-            const isMedia = !!m.imageUrl || !!m.sticker;
+            const isMedia = !!m.imageUrl || !!m.sticker || !!m.stickerImageUrl;
             const msgKey = m.clientKey ?? m.id;
             const isNew = !settledKeysRef.current!.has(msgKey);
             if (isNew) settledKeysRef.current!.add(msgKey);
@@ -354,6 +420,10 @@ export default function Chat({ onBack }: Props) {
                   {m.sticker ? (
                     <div onClick={() => setExpandedId(id => id === msgKey ? null : msgKey)} style={{ cursor: 'pointer', lineHeight: 1, opacity: m.pending ? 0.6 : 1, transition: 'opacity 0.25s ease' }}>
                       <Icon emoji={m.sticker} size={72} />
+                    </div>
+                  ) : m.stickerImageUrl ? (
+                    <div onClick={() => setExpandedId(id => id === msgKey ? null : msgKey)} style={{ cursor: 'pointer', width: 120, opacity: m.pending ? 0.6 : 1, transition: 'opacity 0.25s ease' }}>
+                      <ChatImage src={m.stickerImageUrl} pending={m.pending} />
                     </div>
                   ) : m.imageUrl ? (
                     <div onClick={() => setExpandedId(id => id === msgKey ? null : msgKey)} style={{ cursor: 'pointer', maxWidth: '65%', minWidth: 0 }}>
@@ -388,14 +458,75 @@ export default function Chat({ onBack }: Props) {
         )}
       </div>
 
-      {/* Sticker panel */}
+      {/* Sticker panel — three tabs: built-in emoji, the couple's own
+          uploaded pack, and a Klipy (Tenor's successor) search/trending
+          grid of real illustrated stickers. */}
       {showStickers && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4, padding: '10px 10px', borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0 }}>
-          {STICKERS.map(s => (
-            <button key={s} onClick={() => handleSendSticker(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
-              <Icon emoji={s} size={26} />
-            </button>
-          ))}
+        <div style={{ borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 4, padding: '8px 10px 0' }}>
+            {([['emoji', '😊', 'Emoji'], ['ours', '📸', 'Ours'], ['search', '🔍', 'Search']] as const).map(([key, emoji, label]) => (
+              <button key={key} onClick={() => setStickerTab(key)} style={{ flex: 1, padding: '7px', borderRadius: 10, border: 'none', background: stickerTab === key ? 'var(--sakura-light)' : 'none', color: stickerTab === key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                <Icon emoji={emoji} size={14} /> {label}
+              </button>
+            ))}
+          </div>
+
+          {stickerTab === 'emoji' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4, padding: '10px' }}>
+              {STICKERS.map(s => (
+                <button key={s} onClick={() => handleSendSticker(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                  <Icon emoji={s} size={26} />
+                </button>
+              ))}
+            </div>
+          )}
+
+          {stickerTab === 'ours' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, padding: '10px', maxHeight: 200, overflowY: 'auto' }}>
+              <input ref={customStickerInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { handleUploadCustomSticker(e.target.files); e.target.value = ''; }} />
+              <button onClick={() => customStickerInputRef.current?.click()} disabled={customStickerUploading} style={{ aspectRatio: '1', borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {customStickerUploading ? <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2.5px solid rgba(201,95,124,0.3)', borderTopColor: 'var(--sakura-deep)', animation: 'palvin-spin 0.7s linear infinite' }} /> : '+'}
+              </button>
+              {state.customStickers.map(s => (
+                <div key={s.id} style={{ position: 'relative' }}>
+                  <button onClick={() => handleSendStickerImage(s.imageUrl)} style={{ width: '100%', aspectRatio: '1', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', padding: 0, cursor: 'pointer', overflow: 'hidden' }}>
+                    <img src={s.imageUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </button>
+                  <button onClick={() => removeCustomSticker(s.id)} title="Remove" style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon emoji="✕" size={9} />
+                  </button>
+                </div>
+              ))}
+              {state.customStickers.length === 0 && !customStickerUploading && (
+                <p style={{ gridColumn: '2 / span 3', fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center' }}>Add your own photos as stickers!</p>
+              )}
+              <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          )}
+
+          {stickerTab === 'search' && (
+            <div style={{ padding: '10px' }}>
+              <input
+                className="input-field"
+                placeholder="Search stickers..."
+                value={klipyQuery}
+                onChange={e => setKlipyQuery(e.target.value)}
+                style={{ marginBottom: 8, fontSize: 13, padding: '8px 12px' }}
+                autoFocus
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
+                {klipyResults.map(r => (
+                  <button key={r.id} onClick={() => handleSendStickerImage(r.url)} style={{ width: '100%', aspectRatio: '1', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', padding: 0, cursor: 'pointer', overflow: 'hidden' }}>
+                    <img src={r.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </button>
+                ))}
+              </div>
+              {klipyLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>Searching...</p>}
+              {!klipyLoading && klipyFailed && (
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>No stickers found.</p>
+              )}
+            </div>
+          )}
         </div>
       )}
 

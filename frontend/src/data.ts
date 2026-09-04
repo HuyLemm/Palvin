@@ -57,6 +57,7 @@ export const initialState: AppState = {
   // Loaded from Supabase (see context.tsx's chat realtime effect) once the couple is linked.
   chatMessages: [],
   unreadChatCount: 0,
+  customStickers: [],
 
   // Loaded from Supabase (see context.tsx's refreshMoods) once the couple is linked.
   moods: {},

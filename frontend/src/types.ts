@@ -343,6 +343,7 @@ export interface ChatMessage {
   audioUrl: string | null;
   audioDuration: number | null;
   sticker: string | null;
+  stickerImageUrl: string | null;
   createdAt: string;
   read: boolean;
   // Optimistic-send state — set the instant the user hits send, before the
@@ -355,6 +356,12 @@ export interface ChatMessage {
   // same DOM node instead of unmounting/remounting it, so the "just sent"
   // fade-in animation doesn't replay a second time the moment it confirms.
   clientKey?: string;
+}
+
+export interface CustomSticker {
+  id: string;
+  imageUrl: string;
+  createdBy: User;
 }
 
 export interface AppState {
@@ -374,6 +381,7 @@ export interface AppState {
   notifications: AppNotification[];
   chatMessages: ChatMessage[];
   unreadChatCount: number;
+  customStickers: CustomSticker[];
   moods: Record<string, Mood | null>;
   moodHistory: MoodEntry[];
   places: Place[];
