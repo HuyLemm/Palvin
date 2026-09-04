@@ -7,7 +7,11 @@
 // Apify's `apify/web-scraper` actor runs a real Puppeteer browser (through
 // Apify's proxy pool) and can wait for the page to actually finish
 // hydrating before reading its meta tags — a real fix for that class of
-// site, not just a faster failure.
+// site, not just a faster failure. Also pulls a price where one is findable
+// (Open Graph product price meta, schema.org Product/Offer JSON-LD, or a
+// microdata itemprop="price") — real browser rendering makes this possible
+// where the old static-fetch approach never could, since price is almost
+// always rendered client-side, not present in a plain HTML fetch at all.
 //
 // This is deliberately its own function, not folded into link-preview:
 // an Apify actor run can legitimately take 10-60+ seconds (spinning up a
@@ -41,10 +45,38 @@ async function pageFunction(context) {
     const el = document.querySelector(selector);
     return el ? el.getAttribute('content') : undefined;
   }
+  function jsonLdPrice() {
+    var scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    for (var i = 0; i < scripts.length; i++) {
+      try {
+        var data = JSON.parse(scripts[i].textContent);
+        var items = Array.isArray(data) ? data : [data];
+        for (var j = 0; j < items.length; j++) {
+          var offers = items[j] && items[j].offers;
+          if (!offers) continue;
+          var offer = Array.isArray(offers) ? offers[0] : offers;
+          if (offer && offer.price != null) return String(offer.price);
+        }
+      } catch (e) {}
+    }
+    return undefined;
+  }
+  function microdataPrice() {
+    var el = document.querySelector('[itemprop="price"]');
+    if (!el) return undefined;
+    return el.getAttribute('content') || el.textContent || undefined;
+  }
+  function cleanPrice(raw) {
+    if (!raw) return undefined;
+    var digits = String(raw).replace(/[^\\d.]/g, '');
+    if (!digits) return undefined;
+    return digits.replace(/\\.00$/, '');
+  }
   return {
     title: meta('meta[property="og:title"]') || meta('meta[name="twitter:title"]') || document.title || undefined,
     description: meta('meta[property="og:description"]') || meta('meta[name="twitter:description"]') || meta('meta[name="description"]') || undefined,
     image: meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]') || undefined,
+    price: cleanPrice(meta('meta[property="product:price:amount"]') || meta('meta[property="og:price:amount"]') || jsonLdPrice() || microdataPrice()),
   };
 }
 `;
@@ -113,7 +145,7 @@ Deno.serve(async (req: Request) => {
       });
     }
     return new Response(
-      JSON.stringify({ status: 'success', data: { title: item.title, description: item.description, image: item.image } }),
+      JSON.stringify({ status: 'success', data: { title: item.title, description: item.description, image: item.image, price: item.price } }),
       { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } },
     );
   } catch (err) {

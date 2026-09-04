@@ -633,7 +633,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
 }
 
 /* ─── Gift Wishlist ───────────────────────────────── */
-type LinkPreview = { title?: string; image?: string; description?: string };
+type LinkPreview = { title?: string; image?: string; description?: string; price?: string };
 
 function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; initialWishId?: string }) {
   const { state, currentUser, isAdmin, partnerProfile, addWish, updateWish, removeWish, drawWish } = useApp();
@@ -688,10 +688,10 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     setShowAdd(false); setWishText(''); setWishLink(''); setWishPrice(''); setLinkPreview(null);
   };
 
-  // Fetch a compact title/image/description preview for whatever link the
-  // user pastes. Debounced so it doesn't fire on every keystroke. Note: it
-  // can't extract a price — that's rendered by JS on most shop pages, not
-  // present in static page metadata — so price stays a manual field.
+  // Fetch a compact title/image/description(/price, where findable) preview
+  // for whatever link the user pastes. Debounced so it doesn't fire on
+  // every keystroke. A fetched price only ever fills the Amount field when
+  // it's still empty — never overwrites a price the user typed themselves.
   //
   // Goes straight to Apify's apify/web-scraper actor (real browser
   // automation through backend/supabase/functions/link-preview-apify),
@@ -730,8 +730,9 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
       const title: string | undefined = json.data?.title ?? undefined;
       const image: string | undefined = json.data?.image ?? undefined;
       const description: string | undefined = json.data?.description ?? undefined;
+      const price: string | undefined = json.data?.price ?? undefined;
       if (looksBlockedPreview(title, image)) return null;
-      return { title, image, description };
+      return { title, image, description, price };
     } catch {
       return null;
     } finally {
@@ -757,6 +758,9 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
         setLinkPreview(preview);
         setPreviewFailed(!preview);
         setPreviewLoading(false);
+        // Only fills in a price the user hasn't already typed themselves —
+        // never overwrites a manually-entered value.
+        if (preview?.price) setWishPrice(current => current || preview.price!);
       });
     }, 700);
     return () => clearTimeout(timer);
@@ -796,6 +800,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
         setEditLinkPreview(preview);
         setEditPreviewFailed(!preview);
         setEditPreviewLoading(false);
+        if (preview?.price) setEditPrice(current => current || preview.price!);
       });
     }, unchanged ? 0 : 700);
     return () => clearTimeout(timer);
@@ -821,7 +826,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     if (linkArg && !editLinkPreview) {
       const pending = editPendingPreviewRef.current?.url === linkArg ? editPendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
       pending.then(preview => {
-        if (preview) updateWish(id, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
+        if (preview) updateWish(id, { wish: savedText, price: savedPrice || preview.price || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
       });
     }
     closeEditWish();
@@ -984,7 +989,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                       if (newId && linkArg && !linkPreview) {
                         const pending = pendingPreviewRef.current?.url === linkArg ? pendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
                         pending.then(preview => {
-                          if (preview) updateWish(newId, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
+                          if (preview) updateWish(newId, { wish: savedText, price: savedPrice || preview.price || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
                         });
                       }
                     }
