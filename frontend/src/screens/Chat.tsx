@@ -863,6 +863,8 @@ export default function Chat({ onBack }: Props) {
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
               placeholder={`Message ${partnerName}...`}
+              autoCorrect="off"
+              spellCheck={false}
               style={{ flex: 1, minWidth: 0, padding: '9px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontSize: 14, outline: 'none' }}
             />
             {text.trim() ? (
