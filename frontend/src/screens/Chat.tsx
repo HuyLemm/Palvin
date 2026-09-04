@@ -277,10 +277,21 @@ export default function Chat({ onBack }: Props) {
   // make way for, and forcing this height there would blow past the phone
   // frame and fill the whole browser window instead.
   const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  // The last real on-screen-keyboard height this device showed — remembered
+  // (not just read live) because by the time the sticker panel needs it the
+  // keyboard has already closed and visualViewport is back to full height.
+  // Sizing the sticker panel to match keeps swapping between "typing" and
+  // "picking a sticker" from visibly jumping the messages list. 320px is a
+  // reasonable guess for before the keyboard has ever been seen this visit.
+  const keyboardHeightRef = useRef(320);
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv || !window.matchMedia('(max-width: 480px)').matches) return;
-    const update = () => setViewportHeight(vv.height);
+    const update = () => {
+      setViewportHeight(vv.height);
+      const kb = window.innerHeight - vv.height;
+      if (kb > 80) keyboardHeightRef.current = kb;
+    };
     update();
     vv.addEventListener('resize', update);
     vv.addEventListener('scroll', update);
@@ -625,8 +636,8 @@ export default function Chat({ onBack }: Props) {
           stickers alike), the couple's own uploaded pack, and Klipy's topic
           packs of real illustrated stickers. */}
       {showStickers && (
-        <div className="app-bottom-nav" style={{ borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0 }}>
-          <div style={{ display: 'flex', gap: 4, padding: '8px 10px 0' }}>
+        <div className="app-bottom-nav" style={{ borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0, display: 'flex', flexDirection: 'column', height: keyboardHeightRef.current }}>
+          <div style={{ display: 'flex', gap: 4, padding: '8px 10px 0', flexShrink: 0 }}>
             <button onClick={() => setShowStickers(false)} title="Back to keyboard" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon emoji="⌨️" size={18} />
             </button>
@@ -637,43 +648,43 @@ export default function Chat({ onBack }: Props) {
             ))}
           </div>
 
-          {stickerTab === 'recent' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, padding: '10px', maxHeight: 200, overflowY: 'auto' }}>
-              {recentStickers.map(url => (
-                <StickerTile key={url} src={url} onClick={() => handleSendStickerImage(url)} />
-              ))}
-              {recentStickers.length === 0 && (
-                <p style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', padding: '20px 10px' }}>Stickers you send from Ours or Topics will show up here.</p>
-              )}
-            </div>
-          )}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px' }}>
+            {stickerTab === 'recent' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                {recentStickers.map(url => (
+                  <StickerTile key={url} src={url} onClick={() => handleSendStickerImage(url)} />
+                ))}
+                {recentStickers.length === 0 && (
+                  <p style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', padding: '20px 10px' }}>Stickers you send from Ours or Topics will show up here.</p>
+                )}
+              </div>
+            )}
 
-          {stickerTab === 'ours' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, padding: '10px', maxHeight: 200, overflowY: 'auto' }}>
-              <input ref={customStickerInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { openStickerCrop(e.target.files); e.target.value = ''; }} />
-              <button onClick={() => customStickerInputRef.current?.click()} disabled={customStickerUploading} style={{ aspectRatio: '1', borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {customStickerUploading ? <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2.5px solid rgba(201,95,124,0.3)', borderTopColor: 'var(--sakura-deep)', animation: 'palvin-spin 0.7s linear infinite' }} /> : '+'}
-              </button>
-              {state.customStickers.map(s => (
-                <div key={s.id} style={{ position: 'relative' }}>
-                  <StickerTile src={s.imageUrl} onClick={() => handleSendStickerImage(s.imageUrl)} />
-                  <button onClick={() => removeCustomSticker(s.id)} title="Remove" style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon emoji="✕" size={9} />
-                  </button>
-                </div>
-              ))}
-              {state.customStickers.length === 0 && !customStickerUploading && (
-                <p style={{ gridColumn: '2 / span 3', fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center' }}>Add your own photos as stickers!</p>
-              )}
-              <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
-            </div>
-          )}
+            {stickerTab === 'ours' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+                <input ref={customStickerInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { openStickerCrop(e.target.files); e.target.value = ''; }} />
+                <button onClick={() => customStickerInputRef.current?.click()} disabled={customStickerUploading} style={{ aspectRatio: '1', borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {customStickerUploading ? <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2.5px solid rgba(201,95,124,0.3)', borderTopColor: 'var(--sakura-deep)', animation: 'palvin-spin 0.7s linear infinite' }} /> : '+'}
+                </button>
+                {state.customStickers.map(s => (
+                  <div key={s.id} style={{ position: 'relative' }}>
+                    <StickerTile src={s.imageUrl} onClick={() => handleSendStickerImage(s.imageUrl)} />
+                    <button onClick={() => removeCustomSticker(s.id)} title="Remove" style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,0.55)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon emoji="✕" size={9} />
+                    </button>
+                  </div>
+                ))}
+                {state.customStickers.length === 0 && !customStickerUploading && (
+                  <p style={{ gridColumn: '2 / span 3', fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center' }}>Add your own photos as stickers!</p>
+                )}
+                <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            )}
 
-          {stickerTab === 'search' && (
-            <div style={{ padding: '10px' }}>
-              {klipyQuery.trim() === '' ? (
+            {stickerTab === 'search' && (
+              klipyQuery.trim() === '' ? (
                 klipyCategories.length > 0 ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxHeight: 200, overflowY: 'auto' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                     {klipyCategories.map(c => (
                       <CategoryTile key={c.category} label={c.category} previewUrl={c.previewUrl} onClick={() => setKlipyQuery(c.query)} />
                     ))}
@@ -688,7 +699,7 @@ export default function Chat({ onBack }: Props) {
                   <button onClick={() => setKlipyQuery('')} style={{ background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 12, cursor: 'pointer', padding: '0 0 8px', display: 'flex', alignItems: 'center', gap: 3 }}>
                     <Icon emoji="←" size={12} /> Topics
                   </button>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                     {klipyResults.map(r => (
                       <StickerTile key={r.id} src={r.thumbnail} onClick={() => handleSendStickerImage(r.url)} />
                     ))}
@@ -698,9 +709,9 @@ export default function Chat({ onBack }: Props) {
                     <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>No stickers found.</p>
                   )}
                 </>
-              )}
-            </div>
-          )}
+              )
+            )}
+          </div>
         </div>
       )}
 
