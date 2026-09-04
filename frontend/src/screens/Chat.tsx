@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { removeBackground } from '@imgly/background-removal';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
@@ -115,7 +116,7 @@ function ChatImage({ src, pending }: { src: string; pending?: boolean }) {
 // ignore.
 function StickerTile({ src, onClick }: { src: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
+    <button className="sticker-tile" onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
       <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
         <img src={src} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
@@ -127,7 +128,7 @@ function StickerTile({ src, onClick }: { src: string; onClick: () => void }) {
 // shape as StickerTile plus a caption naming the topic.
 function CategoryTile({ label, previewUrl, onClick }: { label: string; previewUrl: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
+    <button className="sticker-tile" onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
       <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
         <img src={previewUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 6px 5px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: 'white', fontSize: 11, fontWeight: 700, textTransform: 'capitalize', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
@@ -136,16 +137,63 @@ function CategoryTile({ label, previewUrl, onClick }: { label: string; previewUr
   );
 }
 
-// Square crop viewport for turning an arbitrary photo into a sticker — see
-// the "Ours" tab: pasting a whole rectangular photo in as a "sticker" isn't
-// what a sticker is, so uploading one now goes through this pan/zoom crop
-// step first instead of uploading the raw file untouched.
-const CROP_VIEW = 260;
-const CROP_OUTPUT = 480;
-function clampCropOffset(offset: { x: number; y: number }, dispW: number, dispH: number): { x: number; y: number } {
-  const maxX = Math.max(0, (dispW - CROP_VIEW) / 2);
-  const maxY = Math.max(0, (dispH - CROP_VIEW) / 2);
-  return { x: Math.min(maxX, Math.max(-maxX, offset.x)), y: Math.min(maxY, Math.max(-maxY, offset.y)) };
+// Turning an arbitrary photo into a sticker means cutting the subject out
+// onto a transparent background, not just cropping the rectangle — see the
+// "Ours" tab. Background removal itself runs entirely on-device (no photo
+// ever leaves the phone) via @imgly/background-removal; this just takes its
+// transparent-background result (same pixel size as the input, subject
+// somewhere inside it) and turns that into a tight, centered square sticker
+// by trimming to the subject's own opaque bounding box and padding it onto
+// a square transparent canvas.
+const STICKER_OUTPUT = 480;
+async function loadImageBitmap(blob: Blob): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = new Image();
+    img.src = url;
+    await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; });
+    return img;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+async function cutoutToSquareSticker(cutout: Blob): Promise<Blob> {
+  const img = await loadImageBitmap(cutout);
+  const w = img.naturalWidth, h = img.naturalHeight;
+  const srcCanvas = document.createElement('canvas');
+  srcCanvas.width = w;
+  srcCanvas.height = h;
+  const sctx = srcCanvas.getContext('2d')!;
+  sctx.drawImage(img, 0, 0);
+  const { data } = sctx.getImageData(0, 0, w, h);
+  // Scanning every pixel's alpha for the bounding box of the actual subject
+  // — a stride of 3 keeps this fast on large camera photos while still
+  // landing within a pixel or two of the true edge, plenty for a sticker.
+  const STRIDE = 3;
+  let minX = w, minY = h, maxX = 0, maxY = 0, found = false;
+  for (let y = 0; y < h; y += STRIDE) {
+    for (let x = 0; x < w; x += STRIDE) {
+      if (data[(y * w + x) * 4 + 3] > 10) {
+        found = true;
+        if (x < minX) minX = x; if (x > maxX) maxX = x;
+        if (y < minY) minY = y; if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (!found) { minX = 0; minY = 0; maxX = w - 1; maxY = h - 1; }
+  const boxW = maxX - minX + 1, boxH = maxY - minY + 1;
+  const longest = Math.max(boxW, boxH) * 1.16; // headroom so the subject doesn't touch the edges
+  const scale = STICKER_OUTPUT / longest;
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = STICKER_OUTPUT;
+  outCanvas.height = STICKER_OUTPUT;
+  const octx = outCanvas.getContext('2d')!;
+  octx.drawImage(
+    srcCanvas, minX, minY, boxW, boxH,
+    (STICKER_OUTPUT - boxW * scale) / 2, (STICKER_OUTPUT - boxH * scale) / 2, boxW * scale, boxH * scale,
+  );
+  const result: Blob | null = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
+  return result ?? cutout;
 }
 
 type KlipyResult = { id: string; url: string; thumbnail: string };
@@ -229,12 +277,11 @@ export default function Chat({ onBack }: Props) {
   });
   const [customStickerUploading, setCustomStickerUploading] = useState(false);
   const customStickerInputRef = useRef<HTMLInputElement>(null);
-  const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const [cropNatural, setCropNatural] = useState<{ w: number; h: number } | null>(null);
-  const [cropZoom, setCropZoom] = useState(1);
-  const [cropOffset, setCropOffset] = useState({ x: 0, y: 0 });
-  const cropImgRef = useRef<HTMLImageElement>(null);
-  const cropDragRef = useRef<{ startX: number; startY: number; ox: number; oy: number } | null>(null);
+  // 'idle' -> nothing to show. 'processing' -> background removal running.
+  // 'preview' -> cutout ready, waiting on Cancel/Use. 'error' -> it failed.
+  const [importStage, setImportStage] = useState<'idle' | 'processing' | 'preview' | 'error'>('idle');
+  const [importPreviewUrl, setImportPreviewUrl] = useState<string | null>(null);
+  const importBlobRef = useRef<Blob | null>(null);
   const [klipyQuery, setKlipyQuery] = useState('');
   const [klipyResults, setKlipyResults] = useState<KlipyResult[]>([]);
   const [klipyLoading, setKlipyLoading] = useState(false);
@@ -342,68 +389,34 @@ export default function Chat({ onBack }: Props) {
     });
   };
 
-  const openStickerCrop = (fileList: FileList | null) => {
+  const openStickerImport = async (fileList: FileList | null) => {
     const file = fileList?.[0];
     if (!file) return;
-    setCropZoom(1);
-    setCropOffset({ x: 0, y: 0 });
-    setCropNatural(null);
-    setCropSrc(URL.createObjectURL(file));
+    setImportStage('processing');
+    try {
+      const cutout = await removeBackground(file);
+      const sticker = await cutoutToSquareSticker(cutout);
+      importBlobRef.current = sticker;
+      setImportPreviewUrl(URL.createObjectURL(sticker));
+      setImportStage('preview');
+    } catch {
+      setImportStage('error');
+    }
   };
 
-  const closeStickerCrop = () => {
-    if (cropSrc) URL.revokeObjectURL(cropSrc);
-    setCropSrc(null);
-    setCropNatural(null);
+  const cancelStickerImport = () => {
+    if (importPreviewUrl) URL.revokeObjectURL(importPreviewUrl);
+    importBlobRef.current = null;
+    setImportPreviewUrl(null);
+    setImportStage('idle');
   };
 
-  const cropDisplaySize = (() => {
-    if (!cropNatural) return null;
-    const baseScale = Math.max(CROP_VIEW / cropNatural.w, CROP_VIEW / cropNatural.h);
-    const scale = baseScale * cropZoom;
-    return { w: cropNatural.w * scale, h: cropNatural.h * scale, scale };
-  })();
-
-  // Zooming back out after panning to an edge shrinks the valid pan range —
-  // re-clamp so a stale offset from the more-zoomed-in view can't point
-  // outside the image and sample garbage into the crop.
-  useEffect(() => {
-    if (!cropDisplaySize) return;
-    setCropOffset(o => clampCropOffset(o, cropDisplaySize.w, cropDisplaySize.h));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cropZoom, cropNatural]);
-
-  const handleCropPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    cropDragRef.current = { startX: e.clientX, startY: e.clientY, ox: cropOffset.x, oy: cropOffset.y };
-  };
-  const handleCropPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const drag = cropDragRef.current;
-    if (!drag || !cropDisplaySize) return;
-    const next = { x: drag.ox + (e.clientX - drag.startX), y: drag.oy + (e.clientY - drag.startY) };
-    setCropOffset(clampCropOffset(next, cropDisplaySize.w, cropDisplaySize.h));
-  };
-  const handleCropPointerUp = () => { cropDragRef.current = null; };
-
-  const confirmStickerCrop = async () => {
-    const img = cropImgRef.current;
-    if (!img || !cropNatural || !cropDisplaySize) return;
-    const topLeftX = CROP_VIEW / 2 - cropDisplaySize.w / 2 + cropOffset.x;
-    const topLeftY = CROP_VIEW / 2 - cropDisplaySize.h / 2 + cropOffset.y;
-    const srcX = -topLeftX / cropDisplaySize.scale;
-    const srcY = -topLeftY / cropDisplaySize.scale;
-    const srcSize = CROP_VIEW / cropDisplaySize.scale;
-    const canvas = document.createElement('canvas');
-    canvas.width = CROP_OUTPUT;
-    canvas.height = CROP_OUTPUT;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, CROP_OUTPUT, CROP_OUTPUT);
-    const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
-    closeStickerCrop();
+  const confirmStickerImport = async () => {
+    const blob = importBlobRef.current;
+    cancelStickerImport();
     if (!blob) return;
     setCustomStickerUploading(true);
-    await addCustomSticker(new File([blob], 'sticker.jpg', { type: 'image/jpeg' }));
+    await addCustomSticker(new File([blob], 'sticker.png', { type: 'image/png' }));
     setCustomStickerUploading(false);
   };
 
@@ -530,6 +543,9 @@ export default function Chat({ onBack }: Props) {
         .chat-icon-btn:active { transform: scale(0.85); }
         .chat-send-btn { transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1); }
         .chat-send-btn:active { transform: scale(0.88); }
+        .sticker-tile { transition: transform 0.12s ease; }
+        .sticker-tile:active { transform: scale(0.92); }
+        .sticker-tab-content { animation: fadeIn 0.16s ease; }
       `}</style>
       {/* Header — reuses .app-header's real-device safe-area rule (padding-top
           clearing the status bar/notch) so it lines up with the main header. */}
@@ -636,19 +652,19 @@ export default function Chat({ onBack }: Props) {
           stickers alike), the couple's own uploaded pack, and Klipy's topic
           packs of real illustrated stickers. */}
       {showStickers && (
-        <div className="app-bottom-nav" style={{ borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0, display: 'flex', flexDirection: 'column', height: keyboardHeightRef.current }}>
+        <div className="app-bottom-nav" style={{ borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0, display: 'flex', flexDirection: 'column', height: keyboardHeightRef.current, animation: 'slideUp 0.22s cubic-bezier(0.32,0.72,0,1)' }}>
           <div style={{ display: 'flex', gap: 4, padding: '8px 10px 0', flexShrink: 0 }}>
-            <button onClick={() => setShowStickers(false)} title="Back to keyboard" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button className="chat-icon-btn" onClick={() => setShowStickers(false)} title="Back to keyboard" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon emoji="⌨️" size={18} />
             </button>
             {([['recent', '🕒', 'Recent'], ['ours', '📸', 'Ours'], ['search', '🗂️', 'Topics']] as const).map(([key, emoji, label]) => (
-              <button key={key} onClick={() => setStickerTab(key)} style={{ flex: 1, padding: '7px', borderRadius: 10, border: 'none', background: stickerTab === key ? 'var(--sakura-light)' : 'none', color: stickerTab === key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              <button key={key} onClick={() => setStickerTab(key)} style={{ flex: 1, padding: '7px', borderRadius: 10, border: 'none', background: stickerTab === key ? 'var(--sakura-light)' : 'none', color: stickerTab === key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, transition: 'background 0.15s ease, color 0.15s ease' }}>
                 <Icon emoji={emoji} size={14} /> {label}
               </button>
             ))}
           </div>
 
-          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px' }}>
+          <div key={stickerTab} className="sticker-tab-content" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '10px' }}>
             {stickerTab === 'recent' && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                 {recentStickers.map(url => (
@@ -662,7 +678,7 @@ export default function Chat({ onBack }: Props) {
 
             {stickerTab === 'ours' && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                <input ref={customStickerInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { openStickerCrop(e.target.files); e.target.value = ''; }} />
+                <input ref={customStickerInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { openStickerImport(e.target.files); e.target.value = ''; }} />
                 <button onClick={() => customStickerInputRef.current?.click()} disabled={customStickerUploading} style={{ aspectRatio: '1', borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 22, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {customStickerUploading ? <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2.5px solid rgba(201,95,124,0.3)', borderTopColor: 'var(--sakura-deep)', animation: 'palvin-spin 0.7s linear infinite' }} /> : '+'}
                 </button>
@@ -683,7 +699,8 @@ export default function Chat({ onBack }: Props) {
 
             {stickerTab === 'search' && (
               klipyQuery.trim() === '' ? (
-                klipyCategories.length > 0 ? (
+                <div key="categories" className="sticker-tab-content">
+                {klipyCategories.length > 0 ? (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
                     {klipyCategories.map(c => (
                       <CategoryTile key={c.category} label={c.category} previewUrl={c.previewUrl} onClick={() => setKlipyQuery(c.query)} />
@@ -693,9 +710,10 @@ export default function Chat({ onBack }: Props) {
                   <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', padding: '20px 10px' }}>
                     {klipyCategoriesLoading ? 'Loading topics...' : 'Couldn’t load topics.'}
                   </p>
-                )
+                )}
+                </div>
               ) : (
-                <>
+                <div key="results" className="sticker-tab-content">
                   <button onClick={() => setKlipyQuery('')} style={{ background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 12, cursor: 'pointer', padding: '0 0 8px', display: 'flex', alignItems: 'center', gap: 3 }}>
                     <Icon emoji="←" size={12} /> Topics
                   </button>
@@ -708,46 +726,46 @@ export default function Chat({ onBack }: Props) {
                   {!klipyLoading && klipyFailed && (
                     <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>No stickers found.</p>
                   )}
-                </>
+                </div>
               )
             )}
           </div>
         </div>
       )}
 
-      {/* Crop-to-sticker step — a whole rectangular photo isn't a sticker,
-          so a fresh upload is pinch/drag-cropped to a square subject first. */}
-      {cropSrc && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}>
-          <p style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>Crop your sticker</p>
-          <div
-            onPointerDown={handleCropPointerDown}
-            onPointerMove={handleCropPointerMove}
-            onPointerUp={handleCropPointerUp}
-            onPointerCancel={handleCropPointerUp}
-            style={{ position: 'relative', width: CROP_VIEW, height: CROP_VIEW, borderRadius: 20, overflow: 'hidden', background: '#111', touchAction: 'none', cursor: 'grab' }}
-          >
-            <img
-              ref={cropImgRef}
-              src={cropSrc}
-              alt=""
-              draggable={false}
-              onLoad={e => setCropNatural({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-              style={cropDisplaySize ? {
-                position: 'absolute', left: '50%', top: '50%', width: cropDisplaySize.w, height: cropDisplaySize.h,
-                transform: `translate(calc(-50% + ${cropOffset.x}px), calc(-50% + ${cropOffset.y}px))`,
-              } : { position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', visibility: 'hidden' }}
-            />
-          </div>
-          <input
-            type="range" min={1} max={3} step={0.01} value={cropZoom}
-            onChange={e => setCropZoom(Number(e.target.value))}
-            style={{ width: CROP_VIEW }}
-          />
-          <div style={{ display: 'flex', gap: 10 }}>
-            <button onClick={closeStickerCrop} style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-            <button onClick={confirmStickerCrop} disabled={!cropDisplaySize} style={{ padding: '10px 24px', borderRadius: 12, border: 'none', background: 'var(--sakura-accent)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: cropDisplaySize ? 1 : 0.5 }}>Use as sticker</button>
-          </div>
+      {/* Sticker import — cuts the subject out onto a transparent background
+          (entirely on-device) instead of just cropping the rectangle, since
+          a whole rectangular photo pasted in isn't what a sticker is. */}
+      {importStage !== 'idle' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24, animation: 'fadeIn 0.18s ease' }}>
+          {importStage === 'processing' && (
+            <>
+              <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3.5px solid rgba(255,255,255,0.25)', borderTopColor: 'white', animation: 'palvin-spin 0.8s linear infinite' }} />
+              <p style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>Cutting out your sticker...</p>
+            </>
+          )}
+          {importStage === 'error' && (
+            <>
+              <p style={{ color: 'white', fontWeight: 700, fontSize: 14, textAlign: 'center' }}>Couldn't process that photo.</p>
+              <button onClick={cancelStickerImport} style={{ padding: '10px 24px', borderRadius: 12, border: 'none', background: 'var(--sakura-accent)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>OK</button>
+            </>
+          )}
+          {importStage === 'preview' && importPreviewUrl && (
+            <>
+              <p style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>Here's your sticker</p>
+              <div style={{
+                width: 220, height: 220, borderRadius: 20, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backgroundImage: 'conic-gradient(#3a3a3a 90deg, #2a2a2a 90deg 180deg, #3a3a3a 180deg 270deg, #2a2a2a 270deg)', backgroundSize: '20px 20px',
+                animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both',
+              }}>
+                <img src={importPreviewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={cancelStickerImport} style={{ padding: '10px 20px', borderRadius: 12, border: 'none', background: 'rgba(255,255,255,0.15)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                <button onClick={confirmStickerImport} style={{ padding: '10px 24px', borderRadius: 12, border: 'none', background: 'var(--sakura-accent)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Use as sticker</button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
