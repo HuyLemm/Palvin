@@ -35,7 +35,8 @@ export default function PostDetail({ id }: { id?: string } = {}) {
           <Avatar user={post.author} size={38} ring />
           <div>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{post.author}</p>
-            <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{post.date}{post.location ? <> · <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap' }}><Icon emoji="📍" size={12} />{post.location}</span></> : ''}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{post.date}</p>
+            {post.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 3, marginTop: 1 }}><Icon emoji="📍" size={12} />{post.location}</p>}
           </div>
         </div>
         <div style={{ position: 'relative', background: 'var(--sakura-light)' }}>
