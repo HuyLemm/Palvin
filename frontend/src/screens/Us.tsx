@@ -693,34 +693,23 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   // can't extract a price — that's rendered by JS on most shop pages, not
   // present in static page metadata — so price stays a manual field.
   //
-  // Tries our own Supabase Edge Function first (backend/supabase/functions/
-  // link-preview — fetches the page server-side and reads its own <meta>
-  // tags directly), falling back to the public Microlink API only if that
-  // fails (not deployed, cold-start error, etc.). Doing this ourselves
-  // means no shared daily quota: Microlink's free (keyless) tier is capped
-  // at 25 requests/DAY PER IP ADDRESS, shared by every wish either partner
-  // adds that day — trivially used up.
+  // Goes straight to Apify's apify/web-scraper actor (real browser
+  // automation through backend/supabase/functions/link-preview-apify),
+  // routed through a residential proxy — the only approach that actually
+  // gets real data off JS-heavy storefronts like Shopee, whose anti-bot
+  // blocks both a plain server-side fetch (no JS execution at all) and
+  // Microlink's own free-tier headless render (unreliable against it, and
+  // separately capped at 25 requests/day shared across every wish either
+  // partner adds). A real actor run can take ~10-60+ seconds, so the
+  // "Fetching info..." state in the form can sit for a while — the button
+  // to save doesn't wait on it either way, see the background-patch calls
+  // below for the case where it resolves after the wish is already saved.
   //
-  // Neither approach fixes sites that actively block automated fetches
-  // outright: Shopee serves a generic "unavailable" shell (whose scraped
-  // "logo" is some unrelated CDN/cert-authority icon, not Shopee's own —
-  // showing that as the preview picture would be actively misleading,
-  // hence no `logo` fallback below), while Lazada/TikTok Shop don't respond
-  // at all. There's no reliable client-side-only (or even server-side,
-  // without a paid headless-browser/residential-proxy service) workaround
-  // for a site that blocks scrapers this deliberately; the wish can still
-  // be saved with the link and no preview.
-  // Shopee's own raw HTML has NO extractable title/meta at all (confirmed —
-  // it's 100% client-JS-rendered, even the homepage), so real per-product
-  // data can only ever come from Microlink's headless-browser render — but
-  // that render isn't perfectly reliable against Shopee's anti-bot system:
-  // sometimes it captures the page before the real product data finishes
-  // hydrating in and gets Shopee's own generic app-shell title/description
-  // instead (a legitimate, well-formed "success" as far as the API is
-  // concerned, just describing the SITE, not the product). Since this
-  // exact generic title recurs verbatim across totally unrelated products,
-  // matching it here means showing an honest "couldn't fetch a preview"
-  // instead of confidently displaying Shopee's own branding under the
+  // Shopee's own generic app-shell title (not the product's, but a
+  // legitimate well-formed "success" as far as the API is concerned) can
+  // still come back if the real per-product data hadn't finished hydrating
+  // in when the actor read the page — matched here so that shows an honest
+  // "couldn't fetch a preview" instead of Shopee's own branding under the
   // wrong wish.
   const GENERIC_SHELL_TITLE = /^shopee việt nam\s*[|-]/i;
 
@@ -729,75 +718,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     return !image && (!title || /page (not found|unavailable)/i.test(title));
   }
 
-  async function fetchFromOurProxy(url: string): Promise<LinkPreview | null> {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
-    if (!supabaseUrl) return null;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
-    try {
-      const res = await fetch(`${supabaseUrl}/functions/v1/link-preview?url=${encodeURIComponent(url)}`, { signal: controller.signal });
-      const json = await res.json();
-      if (json.status !== 'success') return null;
-      const title: string | undefined = json.data?.title ?? undefined;
-      const image: string | undefined = json.data?.image ?? undefined;
-      const description: string | undefined = json.data?.description ?? undefined;
-      if (looksBlockedPreview(title, image)) return null;
-      return { title, image, description };
-    } catch {
-      return null;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  async function fetchFromMicrolink(url: string): Promise<LinkPreview | null> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
-    try {
-      const apiKey = import.meta.env.VITE_MICROLINK_API_KEY as string | undefined;
-      const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}&palette=false${apiKey ? `&apiKey=${apiKey}` : ''}`, { signal: controller.signal });
-      const json = await res.json();
-      if (json.status !== 'success') return null;
-      const title: string | undefined = json.data?.title ?? undefined;
-      const image: string | undefined = json.data?.image?.url ?? undefined;
-      const description: string | undefined = json.data?.description ?? undefined;
-      if (looksBlockedPreview(title, image)) return null;
-      return { title, image, description };
-    } catch {
-      return null;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  // Our own proxy only reads the page's OWN static HTML — it can't run
-  // JavaScript. Microlink's free tier actually does (it prerenders the page
-  // in a real headless browser before reading its meta tags), so on a
-  // JS-heavy site that injects its real title/image client-side, our proxy
-  // sees only the generic app-shell markup (a real, present, but WRONG
-  // title, and no image) — that used to read as a confident "success" and
-  // skip Microlink entirely, silently downgrading a link Microlink alone
-  // could actually resolve. Only trust our proxy outright when it found an
-  // image; otherwise treat it as likely incomplete and try Microlink next,
-  // falling back to whatever our proxy did get only if Microlink also
-  // comes up empty (e.g. its quota is used up).
   async function fetchLinkPreview(url: string): Promise<LinkPreview | null> {
-    const ours = await fetchFromOurProxy(url);
-    if (ours?.image) return ours;
-    const micro = await fetchFromMicrolink(url);
-    return micro ?? ours;
-  }
-
-  // Real browser automation (via Apify's `apify/web-scraper` actor, run
-  // server-side through backend/supabase/functions/link-preview-apify) —
-  // waits for a JS-heavy storefront to actually finish hydrating before
-  // reading its meta tags, unlike our own static-HTML proxy, and doesn't
-  // depend on Microlink's own free-render reliability. A real actor run can
-  // take anywhere from ~10 to 60+ seconds (spinning up a browser, proxying,
-  // waiting), so this is ONLY ever called from the background-retry chain
-  // below (after the fast path already came back empty) — never from the
-  // live "while you're typing" preview.
-  async function fetchFromApify(url: string): Promise<LinkPreview | null> {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
     if (!supabaseUrl) return null;
     const controller = new AbortController();
@@ -899,9 +820,8 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     // patch it in once/if it resolves instead of losing it.
     if (linkArg && !editLinkPreview) {
       const pending = editPendingPreviewRef.current?.url === linkArg ? editPendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
-      pending.then(async preview => {
-        const finalPreview = preview ?? await fetchFromApify(linkArg);
-        if (finalPreview) updateWish(id, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: finalPreview.image, linkTitle: finalPreview.title, linkDescription: finalPreview.description });
+      pending.then(preview => {
+        if (preview) updateWish(id, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
       });
     }
     closeEditWish();
@@ -1063,9 +983,8 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                       // because they didn't wait around.
                       if (newId && linkArg && !linkPreview) {
                         const pending = pendingPreviewRef.current?.url === linkArg ? pendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
-                        pending.then(async preview => {
-                          const finalPreview = preview ?? await fetchFromApify(linkArg);
-                          if (finalPreview) updateWish(newId, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: finalPreview.image, linkTitle: finalPreview.title, linkDescription: finalPreview.description });
+                        pending.then(preview => {
+                          if (preview) updateWish(newId, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
                         });
                       }
                     }
@@ -1148,9 +1067,10 @@ function formatReleaseDate(isoDate: string): string {
   return d.toLocaleDateString('en-US', { day: 'numeric', month: 'numeric', year: 'numeric' });
 }
 
-// iTunes Search — free, no key, CORS-enabled from the browser (same reasoning
-// as Microlink for link previews: no backend of our own to proxy this
-// through). Returns real title/artist/cover art for whatever the user types.
+// iTunes Search — free, no key, CORS-enabled from the browser, so no need
+// for a backend proxy the way the wishlist's link preview needs one (see
+// fetchLinkPreview above). Returns real title/artist/cover art for whatever
+// the user types.
 //
 // entity=song pins results to actual tracks — without it, media=music can
 // rank artist/album entries above songs, which have no trackName and get
