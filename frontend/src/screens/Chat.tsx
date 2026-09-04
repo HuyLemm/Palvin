@@ -127,6 +127,19 @@ function StickerTile({ src, onClick }: { src: string; onClick: () => void }) {
   );
 }
 
+// A topic/pack tile (Messenger-style sticker store browsing) — same tile
+// shape as StickerTile plus a caption naming the topic.
+function CategoryTile({ label, previewUrl, onClick }: { label: string; previewUrl: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
+        <img src={previewUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 6px 5px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: 'white', fontSize: 11, fontWeight: 700, textTransform: 'capitalize', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+      </div>
+    </button>
+  );
+}
+
 // Square crop viewport for turning an arbitrary photo into a sticker — see
 // the "Ours" tab: pasting a whole rectangular photo in as a "sticker" isn't
 // what a sticker is, so uploading one now goes through this pan/zoom crop
@@ -165,6 +178,21 @@ function parseKlipyResults(json: unknown): KlipyResult[] {
   }).filter((r): r is KlipyResult => r !== null);
 }
 
+// Klipy's "categories" endpoint is a curated list of topic tiles (name +
+// preview thumbnail + a `query` string) — not stickers themselves. Browsing
+// a topic means feeding its `query` back into the ordinary search endpoint.
+type KlipyCategory = { category: string; query: string; previewUrl: string };
+function parseKlipyCategories(json: unknown): KlipyCategory[] {
+  const root = json as { data?: { categories?: unknown[] } };
+  const items = root?.data?.categories;
+  if (!Array.isArray(items)) return [];
+  return items.map((raw): KlipyCategory | null => {
+    const item = raw as { category?: string; query?: string; preview_url?: string };
+    if (!item.category || !item.query || !item.preview_url) return null;
+    return { category: item.category, query: item.query, previewUrl: item.preview_url };
+  }).filter((c): c is KlipyCategory => c !== null);
+}
+
 // Chat wallpaper is a personal display preference (like WhatsApp's per-chat
 // wallpaper), not couple data — kept in localStorage per profile so picking
 // one never affects what the partner sees on their own device.
@@ -200,6 +228,8 @@ export default function Chat({ onBack }: Props) {
   const [klipyResults, setKlipyResults] = useState<KlipyResult[]>([]);
   const [klipyLoading, setKlipyLoading] = useState(false);
   const [klipyFailed, setKlipyFailed] = useState(false);
+  const [klipyCategories, setKlipyCategories] = useState<KlipyCategory[]>([]);
+  const [klipyCategoriesLoading, setKlipyCategoriesLoading] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
   const [chatThemeKeyValue, setChatThemeKeyValue] = useState(() => {
     if (!myProfile?.id) return 'default';
@@ -355,10 +385,11 @@ export default function Chat({ onBack }: Props) {
     setCustomStickerUploading(false);
   };
 
-  // Debounced Klipy search — an empty query fetches trending instead (see
-  // the edge function), so the tab never opens on a blank grid.
+  // Debounced Klipy search — an empty query shows topic tiles instead (see
+  // the categories effect below), so this only runs once there's something
+  // to actually search for (typed, or a tapped topic's query string).
   useEffect(() => {
-    if (stickerTab !== 'search') return;
+    if (stickerTab !== 'search' || !klipyQuery.trim()) { setKlipyResults([]); setKlipyLoading(false); setKlipyFailed(false); return; }
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
     if (!supabaseUrl) { setKlipyFailed(true); return; }
     setKlipyLoading(true);
@@ -380,6 +411,26 @@ export default function Chat({ onBack }: Props) {
     }, 400);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [stickerTab, klipyQuery]);
+
+  // Topic tiles (Messenger-style sticker packs) — fetched once per session,
+  // not re-fetched every time the Search tab reopens.
+  useEffect(() => {
+    if (stickerTab !== 'search' || klipyCategories.length > 0 || klipyCategoriesLoading) return;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    if (!supabaseUrl) return;
+    setKlipyCategoriesLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`${supabaseUrl}/functions/v1/klipy-search?mode=categories`);
+        const json = await res.json();
+        setKlipyCategories(parseKlipyCategories(json));
+      } catch {
+        // Topic tiles just stay empty — typing a search still works.
+      } finally {
+        setKlipyCategoriesLoading(false);
+      }
+    })();
+  }, [stickerTab, klipyCategories.length, klipyCategoriesLoading]);
 
   const handleFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -610,20 +661,38 @@ export default function Chat({ onBack }: Props) {
             <div style={{ padding: '10px' }}>
               <input
                 className="input-field"
-                placeholder="Search stickers..."
+                placeholder="Search KLIPY"
                 value={klipyQuery}
                 onChange={e => setKlipyQuery(e.target.value)}
                 style={{ marginBottom: 8, fontSize: 13, padding: '8px 12px' }}
-                autoFocus
               />
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
-                {klipyResults.map(r => (
-                  <StickerTile key={r.id} src={r.thumbnail} onClick={() => handleSendStickerImage(r.url)} />
-                ))}
-              </div>
-              {klipyLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>Searching...</p>}
-              {!klipyLoading && klipyFailed && (
-                <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>No stickers found.</p>
+              {klipyQuery.trim() === '' ? (
+                klipyCategories.length > 0 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxHeight: 200, overflowY: 'auto' }}>
+                    {klipyCategories.map(c => (
+                      <CategoryTile key={c.category} label={c.category} previewUrl={c.previewUrl} onClick={() => setKlipyQuery(c.query)} />
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>
+                    {klipyCategoriesLoading ? 'Loading topics...' : 'Type something to search stickers.'}
+                  </p>
+                )
+              ) : (
+                <>
+                  <button onClick={() => setKlipyQuery('')} style={{ background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 12, cursor: 'pointer', padding: '0 0 8px', display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <Icon emoji="←" size={12} /> Topics
+                  </button>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, maxHeight: 160, overflowY: 'auto' }}>
+                    {klipyResults.map(r => (
+                      <StickerTile key={r.id} src={r.thumbnail} onClick={() => handleSendStickerImage(r.url)} />
+                    ))}
+                  </div>
+                  {klipyLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>Searching...</p>}
+                  {!klipyLoading && klipyFailed && (
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>No stickers found.</p>
+                  )}
+                </>
               )}
             </div>
           )}

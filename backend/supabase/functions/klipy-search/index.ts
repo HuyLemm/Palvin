@@ -34,6 +34,11 @@ Deno.serve(async (req: Request) => {
   // "stickers" for the sticker-specific catalog; Klipy also serves "gifs"
   // under the same shape if that's ever wanted here too.
   const type = url.searchParams.get('type') === 'gifs' ? 'gifs' : 'stickers';
+  // Category browsing (Messenger-style "packs") — a curated list of topic
+  // tiles (name + preview thumbnail + a `query` string), NOT the stickers
+  // themselves. The frontend feeds a tapped category's `query` back in as
+  // `q` on a normal search call to actually list that topic's stickers.
+  const categories = url.searchParams.get('mode') === 'categories';
 
   const apiKey = Deno.env.get('KLIPY_API_KEY');
   if (!apiKey) {
@@ -48,8 +53,8 @@ Deno.serve(async (req: Request) => {
   try {
     // No query -> trending (a sensible default when the picker first opens,
     // before the user has typed anything).
-    const path = q ? `${type}/search` : `${type}/trending`;
-    const qs = new URLSearchParams({ per_page: '30', page: '1', locale: 'en_US' });
+    const path = categories ? `${type}/categories` : q ? `${type}/search` : `${type}/trending`;
+    const qs = new URLSearchParams(categories ? { locale: 'en_US' } : { per_page: '30', page: '1', locale: 'en_US' });
     if (q) qs.set('q', q);
     const klipyUrl = `https://api.klipy.com/api/v1/${apiKey}/${path}?${qs.toString()}`;
     const res = await fetch(klipyUrl, { signal: controller.signal });
