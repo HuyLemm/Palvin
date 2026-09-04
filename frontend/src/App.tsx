@@ -320,6 +320,24 @@ export default function App() {
     };
   }, []);
 
+  // The opposite of --app-vh above: modals need to know the CURRENT visible
+  // height (shrinking when the keyboard opens), not the stable full-screen
+  // one, or a modal centered via flexbox can end up with its lower half —
+  // sometimes the very input the keyboard is for — hidden underneath it.
+  // Scoped to its own variable rather than repurposing --app-vh, since that
+  // one exists specifically to keep the rest of the app from reflowing when
+  // the keyboard opens. Consumed by the `.kb-modal-overlay` class (see
+  // index.css) that every input-carrying modal's backdrop uses.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv || !window.matchMedia('(max-width: 480px)').matches) return;
+    const update = () => document.documentElement.style.setProperty('--kb-vh', `${vv.height}px`);
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); };
+  }, []);
+
   // iOS Safari only auto-scrolls a focused input into view if it's visible
   // at the moment it receives focus — hiding it for a single tick makes
   // Safari skip that scroll decision entirely, avoiding the jerk from

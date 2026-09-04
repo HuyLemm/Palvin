@@ -149,6 +149,14 @@ html, body {
   .chat-input-bar { padding-bottom: calc(-30px + env(safe-area-inset-bottom)) !important; }
 }
 
+/* Backdrop for any modal that contains a text input — sized to the live,
+   keyboard-shrunk visible area (see App.tsx's --kb-vh) rather than a fixed
+   `inset: 0`, so the flexbox centering inside it re-centers the modal
+   within whatever's actually still visible instead of half-hiding it (and
+   the input the keyboard opened for) underneath the keyboard. Falls back to
+   100dvh on desktop/before the JS has run, matching the old inset:0 look. */
+.kb-modal-overlay { height: var(--kb-vh, 100dvh); }
+
 * { box-sizing: border-box; }
 
 ::-webkit-scrollbar { display: none; }

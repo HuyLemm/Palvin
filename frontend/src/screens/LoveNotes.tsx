@@ -302,7 +302,7 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(20,10,28,0.6)', backdropFilter: 'blur(6px)', zIndex: 200, overflowY: 'auto' }}>
+    <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(20,10,28,0.6)', backdropFilter: 'blur(6px)', zIndex: 200, overflowY: 'auto' }}>
       <div style={{ minHeight: '100%', padding: '20px 16px 40px', display: 'flex', flexDirection: 'column', maxWidth: 430, margin: '0 auto' }}>
         {/* Toolbar */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>

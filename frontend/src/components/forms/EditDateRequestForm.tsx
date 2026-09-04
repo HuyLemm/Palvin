@@ -55,7 +55,7 @@ export default function EditDateRequestForm({ req, onClose }: { req: DateRequest
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={onClose}>
+    <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={onClose}>
       <style>{`
         .editreq-date-input[type="date"]::-webkit-calendar-picker-indicator,
         .editreq-date-input[type="time"]::-webkit-calendar-picker-indicator { transform: scale(0.8); }

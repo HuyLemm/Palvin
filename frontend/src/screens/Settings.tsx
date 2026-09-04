@@ -446,6 +446,7 @@ export default function Settings() {
       {showPasswordModal && (
         <div
           onClick={() => setShowPasswordModal(false)}
+          className="kb-modal-overlay"
           style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }}
         >
           <div
