@@ -56,6 +56,10 @@ export default function EditDateRequestForm({ req, onClose }: { req: DateRequest
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={onClose}>
+      <style>{`
+        .editreq-date-input[type="date"]::-webkit-calendar-picker-indicator,
+        .editreq-date-input[type="time"]::-webkit-calendar-picker-indicator { transform: scale(0.8); }
+      `}</style>
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Edit Permission Request <Icon emoji="✏️" size={15} /></p>
@@ -78,8 +82,8 @@ export default function EditDateRequestForm({ req, onClose }: { req: DateRequest
           <input className="input-field" placeholder="Location" value={location} onChange={e => setLocation(e.target.value)} />
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <input type="date" className="input-field" value={date} onChange={e => setDate(e.target.value)} style={{ minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
-            <input type="time" className="input-field" value={time} onChange={e => setTime(e.target.value)} style={{ minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
+            <input type="date" className="input-field editreq-date-input" value={date} onChange={e => setDate(e.target.value)} style={{ minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
+            <input type="time" className="input-field editreq-date-input" value={time} onChange={e => setTime(e.target.value)} style={{ minWidth: 0, fontSize: 12.5, padding: '9px 8px' }} />
           </div>
 
           <textarea

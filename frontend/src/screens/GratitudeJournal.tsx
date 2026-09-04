@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
+import FilterCountBadge from '../components/FilterCountBadge';
 
 const PROMPTS = [
   "Today I'm grateful for...",
@@ -118,8 +119,9 @@ export default function GratitudeJournal({ onBack }: Props) {
       {/* Filter */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
         {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: filter === f ? 'var(--sakura-deep)' : 'var(--sakura-light)', color: filter === f ? 'white' : 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s' }}>
+          <button key={f} onClick={() => setFilter(f)} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: filter === f ? 'var(--sakura-deep)' : 'var(--sakura-light)', color: filter === f ? 'white' : 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {f === 'all' ? 'All' : f}
+            <FilterCountBadge count={f === 'all' ? state.gratitude.length : state.gratitude.filter(g => g.from === f).length} />
           </button>
         ))}
       </div>

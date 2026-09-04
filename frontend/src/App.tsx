@@ -373,6 +373,17 @@ export default function App() {
   const activeTab = MAIN_TABS.includes(screen as Tab) ? screen as Tab : null;
   const unreadNotifs = state.notifications.filter(n => !n.read).length + (pendingInvite ? 1 : 0);
 
+  // Mirrors the two in-app header badges above onto the installed PWA's own
+  // home-screen icon (the Badging API — iOS 16.4+, home-screen-installed
+  // only). Safari treats 0/undefined as "remove", not "show a zero badge",
+  // so clearAppBadge() is called explicitly rather than setAppBadge(0).
+  useEffect(() => {
+    if (!('setAppBadge' in navigator)) return;
+    const total = unreadNotifs + state.unreadChatCount;
+    if (total > 0) navigator.setAppBadge(total).catch(() => {});
+    else navigator.clearAppBadge?.().catch(() => {});
+  }, [unreadNotifs, state.unreadChatCount]);
+
   const handleTabClick = (key: string) => {
     navigate(key);
   };

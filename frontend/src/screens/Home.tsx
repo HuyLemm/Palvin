@@ -319,7 +319,7 @@ export default function Home() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
         {[
           { emoji: '🌸', value: state.memories.length, label: 'Memories' },
-          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length, label: 'Love notes' },
+          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes' },
           { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist' },
           { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude' },
         ].map(s => (

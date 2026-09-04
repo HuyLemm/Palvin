@@ -6,6 +6,7 @@ import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
 import AmountInput from '../components/AmountInput';
+import FilterCountBadge from '../components/FilterCountBadge';
 import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
 import { uploadPlaceImage } from '../places';
@@ -981,12 +982,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
         ].map(f => (
           <button key={f.k} className="wish-tab-btn" onClick={() => setFilter(f.k)} style={{ padding: '6px 14px', borderRadius: 99, border: filter === f.k ? 'none' : '1.5px solid var(--border)', background: filter === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {f.label}
-            <span style={{
-              minWidth: 17, height: 17, padding: '0 4px', borderRadius: 99, fontSize: 10, fontWeight: 800,
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              background: filter === f.k ? 'rgba(255,255,255,0.3)' : 'var(--sakura-light)',
-              color: filter === f.k ? 'white' : 'var(--sakura-deep)',
-            }}>{f.count}</span>
+            <FilterCountBadge count={f.count} />
           </button>
         ))}
       </div>
@@ -1465,11 +1461,14 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
       {/* Filter tabs */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
-          { k: 'all', label: 'All', emoji: null as string | null },
-          { k: currentUser, label: `Added by ${currentUser}`, emoji: '💙' },
-          ...(partnerName ? [{ k: partnerName, label: `Added by ${partnerName}`, emoji: '💗' }] : []),
+          { k: 'all', label: 'All', emoji: null as string | null, count: state.playlist.length },
+          { k: currentUser, label: `Added by ${currentUser}`, emoji: '💙', count: state.playlist.filter(p => p.addedBy === currentUser).length },
+          ...(partnerName ? [{ k: partnerName, label: `Added by ${partnerName}`, emoji: '💗', count: state.playlist.filter(p => p.addedBy === partnerName).length }] : []),
         ].map(f => (
-          <button key={f.k} onClick={() => setFilter(f.k)} style={{ padding: '6px 14px', borderRadius: 99, border: filter === f.k ? 'none' : '1.5px solid var(--border)', background: filter === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{f.label}{f.emoji && <Icon emoji={f.emoji} size={12} />}</button>
+          <button key={f.k} onClick={() => setFilter(f.k)} style={{ padding: '6px 14px', borderRadius: 99, border: filter === f.k ? 'none' : '1.5px solid var(--border)', background: filter === f.k ? 'var(--sakura-accent)' : 'var(--white)', color: filter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            {f.label}{f.emoji && <Icon emoji={f.emoji} size={12} />}
+            <FilterCountBadge count={f.count} />
+          </button>
         ))}
       </div>
 
@@ -1831,8 +1830,9 @@ function DebtScreen({ onBack }: { onBack: () => void }) {
       {/* Filter — who logged this debt */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
         {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             {f === 'all' ? 'All' : f}
+            <FilterCountBadge count={f === 'all' ? state.debts.length : state.debts.filter(d => d.createdBy === f).length} />
           </button>
         ))}
       </div>

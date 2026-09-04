@@ -3,6 +3,7 @@ import { useApp } from '../context';
 import AddMemoryForm from '../components/forms/AddMemoryForm';
 import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
+import FilterCountBadge from '../components/FilterCountBadge';
 
 type Filter = 'All' | '2026' | '2025' | '2024' | '2023';
 const FILTERS: Filter[] = ['All', '2026', '2025', '2024', '2023'];
@@ -26,8 +27,11 @@ export default function Memories() {
             background: filter === f ? 'var(--sakura-deep)' : 'var(--white)',
             color: filter === f ? 'white' : 'var(--ink-2)',
             outline: filter === f ? 'none' : '1.5px solid var(--border)',
-            transition: 'all 0.15s'
-          } as any}>{f}</button>
+            transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6,
+          } as any}>
+            {f}
+            <FilterCountBadge count={f === 'All' ? state.memories.length : state.memories.filter(m => m.year === +f).length} />
+          </button>
         ))}
       </div>
 

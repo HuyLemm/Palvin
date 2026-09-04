@@ -8,6 +8,7 @@ import EditGoalForm from '../components/forms/EditGoalForm';
 import EditBillForm from '../components/forms/EditBillForm';
 import AmountInput from '../components/AmountInput';
 import Icon from '../components/Icon';
+import FilterCountBadge from '../components/FilterCountBadge';
 import type { Bill, Expense, SavingsGoal } from '../types';
 
 type Tab = 'expenses' | 'goals' | 'stats' | 'bills';
@@ -181,7 +182,11 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
               background: filter === f ? 'var(--sakura-accent)' : 'transparent',
               color: filter === f ? 'white' : 'var(--ink-2)',
               transition: 'all 0.2s ease',
-            }}>{f === 'all' ? 'All' : f === 'income' ? 'Income' : 'Expense'}</button>
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+            }}>
+              {f === 'all' ? 'All' : f === 'income' ? 'Income' : 'Expense'}
+              <FilterCountBadge count={expenses.filter(e => (month === 'all' || e.date.startsWith(month)) && (f === 'all' || (f === 'income' ? e.type === 'income' : e.type !== 'income'))).length} />
+            </button>
           ))}
         </div>
         <select
@@ -383,21 +388,44 @@ function lastNMonths(anchor: string, n: number): string[] {
   return out;
 }
 
+// Same idea as getRecentMonths above, but for the Stats tab's Year mode —
+// a "YYYY" key is still a valid prefix of a "YYYY-MM-DD" date string, so
+// every `.date.startsWith(key)` filter below works unchanged whether `key`
+// is a month or a full year.
+function getRecentYears(count: number): string[] {
+  const y = new Date().getFullYear();
+  return Array.from({ length: count }, (_, i) => String(y - i));
+}
+const YEARS = getRecentYears(5);
+function lastNYears(anchor: string, n: number): string[] {
+  const anchorYear = Number(anchor);
+  return Array.from({ length: n }, (_, i) => String(anchorYear - (n - 1 - i)));
+}
+
 /* ─── Thống kê tab ────────────────────────────────── */
 function StatsTab({ expenses }: { expenses: any[] }) {
   const { currentUser, partnerProfile } = useApp();
   const partnerName = partnerProfile?.displayName;
+  const [mode, setMode] = useState<'month' | 'year'>('month');
   const [month, setMonth] = useState(MONTHS[0]);
-  const monthExp = expenses.filter(e => e.date.startsWith(month) && e.type !== 'income');
-  const monthInc = expenses.filter(e => e.date.startsWith(month) && e.type === 'income');
+  const [year, setYear] = useState(YEARS[0]);
+  // Every filter/label below reads `period` (whichever picker is active),
+  // not `month` directly — a "YYYY" key is still a valid prefix of a
+  // "YYYY-MM-DD" date string, so the exact same `.startsWith(period)` calls
+  // work unchanged for both a month and a full year.
+  const period = mode === 'month' ? month : year;
+  const periodLabel = mode === 'month' ? monthLabel(month) : year;
+  const monthExp = expenses.filter(e => e.date.startsWith(period) && e.type !== 'income');
+  const monthInc = expenses.filter(e => e.date.startsWith(period) && e.type === 'income');
   const total = monthExp.reduce((s: number, e: any) => s + e.amount, 0);
   const totalInc = monthInc.reduce((s: number, e: any) => s + e.amount, 0);
   const alvinT = monthExp.filter((e: any) => e.paidBy === currentUser).reduce((s: number, e: any) => s + e.amount, 0);
   const paoiT = partnerName ? monthExp.filter((e: any) => e.paidBy === partnerName).reduce((s: number, e: any) => s + e.amount, 0) : 0;
   const bothT = monthExp.filter((e: any) => e.paidBy === 'Both').reduce((s: number, e: any) => s + e.amount, 0);
 
-  const prevMonth = shiftMonth(month, -1);
-  const prevMonthExp = expenses.filter(e => e.date.startsWith(prevMonth) && e.type !== 'income');
+  const prevPeriod = mode === 'month' ? shiftMonth(month, -1) : String(+year - 1);
+  const prevPeriodLabel = mode === 'month' ? 'last month' : 'last year';
+  const prevMonthExp = expenses.filter(e => e.date.startsWith(prevPeriod) && e.type !== 'income');
   const prevTotal = prevMonthExp.reduce((s: number, e: any) => s + e.amount, 0);
   const change = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : null;
 
@@ -415,10 +443,12 @@ function StatsTab({ expenses }: { expenses: any[] }) {
     .sort((a, b) => b.amount - a.amount);
   const maxCat = categories[0]?.amount || 1;
 
-  // Last 6 months ending at the selected month — computed dynamically, not from a fixed list
-  const monthlyData = lastNMonths(month, 6).map(key => ({
+  // Last 6 months (or last 5 years, in Year mode) ending at the selected
+  // period — computed dynamically, not from a fixed list.
+  const trendKeys = mode === 'month' ? lastNMonths(month, 6) : lastNYears(year, 5);
+  const monthlyData = trendKeys.map(key => ({
     key,
-    label: monthShortLabel(key),
+    label: mode === 'month' ? monthShortLabel(key) : key,
     exp: expenses.filter(e => e.date.startsWith(key) && e.type !== 'income').reduce((s: number, e: any) => s + e.amount, 0),
   }));
   const sixMonthAvg = monthlyData.reduce((s, d) => s + d.exp, 0) / monthlyData.length;
@@ -454,38 +484,52 @@ function StatsTab({ expenses }: { expenses: any[] }) {
     .map(c => ({ ...c, changePct: ((c.amount - c.prevAmount) / c.prevAmount) * 100 }))
     .sort((a, b) => b.changePct - a.changePct);
   if (risers[0] && risers[0].changePct >= 20) {
-    insights.push({ icon: risers[0].emoji, text: `${risers[0].cat} is up ${Math.round(risers[0].changePct)}% from last month.` });
+    insights.push({ icon: risers[0].emoji, text: `${risers[0].cat} is up ${Math.round(risers[0].changePct)}% from ${prevPeriodLabel}.` });
   }
+  const trendLabel = mode === 'month' ? '6-month' : '5-year';
+  const periodNoun = mode === 'month' ? "month's" : "year's";
   if (sixMonthAvg > 0) {
     const avgDiff = ((total - sixMonthAvg) / sixMonthAvg) * 100;
-    if (Math.abs(avgDiff) < 8) insights.push({ icon: '💡', text: `This month's spending is about the same as your 6-month average (${VND(sixMonthAvg)}).` });
-    else insights.push({ icon: avgDiff > 0 ? '📈' : '📉', text: `This month's spending is ${avgDiff > 0 ? 'higher' : 'lower'} than your 6-month average by ${Math.round(Math.abs(avgDiff))}% (${VND(sixMonthAvg)}).` });
+    if (Math.abs(avgDiff) < 8) insights.push({ icon: '💡', text: `This ${periodNoun} spending is about the same as your ${trendLabel} average (${VND(sixMonthAvg)}).` });
+    else insights.push({ icon: avgDiff > 0 ? '📈' : '📉', text: `This ${periodNoun} spending is ${avgDiff > 0 ? 'higher' : 'lower'} than your ${trendLabel} average by ${Math.round(Math.abs(avgDiff))}% (${VND(sixMonthAvg)}).` });
   }
 
   return (
     <div>
-      {/* Month picker */}
+      {/* Month/Year mode toggle */}
+      <div style={{ display: 'flex', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 10, width: 'fit-content' }}>
+        {(['month', 'year'] as const).map(m => (
+          <button key={m} onClick={() => setMode(m)} style={{
+            padding: '6px 16px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+            background: mode === m ? 'var(--sakura-accent)' : 'transparent',
+            color: mode === m ? 'white' : 'var(--ink-2)',
+            transition: 'all 0.2s ease',
+          }}>{m === 'month' ? 'By month' : 'By year'}</button>
+        ))}
+      </div>
+
+      {/* Month/Year picker */}
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 16 }}>
-        {MONTHS.map(m => (
-          <button key={m} onClick={() => setMonth(m)} style={{
+        {(mode === 'month' ? MONTHS : YEARS).map(m => (
+          <button key={m} onClick={() => mode === 'month' ? setMonth(m) : setYear(m)} style={{
             flexShrink: 0, padding: '6px 14px', borderRadius: 99, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-            background: m === month ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--white)',
-            color: m === month ? 'white' : 'var(--ink-2)',
-            border: m === month ? 'none' : '1px solid var(--border)',
-            boxShadow: m === month ? '0 2px 8px rgba(201,95,124,0.3)' : 'none',
-          }}>{monthLabel(m)}</button>
+            background: m === period ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--white)',
+            color: m === period ? 'white' : 'var(--ink-2)',
+            border: m === period ? 'none' : '1px solid var(--border)',
+            boxShadow: m === period ? '0 2px 8px rgba(201,95,124,0.3)' : 'none',
+          }}>{mode === 'month' ? monthLabel(m) : m}</button>
         ))}
       </div>
 
       {/* Hero — tổng chi tiêu, % so tháng trước, thu nhập */}
       <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{monthLabel(month)} · Spending</p>
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{periodLabel} · Spending</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, color: 'white', lineHeight: 1.1, marginBottom: 6 }}>{VND(total)}</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {change !== null && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: change > 0 ? 'rgba(255,100,100,0.25)' : 'rgba(100,220,140,0.25)', borderRadius: 99, padding: '3px 10px' }}>
-              <span style={{ color: 'white', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji={change > 0 ? '↑' : '↓'} size={11} /> {Math.abs(change).toFixed(0)}% vs last month</span>
+              <span style={{ color: 'white', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji={change > 0 ? '↑' : '↓'} size={11} /> {Math.abs(change).toFixed(0)}% vs {prevPeriodLabel}</span>
             </div>
           )}
           {totalInc > 0 && (
@@ -553,7 +597,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
                   </div>
                   {catChange !== null && (
                     <p style={{ fontSize: 10, color: catChange > 0 ? '#E8524A' : '#5AC26A', display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <Icon emoji={catChange > 0 ? '↑' : '↓'} size={10} /> {Math.abs(Math.round(catChange))}% vs last month
+                      <Icon emoji={catChange > 0 ? '↑' : '↓'} size={10} /> {Math.abs(Math.round(catChange))}% vs {prevPeriodLabel}
                     </p>
                   )}
                 </div>
@@ -605,7 +649,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       {/* 6 tháng gần nhất — tính động theo tháng đang chọn, + mức trung bình */}
       <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>Last 6 months</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{mode === 'month' ? 'Last 6 months' : 'Last 5 years'}</p>
           <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Avg: <strong style={{ color: 'var(--ink)' }}>{VND(sixMonthAvg)}</strong></p>
         </div>
         <MonthlyBar data={monthlyData} avg={sixMonthAvg} />

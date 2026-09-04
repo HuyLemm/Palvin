@@ -155,6 +155,8 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
         }
         .permit-input:focus { border-color: var(--sakura-accent); box-shadow: 0 0 0 3px rgba(230,127,154,0.12); }
         .permit-input::placeholder { color: var(--ink-2); }
+        .permit-input[type="date"]::-webkit-calendar-picker-indicator,
+        .permit-input[type="time"]::-webkit-calendar-picker-indicator { transform: scale(0.8); }
       `}</style>
 
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={15} /> Back</button>
@@ -260,7 +262,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ fontSize: 10, color: 'var(--ink-2)', marginBottom: 2 }}>Signature</p>
-                    <p style={{ display: 'flex', justifyContent: 'flex-end' }}><Icon emoji="❤️" size={22} /></p>
+                    <p style={{ display: 'flex', justifyContent: 'flex-end' }}><Icon emoji="❤️" size={16} /></p>
                   </div>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
+import FilterCountBadge from '../components/FilterCountBadge';
 import type { Capsule } from '../types';
 
 function truncate(text: string, max = 100): string {
@@ -73,6 +74,7 @@ export default function TimeCapsule() {
         {[currentUser, ...(partnerName ? [partnerName] : []), 'both'].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
             <Icon emoji={f === 'both' ? '💑' : f === currentUser ? '💙' : '💗'} size={14} /> {f === 'both' ? 'Both' : f}
+            <FilterCountBadge count={state.capsules.filter(c => c.to === f).length} />
           </button>
         ))}
       </div>
