@@ -9,6 +9,7 @@ import AmountInput from '../components/AmountInput';
 import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
 import { uploadPlaceImage } from '../places';
+import { uploadWishImage } from '../wishes';
 import FutureUs from './FutureUs';
 import Calendar from './Calendar';
 import TripPlanner from './TripPlanner';
@@ -636,11 +637,18 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
 type LinkPreview = { title?: string; image?: string; description?: string; price?: string };
 
 function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; initialWishId?: string }) {
-  const { state, currentUser, isAdmin, partnerProfile, addWish, updateWish, removeWish, drawWish } = useApp();
+  const { myProfile, state, currentUser, isAdmin, partnerProfile, addWish, updateWish, removeWish, drawWish } = useApp();
   const [showAdd, setShowAdd] = useState(false);
+  // "link" fetches image/name/price automatically from a pasted product
+  // link; "manual" is for anything with no shareable link (or one that
+  // won't fetch, e.g. Shopee) — name/price/picture are all entered by hand.
+  const [wishMode, setWishMode] = useState<'link' | 'manual'>('link');
   const [wishText, setWishText] = useState('');
   const [wishLink, setWishLink] = useState('');
   const [wishPrice, setWishPrice] = useState('');
+  const [wishImagePreview, setWishImagePreview] = useState('');
+  const [wishImageUrl, setWishImageUrl] = useState('');
+  const [wishImageUploading, setWishImageUploading] = useState(false);
   // A wishlist notification tap lands on whichever filter tab actually shows
   // that wish — "bought" if it's already been marked bought, "all" (which
   // already includes both people's not-yet-bought wishes) otherwise.
@@ -654,6 +662,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   const [previewFailed, setPreviewFailed] = useState(false);
 
   const [editingWish, setEditingWish] = useState<WishItem | null>(null);
+  const [editMode, setEditMode] = useState<'link' | 'manual'>('link');
   const [editText, setEditText] = useState('');
   const [editPrice, setEditPrice] = useState('');
   const [editLink, setEditLink] = useState('');
@@ -661,8 +670,13 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   const [editLinkPreview, setEditLinkPreview] = useState<LinkPreview | null>(null);
   const [editPreviewLoading, setEditPreviewLoading] = useState(false);
   const [editPreviewFailed, setEditPreviewFailed] = useState(false);
+  const [editImagePreview, setEditImagePreview] = useState('');
+  const [editImageUrl, setEditImageUrl] = useState('');
+  const [editImageUploading, setEditImageUploading] = useState(false);
   const [confirmDeleteWish, setConfirmDeleteWish] = useState<string | null>(null);
   const [addingWish, setAddingWish] = useState(false);
+  const wishImageInputRef = useRef<HTMLInputElement>(null);
+  const editImageInputRef = useRef<HTMLInputElement>(null);
 
   const other = partnerProfile?.displayName ?? currentUser;
 
@@ -685,7 +699,20 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   }, [highlightId, filtered.length]);
 
   const closeAdd = () => {
-    setShowAdd(false); setWishText(''); setWishLink(''); setWishPrice(''); setLinkPreview(null);
+    setShowAdd(false); setWishMode('link'); setWishText(''); setWishLink(''); setWishPrice(''); setLinkPreview(null);
+    setWishImagePreview(''); setWishImageUrl(''); setWishImageUploading(false);
+  };
+
+  const handleWishImageFile = (fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (!file || !myProfile?.coupleId) return;
+    setWishImagePreview(URL.createObjectURL(file));
+    setWishImageUrl('');
+    setWishImageUploading(true);
+    uploadWishImage(myProfile.coupleId, file).then(url => {
+      setWishImageUploading(false);
+      if (url) setWishImageUrl(url);
+    });
   };
 
   // Fetch a compact title/image/description(/price, where findable) preview
@@ -747,6 +774,10 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   const pendingPreviewRef = useRef<{ url: string; promise: Promise<LinkPreview | null> } | null>(null);
 
   useEffect(() => {
+    // Manual mode can still carry a link (so the wish stays clickable) but
+    // never triggers a fetch for it — the whole point of manual mode is not
+    // depending on that.
+    if (wishMode !== 'link') { setLinkPreview(null); setPreviewLoading(false); setPreviewFailed(false); pendingPreviewRef.current = null; return; }
     const url = wishLink.trim();
     if (!/^https?:\/\/.+/i.test(url)) { setLinkPreview(null); setPreviewLoading(false); setPreviewFailed(false); pendingPreviewRef.current = null; return; }
     setPreviewLoading(true);
@@ -758,35 +789,55 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
         setLinkPreview(preview);
         setPreviewFailed(!preview);
         setPreviewLoading(false);
-        // Only fills in a price the user hasn't already typed themselves —
-        // never overwrites a manually-entered value.
+        // Only fills in a price/name the user hasn't already typed
+        // themselves — never overwrites a manually-entered value.
         if (preview?.price) setWishPrice(current => current || preview.price!);
+        if (preview?.title) setWishText(current => current || preview.title!);
       });
     }, 700);
     return () => clearTimeout(timer);
-  }, [wishLink]);
+  }, [wishLink, wishMode]);
 
   function openEditWish(w: WishItem) {
     setEditingWish(w);
+    // A wish with no link at all was necessarily added manually — anything
+    // with a link defaults to "link" mode, whether or not the fetch ever
+    // actually succeeded for it.
+    setEditMode(w.link ? 'link' : 'manual');
     setEditText(w.wish);
     setEditPrice(w.price ?? '');
     setEditLink(w.link ?? '');
     setEditOriginalLink(w.link ?? '');
     setEditLinkPreview((w.linkImage || w.linkTitle || w.linkDescription) ? { image: w.linkImage, title: w.linkTitle, description: w.linkDescription } : null);
+    setEditImagePreview(w.linkImage ?? '');
+    setEditImageUrl(w.linkImage ?? '');
   }
   function closeEditWish() {
-    setEditingWish(null); setEditText(''); setEditPrice(''); setEditLink(''); setEditOriginalLink(''); setEditLinkPreview(null); setEditPreviewLoading(false); setEditPreviewFailed(false);
+    setEditingWish(null); setEditMode('link'); setEditText(''); setEditPrice(''); setEditLink(''); setEditOriginalLink(''); setEditLinkPreview(null); setEditPreviewLoading(false); setEditPreviewFailed(false);
+    setEditImagePreview(''); setEditImageUrl(''); setEditImageUploading(false);
   }
+
+  const handleEditImageFile = (fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (!file || !myProfile?.coupleId) return;
+    setEditImagePreview(URL.createObjectURL(file));
+    setEditImageUrl('');
+    setEditImageUploading(true);
+    uploadWishImage(myProfile.coupleId, file).then(url => {
+      setEditImageUploading(false);
+      if (url) setEditImageUrl(url);
+    });
+  };
 
   // Re-fetch the preview only when the link actually changed, or when the
   // wish has a link but never had a preview stored (older items added
   // before this feature existed) — so opening edit on a legacy item
   // backfills it, but saving other fields on an already-previewed item
-  // never wastes an API call.
+  // never wastes an API call. Manual mode never fetches, same as Add.
   const editPendingPreviewRef = useRef<{ url: string; promise: Promise<LinkPreview | null> } | null>(null);
 
   useEffect(() => {
-    if (!editingWish) return;
+    if (!editingWish || editMode !== 'link') return;
     const url = editLink.trim();
     const unchanged = url === editOriginalLink.trim();
     if (unchanged && editLinkPreview) { setEditPreviewLoading(false); return; }
@@ -801,11 +852,12 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
         setEditPreviewFailed(!preview);
         setEditPreviewLoading(false);
         if (preview?.price) setEditPrice(current => current || preview.price!);
+        if (preview?.title) setEditText(current => current || preview.title!);
       });
     }, unchanged ? 0 : 700);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editLink, editOriginalLink, editingWish]);
+  }, [editLink, editOriginalLink, editingWish, editMode]);
 
   function saveEditWish() {
     if (!editingWish || !editText.trim()) return;
@@ -813,6 +865,13 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     const savedText = editText.trim();
     const savedPrice = editPrice;
     const linkArg = editLink.trim() || undefined;
+
+    if (editMode === 'manual') {
+      updateWish(id, { wish: savedText, price: savedPrice || undefined, link: linkArg, linkImage: editImageUrl || undefined });
+      closeEditWish();
+      return;
+    }
+
     updateWish(id, {
       wish: savedText,
       price: savedPrice || undefined,
@@ -839,46 +898,58 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     const isHighlighted = w.id === highlightId;
     return (
       <div key={w.id} data-wish-id={w.id} className="card wish-card" style={{
-        padding: '14px 16px', opacity: isBought ? 0.6 : 1,
+        padding: 0, overflow: 'hidden', opacity: isBought ? 0.6 : 1,
         animation: `wishCardIn 0.3s cubic-bezier(0.32,0.72,0,1) both${isHighlighted ? ', wishHighlight 1.2s ease 2' : ''}`,
         animationDelay: isHighlighted ? '0s, 0s' : `${Math.min(index, 6) * 30}ms`,
         boxShadow: isHighlighted ? '0 0 0 2.5px var(--sakura-accent)' : undefined,
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: isBought ? 'var(--bg)' : (isOwner ? '#E4ECFF' : '#FFE4EC'), display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.2s ease' }}>
-            <Icon emoji={isBought ? '✅' : (isOwner ? '💙' : '💗')} size={20} />
+        {/* Picture leads the card — from a fetched or manually-uploaded
+            image alike, both just live in linkImage. Falls back to a
+            plain owner-colored block when there's no picture at all. */}
+        {w.linkImage ? (
+          <div style={{ width: '100%', height: 160 }}>
+            <FadeImage src={w.linkImage} alt="" style={{ width: '100%', height: '100%' }} />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: isBought ? 'line-through' : 'none', lineHeight: 1.3 }}>{w.wish}</p>
-            <p style={{ fontSize: 11, color: 'var(--sakura-deep)', marginTop: 3, fontWeight: 600 }}>{w.from}'s wishlist · {w.date}</p>
-            {w.price && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💰" size={12} /> {/^\d+$/.test(w.price) ? `${Number(w.price).toLocaleString('en-US')} VND` : w.price}</p>}
+        ) : (
+          <div style={{ width: '100%', height: 84, background: isOwner ? '#E4ECFF' : '#FFE4EC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon emoji={isBought ? '✅' : (isOwner ? '💙' : '💗')} size={30} />
           </div>
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            {!isBought && (
-              <button className="wish-action-btn" onClick={() => drawWish(w.id, true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Bought <Icon emoji="🎁" size={12} /></button>
-            )}
-            {isBought && (
-              <button className="wish-action-btn" onClick={() => drawWish(w.id, false)} style={{ background: 'var(--bg)', color: 'var(--ink-2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}>Undo <Icon emoji="↩️" size={12} /></button>
-            )}
-            {canEdit && (
-              <>
-                <button className="wish-action-btn" onClick={() => openEditWish(w)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
-                <button className="wish-action-btn" onClick={() => setConfirmDeleteWish(w.id)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={12} /></button>
-              </>
-            )}
-          </div>
-        </div>
-        {w.link && (
-          <a href={w.link} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, padding: 8, background: 'var(--bg)', borderRadius: 10, textDecoration: 'none', minWidth: 0 }}>
-            {w.linkImage
-              ? <FadeImage src={w.linkImage} alt="" style={{ width: 44, height: 44, borderRadius: 8, flexShrink: 0 }} />
-              : <div style={{ width: 44, height: 44, borderRadius: 8, background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🔗" size={16} /></div>}
-            <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 12, color: '#4A8AE8', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.linkTitle || w.link}</p>
-              {w.linkDescription && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{w.linkDescription}</p>}
-            </div>
-          </a>
         )}
+
+        <div style={{ padding: '14px 16px' }}>
+          {/* Product data first — name, description, price */}
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', textDecoration: isBought ? 'line-through' : 'none', lineHeight: 1.3 }}>{w.wish}</p>
+          {w.linkDescription && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{w.linkDescription}</p>}
+          {w.price && <p style={{ fontSize: 13, color: 'var(--sakura-deep)', fontWeight: 700, marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💰" size={13} /> {/^\d+$/.test(w.price) ? `${Number(w.price).toLocaleString('en-US')} VND` : w.price}</p>}
+          {w.link && (
+            <a href={w.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#4A8AE8', fontWeight: 600, marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+              <Icon emoji="🔗" size={11} /> View product
+            </a>
+          )}
+
+          {/* Whose wishlist + date — pulled down, de-emphasized */}
+          <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Icon emoji={isOwner ? '💙' : '💗'} size={10} /> {w.from}'s wishlist · {w.date}
+          </p>
+
+          {/* Bought/Undo gets its own full-width row */}
+          <div style={{ marginTop: 10 }}>
+            {!isBought ? (
+              <button className="wish-action-btn" onClick={() => drawWish(w.id, true)} style={{ width: '100%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '9px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Bought <Icon emoji="🎁" size={13} /></button>
+            ) : (
+              <button className="wish-action-btn" onClick={() => drawWish(w.id, false)} style={{ width: '100%', background: 'var(--bg)', color: 'var(--ink-2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '9px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Undo <Icon emoji="↩️" size={13} /></button>
+            )}
+          </div>
+
+          {/* Edit/Delete on their own separate row below, so a mis-tap
+              reaching for Bought/Undo can't land on either by accident */}
+          {canEdit && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button className="wish-action-btn" onClick={() => openEditWish(w)} style={{ flex: 1, background: 'var(--bg)', border: 'none', borderRadius: 10, padding: '7px', cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}><Icon emoji="✏️" size={12} /> Edit</button>
+              <button className="wish-action-btn" onClick={() => setConfirmDeleteWish(w.id)} style={{ flex: 1, background: 'var(--bg)', border: 'none', borderRadius: 10, padding: '7px', cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}><Icon emoji="🗑️" size={12} /> Delete</button>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -945,14 +1016,42 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
               </div>
               <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 14 }}>Adding for <strong>{currentUser}</strong> — {other} will see it and can surprise you with it!</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setWishMode('link')} className="wish-tab-btn" style={{ flex: 1, padding: '9px', borderRadius: 12, border: wishMode === 'link' ? 'none' : '1.5px solid var(--border)', background: wishMode === 'link' ? 'var(--sakura-accent)' : 'var(--bg)', color: wishMode === 'link' ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Icon emoji="🔗" size={13} /> Paste a link</button>
+                  <button onClick={() => setWishMode('manual')} className="wish-tab-btn" style={{ flex: 1, padding: '9px', borderRadius: 12, border: wishMode === 'manual' ? 'none' : '1.5px solid var(--border)', background: wishMode === 'manual' ? 'var(--sakura-accent)' : 'var(--bg)', color: wishMode === 'manual' ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Icon emoji="✏️" size={13} /> Enter manually</button>
+                </div>
+
                 <input className="input-field" placeholder="Item you'd like to receive..." value={wishText} onChange={e => setWishText(e.target.value)} />
                 <AmountInput placeholder="Estimated price (VND, optional)" value={wishPrice} onChange={setWishPrice} />
-                <input className="input-field" placeholder="Product link (optional)" value={wishLink} onChange={e => setWishLink(e.target.value)} />
-                {previewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
-                {!previewLoading && previewFailed && (
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still add the item without one.</p>
+
+                {wishMode === 'manual' && (
+                  <div>
+                    <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photo (optional)</p>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {wishImagePreview && (
+                        <div style={{ position: 'relative', width: 70, height: 70, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2px solid var(--sakura-deep)' }}>
+                          <img src={wishImagePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: wishImageUploading ? 0.5 : 1 }} />
+                          {wishImageUploading && (
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-spin 0.7s linear infinite' }} />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <button onClick={() => wishImageInputRef.current?.click()} style={{ width: 70, height: 70, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{wishImagePreview ? '↻' : '+'}</button>
+                      <input ref={wishImageInputRef} type="file" accept="image/*" onChange={e => { handleWishImageFile(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
+                    </div>
+                    <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+                  </div>
                 )}
-                {!previewLoading && linkPreview && (linkPreview.image || linkPreview.title) && (
+
+                <input className="input-field" placeholder="Product link (optional)" value={wishLink} onChange={e => setWishLink(e.target.value)} />
+
+                {wishMode === 'link' && previewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
+                {wishMode === 'link' && !previewLoading && previewFailed && (
+                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still add the item without one, or switch to "Enter manually".</p>
+                )}
+                {wishMode === 'link' && !previewLoading && linkPreview && (linkPreview.image || linkPreview.title) && (
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
                     {linkPreview.image
                       ? <FadeImage src={linkPreview.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }} />
@@ -965,33 +1064,47 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                 )}
                 <button
                   onClick={async () => {
-                    if (wishText.trim()) {
-                      setAddingWish(true);
-                      const savedText = wishText.trim();
-                      const savedPrice = wishPrice;
-                      const linkArg = wishLink.trim() || undefined;
-                      const newId = await addWish({
+                    if (!wishText.trim()) return;
+                    setAddingWish(true);
+                    const savedText = wishText.trim();
+                    const savedPrice = wishPrice;
+                    const linkArg = wishLink.trim() || undefined;
+
+                    if (wishMode === 'manual') {
+                      await addWish({
                         from: currentUser,
                         wish: savedText,
                         date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
                         ...(savedPrice ? { price: savedPrice } : {}),
                         ...(linkArg ? { link: linkArg } : {}),
-                        ...(linkPreview?.image ? { linkImage: linkPreview.image } : {}),
-                        ...(linkPreview?.title ? { linkTitle: linkPreview.title } : {}),
-                        ...(linkPreview?.description ? { linkDescription: linkPreview.description } : {}),
+                        ...(wishImageUrl ? { linkImage: wishImageUrl } : {}),
                       });
                       setAddingWish(false);
                       closeAdd();
-                      // Preview wasn't ready when Add was pressed — patch this
-                      // same wish in place once/if it does resolve, instead of
-                      // making the user wait for it (or losing it) just
-                      // because they didn't wait around.
-                      if (newId && linkArg && !linkPreview) {
-                        const pending = pendingPreviewRef.current?.url === linkArg ? pendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
-                        pending.then(preview => {
-                          if (preview) updateWish(newId, { wish: savedText, price: savedPrice || preview.price || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
-                        });
-                      }
+                      return;
+                    }
+
+                    const newId = await addWish({
+                      from: currentUser,
+                      wish: savedText,
+                      date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+                      ...(savedPrice ? { price: savedPrice } : {}),
+                      ...(linkArg ? { link: linkArg } : {}),
+                      ...(linkPreview?.image ? { linkImage: linkPreview.image } : {}),
+                      ...(linkPreview?.title ? { linkTitle: linkPreview.title } : {}),
+                      ...(linkPreview?.description ? { linkDescription: linkPreview.description } : {}),
+                    });
+                    setAddingWish(false);
+                    closeAdd();
+                    // Preview wasn't ready when Add was pressed — patch this
+                    // same wish in place once/if it does resolve, instead of
+                    // making the user wait for it (or losing it) just
+                    // because they didn't wait around.
+                    if (newId && linkArg && !linkPreview) {
+                      const pending = pendingPreviewRef.current?.url === linkArg ? pendingPreviewRef.current.promise : fetchLinkPreview(linkArg);
+                      pending.then(preview => {
+                        if (preview) updateWish(newId, { wish: savedText, price: savedPrice || preview.price || undefined, link: linkArg, linkImage: preview.image, linkTitle: preview.title, linkDescription: preview.description });
+                      });
                     }
                   }}
                   disabled={addingWish}
@@ -1012,14 +1125,42 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
               <button onClick={closeEditWish} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setEditMode('link')} className="wish-tab-btn" style={{ flex: 1, padding: '9px', borderRadius: 12, border: editMode === 'link' ? 'none' : '1.5px solid var(--border)', background: editMode === 'link' ? 'var(--sakura-accent)' : 'var(--bg)', color: editMode === 'link' ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Icon emoji="🔗" size={13} /> Paste a link</button>
+                <button onClick={() => setEditMode('manual')} className="wish-tab-btn" style={{ flex: 1, padding: '9px', borderRadius: 12, border: editMode === 'manual' ? 'none' : '1.5px solid var(--border)', background: editMode === 'manual' ? 'var(--sakura-accent)' : 'var(--bg)', color: editMode === 'manual' ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Icon emoji="✏️" size={13} /> Enter manually</button>
+              </div>
+
               <input className="input-field" placeholder="Item you'd like to receive..." value={editText} onChange={e => setEditText(e.target.value)} />
               <AmountInput placeholder="Estimated price (VND, optional)" value={editPrice} onChange={setEditPrice} />
-              <input className="input-field" placeholder="Product link (optional)" value={editLink} onChange={e => setEditLink(e.target.value)} />
-              {editPreviewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
-              {!editPreviewLoading && editPreviewFailed && (
-                <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still keep the link without one.</p>
+
+              {editMode === 'manual' && (
+                <div>
+                  <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photo (optional)</p>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {editImagePreview && (
+                      <div style={{ position: 'relative', width: 70, height: 70, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2px solid var(--sakura-deep)' }}>
+                        <img src={editImagePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: editImageUploading ? 0.5 : 1 }} />
+                        {editImageUploading && (
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: 20, height: 20, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-spin 0.7s linear infinite' }} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <button onClick={() => editImageInputRef.current?.click()} style={{ width: 70, height: 70, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{editImagePreview ? '↻' : '+'}</button>
+                    <input ref={editImageInputRef} type="file" accept="image/*" onChange={e => { handleEditImageFile(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
+                  </div>
+                  <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+                </div>
               )}
-              {!editPreviewLoading && editLinkPreview && (editLinkPreview.image || editLinkPreview.title) && (
+
+              <input className="input-field" placeholder="Product link (optional)" value={editLink} onChange={e => setEditLink(e.target.value)} />
+
+              {editMode === 'link' && editPreviewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
+              {editMode === 'link' && !editPreviewLoading && editPreviewFailed && (
+                <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still keep the link without one, or switch to "Enter manually".</p>
+              )}
+              {editMode === 'link' && !editPreviewLoading && editLinkPreview && (editLinkPreview.image || editLinkPreview.title) && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
                   {editLinkPreview.image
                     ? <FadeImage src={editLinkPreview.image} alt="" style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }} />

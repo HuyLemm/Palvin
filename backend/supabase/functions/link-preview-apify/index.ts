@@ -35,12 +35,25 @@ const CORS_HEADERS = {
 // apify/web-scraper's pageFunction runs INSIDE the actor's real browser
 // page already (Apify injects and evaluates it there itself) — there is no
 // context.page/Puppeteer handle to reach for; `document` is directly
-// available. Waits a few seconds after load for client-side-rendered meta
-// tags (Shopee-style SPAs) to actually populate before reading them, via
-// this actor's own context.waitFor(ms), not a Puppeteer API.
+// available. Actively polls for the real per-page <title> to replace
+// Shopee's generic app-shell one (rather than a single blind delay) for up
+// to 10s, via this actor's own context.waitFor(predicate, options) — exits
+// as soon as it changes instead of always waiting the full budget, and
+// still reads whatever's there if the real title never shows up (either a
+// genuinely slower page, or Shopee having detected the automation and
+// deliberately not hydrating real data for it — either way, nothing more
+// to do from here).
 const PAGE_FUNCTION = `
 async function pageFunction(context) {
-  await context.waitFor(4000);
+  var GENERIC_TITLE = /^shopee việt nam/i;
+  try {
+    await context.waitFor(function() {
+      var t = document.title || '';
+      return !!t && !GENERIC_TITLE.test(t);
+    }, { timeoutMillis: 10000, pollingIntervalMillis: 300 });
+  } catch (e) {
+    // Timed out still on the generic title — proceed with whatever's there.
+  }
   function meta(selector) {
     const el = document.querySelector(selector);
     return el ? el.getAttribute('content') : undefined;

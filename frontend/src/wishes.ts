@@ -54,6 +54,18 @@ export async function updateWishRow(id: string, w: { wish: string; price?: strin
   }).eq('id', id);
 }
 
+// For a manually-added wish with no link to fetch a picture from — same
+// bucket/RLS as the other couple-photo uploads (favourite places, posts,
+// ...), just its own subfolder.
+export async function uploadWishImage(coupleId: string, file: File): Promise<string | null> {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const path = `${coupleId}/wishes/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  if (error) return null;
+  const { data } = supabase.storage.from('post-images').getPublicUrl(path);
+  return data.publicUrl;
+}
+
 export async function setWishDrawnRow(id: string, drawn: boolean) {
   return supabase.from('wishes').update({ drawn }).eq('id', id);
 }
