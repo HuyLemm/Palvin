@@ -103,10 +103,6 @@ function ChatImage({ src, pending }: { src: string; pending?: boolean }) {
   );
 }
 
-// Large emoji rendered with no bubble chrome, Messenger/WhatsApp-sticker
-// style — no image assets or storage needed, just a distinct message kind.
-const STICKERS = ['❤️', '😍', '🥰', '😘', '🎉', '😂', '😭', '👍', '🙏', '🔥', '🥳', '😴', '🌸', '💐', '🍰', '☕'];
-
 // A grid tile for a sticker thumbnail. Deliberately NOT the more obvious
 // `aspectRatio: '1'` box + `<img width="100%" height="100%" objectFit="cover">`
 // — that combination clips fine for ordinary photos, but on iOS Safari an
@@ -206,6 +202,14 @@ const CHAT_THEMES: { key: string; label: string; background: string }[] = [
 ];
 function chatThemeKey(profileId: string) { return `palvin_chat_theme_${profileId}`; }
 
+// Recently-used stickers — like the chat theme above, this is a per-device
+// display convenience (not couple data), tracking both "Ours" and topic
+// stickers so whichever the account actually reaches for surfaces on the
+// first tab instead of a separate emoji-picker no one used once real
+// stickers existed.
+const RECENT_STICKERS_MAX = 16;
+function recentStickersKey(profileId: string) { return `palvin_recent_stickers_${profileId}`; }
+
 interface Props { onBack: () => void; }
 
 export default function Chat({ onBack }: Props) {
@@ -215,7 +219,14 @@ export default function Chat({ onBack }: Props) {
   const [text, setText] = useState('');
   const [sendingMedia, setSendingMedia] = useState(false);
   const [showStickers, setShowStickers] = useState(false);
-  const [stickerTab, setStickerTab] = useState<'emoji' | 'ours' | 'search'>('emoji');
+  const [stickerTab, setStickerTab] = useState<'recent' | 'ours' | 'search'>('recent');
+  const [recentStickers, setRecentStickers] = useState<string[]>(() => {
+    if (!myProfile?.id) return [];
+    try {
+      const raw = localStorage.getItem(recentStickersKey(myProfile.id));
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch { return []; }
+  });
   const [customStickerUploading, setCustomStickerUploading] = useState(false);
   const customStickerInputRef = useRef<HTMLInputElement>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
@@ -310,14 +321,14 @@ export default function Chat({ onBack }: Props) {
 
   const sendHeart = () => sendChatMessage({ text: '❤️' });
 
-  const handleSendSticker = (emoji: string) => {
-    sendChatMessage({ sticker: emoji });
-    setShowStickers(false);
-  };
-
   const handleSendStickerImage = (url: string) => {
     sendChatMessage({ stickerImageUrl: url });
     setShowStickers(false);
+    setRecentStickers(prev => {
+      const next = [url, ...prev.filter(u => u !== url)].slice(0, RECENT_STICKERS_MAX);
+      if (myProfile?.id) { try { localStorage.setItem(recentStickersKey(myProfile.id), JSON.stringify(next)); } catch { /* ignore */ } }
+      return next;
+    });
   };
 
   const openStickerCrop = (fileList: FileList | null) => {
@@ -610,29 +621,30 @@ export default function Chat({ onBack }: Props) {
         )}
       </div>
 
-      {/* Sticker panel — three tabs: built-in emoji, the couple's own
-          uploaded pack, and a Klipy (Tenor's successor) search/trending
-          grid of real illustrated stickers. */}
+      {/* Sticker panel — three tabs: recently-used (across "Ours" and topic
+          stickers alike), the couple's own uploaded pack, and Klipy's topic
+          packs of real illustrated stickers. */}
       {showStickers && (
-        <div style={{ borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0 }}>
+        <div className="app-bottom-nav" style={{ borderTop: '1px solid var(--border)', background: 'var(--card)', flexShrink: 0 }}>
           <div style={{ display: 'flex', gap: 4, padding: '8px 10px 0' }}>
             <button onClick={() => setShowStickers(false)} title="Back to keyboard" style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon emoji="⌨️" size={18} />
             </button>
-            {([['emoji', '😊', 'Emoji'], ['ours', '📸', 'Ours'], ['search', '🔍', 'Search']] as const).map(([key, emoji, label]) => (
+            {([['recent', '🕒', 'Recent'], ['ours', '📸', 'Ours'], ['search', '🗂️', 'Topics']] as const).map(([key, emoji, label]) => (
               <button key={key} onClick={() => setStickerTab(key)} style={{ flex: 1, padding: '7px', borderRadius: 10, border: 'none', background: stickerTab === key ? 'var(--sakura-light)' : 'none', color: stickerTab === key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                 <Icon emoji={emoji} size={14} /> {label}
               </button>
             ))}
           </div>
 
-          {stickerTab === 'emoji' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4, padding: '10px' }}>
-              {STICKERS.map(s => (
-                <button key={s} onClick={() => handleSendSticker(s)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
-                  <Icon emoji={s} size={26} />
-                </button>
+          {stickerTab === 'recent' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, padding: '10px', maxHeight: 200, overflowY: 'auto' }}>
+              {recentStickers.map(url => (
+                <StickerTile key={url} src={url} onClick={() => handleSendStickerImage(url)} />
               ))}
+              {recentStickers.length === 0 && (
+                <p style={{ gridColumn: '1 / -1', fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', padding: '20px 10px' }}>Stickers you send from Ours or Topics will show up here.</p>
+              )}
             </div>
           )}
 
@@ -659,13 +671,6 @@ export default function Chat({ onBack }: Props) {
 
           {stickerTab === 'search' && (
             <div style={{ padding: '10px' }}>
-              <input
-                className="input-field"
-                placeholder="Search KLIPY"
-                value={klipyQuery}
-                onChange={e => setKlipyQuery(e.target.value)}
-                style={{ marginBottom: 8, fontSize: 13, padding: '8px 12px' }}
-              />
               {klipyQuery.trim() === '' ? (
                 klipyCategories.length > 0 ? (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, maxHeight: 200, overflowY: 'auto' }}>
@@ -674,8 +679,8 @@ export default function Chat({ onBack }: Props) {
                     ))}
                   </div>
                 ) : (
-                  <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>
-                    {klipyCategoriesLoading ? 'Loading topics...' : 'Type something to search stickers.'}
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', padding: '20px 10px' }}>
+                    {klipyCategoriesLoading ? 'Loading topics...' : 'Couldn’t load topics.'}
                   </p>
                 )
               ) : (
