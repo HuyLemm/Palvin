@@ -898,58 +898,60 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
     const isHighlighted = w.id === highlightId;
     return (
       <div key={w.id} data-wish-id={w.id} className="card wish-card" style={{
-        padding: 0, overflow: 'hidden', opacity: isBought ? 0.6 : 1,
+        padding: '14px 16px', opacity: isBought ? 0.6 : 1,
         animation: `wishCardIn 0.3s cubic-bezier(0.32,0.72,0,1) both${isHighlighted ? ', wishHighlight 1.2s ease 2' : ''}`,
         animationDelay: isHighlighted ? '0s, 0s' : `${Math.min(index, 6) * 30}ms`,
         boxShadow: isHighlighted ? '0 0 0 2.5px var(--sakura-accent)' : undefined,
       }}>
-        {/* Picture leads the card — from a fetched or manually-uploaded
-            image alike, both just live in linkImage. Falls back to a
-            plain owner-colored block when there's no picture at all. */}
-        {w.linkImage ? (
-          <div style={{ width: '100%', height: 160 }}>
-            <FadeImage src={w.linkImage} alt="" style={{ width: '100%', height: '100%' }} />
-          </div>
-        ) : (
-          <div style={{ width: '100%', height: 84, background: isOwner ? '#E4ECFF' : '#FFE4EC', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon emoji={isBought ? '✅' : (isOwner ? '💙' : '💗')} size={30} />
-          </div>
-        )}
-
-        <div style={{ padding: '14px 16px' }}>
-          {/* Product data first — name, description, price */}
-          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', textDecoration: isBought ? 'line-through' : 'none', lineHeight: 1.3 }}>{w.wish}</p>
-          {w.linkDescription && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{w.linkDescription}</p>}
-          {w.price && <p style={{ fontSize: 13, color: 'var(--sakura-deep)', fontWeight: 700, marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💰" size={13} /> {/^\d+$/.test(w.price) ? `${Number(w.price).toLocaleString('en-US')} VND` : w.price}</p>}
-          {w.link && (
-            <a href={w.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#4A8AE8', fontWeight: 600, marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-              <Icon emoji="🔗" size={11} /> View product
-            </a>
-          )}
-
-          {/* Whose wishlist + date — pulled down, de-emphasized */}
-          <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
-            <Icon emoji={isOwner ? '💙' : '💗'} size={10} /> {w.from}'s wishlist · {w.date}
-          </p>
-
-          {/* Bought/Undo gets its own full-width row */}
-          <div style={{ marginTop: 10 }}>
-            {!isBought ? (
-              <button className="wish-action-btn" onClick={() => drawWish(w.id, true)} style={{ width: '100%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '9px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Bought <Icon emoji="🎁" size={13} /></button>
-            ) : (
-              <button className="wish-action-btn" onClick={() => drawWish(w.id, false)} style={{ width: '100%', background: 'var(--bg)', color: 'var(--ink-2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '9px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Undo <Icon emoji="↩️" size={13} /></button>
-            )}
-          </div>
-
-          {/* Edit/Delete on their own separate row below, so a mis-tap
-              reaching for Bought/Undo can't land on either by accident */}
-          {canEdit && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button className="wish-action-btn" onClick={() => openEditWish(w)} style={{ flex: 1, background: 'var(--bg)', border: 'none', borderRadius: 10, padding: '7px', cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}><Icon emoji="✏️" size={12} /> Edit</button>
-              <button className="wish-action-btn" onClick={() => setConfirmDeleteWish(w.id)} style={{ flex: 1, background: 'var(--bg)', border: 'none', borderRadius: 10, padding: '7px', cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}><Icon emoji="🗑️" size={12} /> Delete</button>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+          {/* Picture on the left — from a fetched or manually-uploaded
+              image alike, both just live in linkImage. Falls back to a
+              plain owner-colored block when there's no picture at all. */}
+          {w.linkImage ? (
+            <div style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', flexShrink: 0 }}>
+              <FadeImage src={w.linkImage} alt="" style={{ width: '100%', height: '100%' }} />
+            </div>
+          ) : (
+            <div style={{ width: 72, height: 72, borderRadius: 12, background: isOwner ? '#E4ECFF' : '#FFE4EC', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon emoji={isBought ? '✅' : (isOwner ? '💙' : '💗')} size={26} />
             </div>
           )}
+
+          {/* Everything else on the right — name, description, price, link */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: isBought ? 'line-through' : 'none', lineHeight: 1.3 }}>{w.wish}</p>
+            {w.linkDescription && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{w.linkDescription}</p>}
+            {w.price && <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="💰" size={12} /> {/^\d+$/.test(w.price) ? `${Number(w.price).toLocaleString('en-US')} VND` : w.price}</p>}
+            {w.link && (
+              <a href={w.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#4A8AE8', fontWeight: 600, marginTop: 3, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+                <Icon emoji="🔗" size={10} /> View product
+              </a>
+            )}
+          </div>
         </div>
+
+        {/* Whose wishlist + date — pulled down, de-emphasized */}
+        <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+          <Icon emoji={isOwner ? '💙' : '💗'} size={10} /> {w.from}'s wishlist · {w.date}
+        </p>
+
+        {/* Bought/Undo gets its own full-width row */}
+        <div style={{ marginTop: 10 }}>
+          {!isBought ? (
+            <button className="wish-action-btn" onClick={() => drawWish(w.id, true)} style={{ width: '100%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '9px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Bought <Icon emoji="🎁" size={13} /></button>
+          ) : (
+            <button className="wish-action-btn" onClick={() => drawWish(w.id, false)} style={{ width: '100%', background: 'var(--bg)', color: 'var(--ink-2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '9px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Undo <Icon emoji="↩️" size={13} /></button>
+          )}
+        </div>
+
+        {/* Edit/Delete on their own separate row below, so a mis-tap
+            reaching for Bought/Undo can't land on either by accident */}
+        {canEdit && (
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <button className="wish-action-btn" onClick={() => openEditWish(w)} style={{ flex: 1, background: 'var(--bg)', border: 'none', borderRadius: 10, padding: '7px', cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}><Icon emoji="✏️" size={12} /> Edit</button>
+            <button className="wish-action-btn" onClick={() => setConfirmDeleteWish(w.id)} style={{ flex: 1, background: 'var(--bg)', border: 'none', borderRadius: 10, padding: '7px', cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, fontSize: 12, fontWeight: 600 }}><Icon emoji="🗑️" size={12} /> Delete</button>
+          </div>
+        )}
       </div>
     );
   }
@@ -1008,8 +1010,8 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
       {/* Add modal */}
       {showAdd && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeAdd}>
-          <div style={{ width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', transform: 'translateY(-40px)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
+          <div style={{ width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8 + 30px)', transform: 'translateY(-40px)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', maxHeight: 'calc(var(--app-vh, 100vh) * 0.8 + 30px)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Add to wishlist<Icon emoji="🎁" size={18} /></p>
                 <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
@@ -1119,7 +1121,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
       {/* Edit modal */}
       {editingWish && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditWish}>
-          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8 + 30px)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Edit wish <Icon emoji="✏️" size={18} /></p>
               <button onClick={closeEditWish} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
