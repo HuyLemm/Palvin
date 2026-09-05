@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type JSX } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState, type JSX } from 'react';
 import { useApp } from './context';
 import Toast from './components/Toast';
 import CreateModal from './components/CreateModal';
@@ -6,6 +6,7 @@ import AuthScreen, { ResetPasswordScreen } from './screens/AuthScreen';
 import CoupleLocked from './components/CoupleLocked';
 import Avatar from './components/Avatar';
 import Icon from './components/Icon';
+import PullToRefresh from './components/PullToRefresh';
 
 // Home (the very first thing a linked user sees on cold boot) loads eagerly,
 // same as AuthScreen (the very first thing a logged-out user sees) above —
@@ -250,7 +251,8 @@ function ScreenRouter() {
 const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 
 export default function App() {
-  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, partnerProfile, authed, authLoading, profileLoaded, isLinked, isLinkedSettled, dataReady, imagesReady, hydratedFromCache, passwordRecovery, pendingInvite, toast } = useApp();
+  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, partnerProfile, authed, authLoading, profileLoaded, isLinked, isLinkedSettled, dataReady, imagesReady, hydratedFromCache, passwordRecovery, pendingInvite, toast, refreshAll } = useApp();
+  const mainRef = useRef<HTMLElement>(null);
   // Also holds the loading screen up until the couple's own data — and every
   // image that data references — has actually loaded, so navigating
   // anywhere right after the loading screen shows real content and real
@@ -641,12 +643,14 @@ export default function App() {
             </header>
 
             {/* Scroll area */}
-            <main style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 80px' }}>
+            <main ref={mainRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 80px' }}>
               {/* ScreenRouter keeps every visited screen mounted (just
                   hidden) internally — see its own per-key .screen-transition
                   wrapper — so this can't have a key={screen} of its own
                   without unmounting that whole kept-alive tree on every nav. */}
-              <ScreenRouter />
+              <PullToRefresh containerRef={mainRef} onRefresh={refreshAll}>
+                <ScreenRouter />
+              </PullToRefresh>
             </main>
 
             {/* Bottom Nav */}

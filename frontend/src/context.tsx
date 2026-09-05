@@ -131,6 +131,9 @@ interface AppContextType {
   // sub-view was showing before the deeper navigation.
   navSeq: number;
   lastNavWasPop: boolean;
+  // Re-fetches every domain a partner's action could've silently changed —
+  // used by App.tsx's pull-to-refresh gesture on <main>.
+  refreshAll: () => Promise<void>;
 
   // Toast
   toasts: ToastItem[];
@@ -297,6 +300,7 @@ interface AppContextType {
   uploadChatMedia: (file: File | Blob, ext: string) => Promise<string | null>;
   addCustomSticker: (file: File) => Promise<void>;
   removeCustomSticker: (id: string) => void;
+  sendTypingSignal: (typing: boolean) => void;
 }
 
 const Ctx = createContext<AppContextType>(null!);
@@ -401,6 +405,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // effect to re-subscribe on every single navigation.
   const screenRef = useRef(screen);
   useEffect(() => { screenRef.current = screen; }, [screen]);
+
+  // Set by the chat realtime effect below whenever it (re)subscribes, so
+  // sendTypingSignal (called from Chat.tsx on every keystroke) always has
+  // the live channel without needing its own subscription.
+  const chatChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const partnerTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const navigate = useCallback((s: string, id?: string) => {
     setStack(prev => [...prev, { screen: s, id }]);
@@ -1662,6 +1672,28 @@ const refreshMoods = useCallback(async () => {
     markLoaded('notifications');
   }, [myProfile, partnerProfile, markLoaded]);
 
+  // Same "something changed, just refetch everything" idea as the
+  // notification handler just below (kept as its own separate inline list
+  // there — it fires far more often, right after an optimistic local
+  // update, so adding refreshNotifications' extra round trip to that path
+  // isn't worth it). This one's for a manual pull-to-refresh (App.tsx's
+  // <main>), which should also re-sync notifications since there's no
+  // "just happened" local update to fall back on there. Chat and
+  // date-requests aren't included in either list: both already have their
+  // own realtime subscriptions, so there's nothing for a manual refresh to
+  // catch that isn't already live.
+  const refreshAll = useCallback(async () => {
+    await Promise.all([
+      refreshPosts(), refreshMemories(), refreshEvents(), refreshCycleLogs(),
+      refreshStoryQuotes(), refreshDebts(), refreshMoney(), refreshLoveStuff(),
+      refreshGoals(), refreshFavorites(), refreshPlaces(), refreshPlaylist(),
+      refreshTrips(), refreshCapsules(), refreshWishes(), refreshDateIdeas(),
+      refreshDateIdeaPresets(), refreshDateIdeaHistory(), refreshGratitude(),
+      refreshMoods(), refreshStreak(), refreshNotifications(),
+    ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Realtime: pop a toast + prepend the item the instant a notification row is
   // inserted for this couple, instead of waiting on a poll interval.
   useEffect(() => {
@@ -1835,9 +1867,46 @@ const refreshMoods = useCallback(async () => {
           setState(s => ({ ...s, chatMessages: s.chatMessages.map(m => m.id === row.id ? { ...m, read: !!row.read_at } : m) }));
         }
       )
+      // Ephemeral typing indicator — a broadcast, not a DB row: nothing worth
+      // persisting or showing in history, just "is the other side typing
+      // right now." Supabase doesn't echo a client's own broadcasts back to
+      // it by default, so no need to filter out our own signal here.
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+        if (!(payload as { typing?: boolean }).typing) {
+          setState(s => (s.partnerTyping ? { ...s, partnerTyping: false } : s));
+          return;
+        }
+        setState(s => (s.partnerTyping ? s : { ...s, partnerTyping: true }));
+        // Auto-clears even if an explicit "stopped typing" signal never
+        // arrives — the partner backgrounding the app mid-keystroke, e.g.
+        partnerTypingTimeoutRef.current = setTimeout(() => {
+          setState(s => (s.partnerTyping ? { ...s, partnerTyping: false } : s));
+        }, 4000);
+      })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    chatChannelRef.current = channel;
+    return () => {
+      supabase.removeChannel(channel);
+      chatChannelRef.current = null;
+      if (partnerTypingTimeoutRef.current) clearTimeout(partnerTypingTimeoutRef.current);
+    };
   }, [isLinked, myProfile, partnerProfile, refreshChat]);
+
+  const lastTypingSentRef = useRef(0);
+  // Throttled to roughly once every 2s while the user keeps typing — a
+  // "stopped" signal (typing: false) always sends immediately regardless,
+  // since that one matters for how quickly the indicator disappears.
+  const sendTypingSignal = useCallback((typing: boolean) => {
+    if (typing) {
+      const now = Date.now();
+      if (now - lastTypingSentRef.current < 2000) return;
+      lastTypingSentRef.current = now;
+    } else {
+      lastTypingSentRef.current = 0;
+    }
+    chatChannelRef.current?.send({ type: 'broadcast', event: 'typing', payload: { typing } });
+  }, []);
 
   // Optimistic send: the bubble appears the instant you hit send, marked
   // "Sending..." — otherwise it only showed up once Realtime echoed the
@@ -1998,7 +2067,7 @@ const refreshMoods = useCallback(async () => {
       state, currentUser,
       authed, authLoading, profileLoaded, isLinked, isLinkedSettled, isAdmin, dataReady, imagesReady, hydratedFromCache, passwordRecovery, completePasswordRecovery, myProfile, partnerProfile, refreshAuthProfile: refreshProfiles, logout,
       pendingInvite, sentInvite, invitePartner, acceptInvite, rejectInvite, cancelSentInvite,
-      screen, selectedId, navigate, goBack, navSeq, lastNavWasPop,
+      screen, selectedId, navigate, goBack, navSeq, lastNavWasPop, refreshAll,
       toasts, toast,
       createModal, createStep, openCreate, closeCreate, celebration,
       toggleLike, toggleSave, addComment, addPost, editPost, deletePost,
@@ -2034,7 +2103,7 @@ const refreshMoods = useCallback(async () => {
       toggleDarkMode,
       setRelationshipStart,
       profilePhotos, updateProfilePhoto,
-      sendChatMessage, markChatRead, uploadChatMedia, addCustomSticker, removeCustomSticker,
+      sendChatMessage, markChatRead, uploadChatMedia, addCustomSticker, removeCustomSticker, sendTypingSignal,
     }}>
       {children}
     </Ctx.Provider>

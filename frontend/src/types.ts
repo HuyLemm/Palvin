@@ -381,6 +381,10 @@ export interface AppState {
   notifications: AppNotification[];
   chatMessages: ChatMessage[];
   unreadChatCount: number;
+  // Ephemeral (never persisted) — set true while a "typing" broadcast has
+  // arrived more recently than its own auto-clear timeout; see context.tsx's
+  // chat realtime channel.
+  partnerTyping: boolean;
   customStickers: CustomSticker[];
   moods: Record<string, Mood | null>;
   moodHistory: MoodEntry[];

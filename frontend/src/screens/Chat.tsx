@@ -268,7 +268,7 @@ function recentStickersKey(profileId: string) { return `palvin_recent_stickers_$
 interface Props { onBack: () => void; }
 
 export default function Chat({ onBack }: Props) {
-  const { state, screen, myProfile, partnerProfile, sendChatMessage, markChatRead, uploadChatMedia, addCustomSticker, removeCustomSticker } = useApp();
+  const { state, screen, myProfile, partnerProfile, sendChatMessage, markChatRead, uploadChatMedia, addCustomSticker, removeCustomSticker, sendTypingSignal } = useApp();
   const messages = state.chatMessages;
   const partnerName = partnerProfile?.displayName ?? 'Partner';
   const [text, setText] = useState('');
@@ -376,14 +376,20 @@ export default function Chat({ onBack }: Props) {
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [messages.length]);
+  }, [messages.length, state.partnerTyping]);
 
   const handleSend = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
     sendChatMessage({ text: trimmed });
     setText('');
+    sendTypingSignal(false);
     inputRef.current?.focus();
+  };
+
+  const handleTextChange = (value: string) => {
+    setText(value);
+    sendTypingSignal(value.trim().length > 0);
   };
 
   const sendHeart = () => sendChatMessage({ text: '❤️' });
@@ -569,6 +575,7 @@ export default function Chat({ onBack }: Props) {
         .sticker-tile { transition: transform 0.12s ease; }
         .sticker-tile:active { transform: scale(0.92); }
         .sticker-tab-content { animation: fadeIn 0.16s ease; }
+        @keyframes chatTypingDot { 0%, 60%, 100% { opacity: 0.3; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
       `}</style>
       {/* Header — reuses .app-header's real-device safe-area rule (padding-top
           clearing the status bar/notch) so it lines up with the main header. */}
@@ -668,6 +675,16 @@ export default function Chat({ onBack }: Props) {
               </div>
             );
           })
+        )}
+        {state.partnerTyping && (
+          <div className="chat-bubble-in" style={{ display: 'flex', alignItems: 'flex-end', gap: 6, marginTop: 2 }}>
+            <div style={{ width: 24, flexShrink: 0 }}><Avatar user={partnerName} size={24} /></div>
+            <div style={{ padding: '11px 14px', borderRadius: '18px 18px 18px 4px', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--ink-2)', animation: `chatTypingDot 1.1s ease-in-out ${i * 0.15}s infinite` }} />
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
@@ -858,10 +875,10 @@ export default function Chat({ onBack }: Props) {
             <input
               ref={inputRef}
               value={text}
-              onChange={e => setText(e.target.value)}
+              onChange={e => handleTextChange(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleSend(); }}
               onFocus={() => setInputFocused(true)}
-              onBlur={() => setInputFocused(false)}
+              onBlur={() => { setInputFocused(false); sendTypingSignal(false); }}
               placeholder={`Message ${partnerName}...`}
               autoCorrect="off"
               spellCheck={false}

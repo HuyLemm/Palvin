@@ -7,6 +7,7 @@ import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
 import AmountInput from '../components/AmountInput';
 import FilterCountBadge from '../components/FilterCountBadge';
+import SwipeToReveal from '../components/SwipeToReveal';
 import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
 import { uploadPlaceImage } from '../places';
@@ -459,21 +460,33 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
       {/* Place list */}
       <div key={activeTab} className="screen-transition" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
         {list.map((pl, i) => (
-          <div key={pl.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            {pl.image
-              ? <FadeImage src={pl.image} alt="" style={{ width: 68, height: 68, borderRadius: 14, flexShrink: 0 }} />
-              : (
-                <div style={{ width: 68, height: 68, borderRadius: 14, background: `${cfg?.color}15`, border: `1.5px solid ${cfg?.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <span style={{ fontSize: 25, fontFamily: "'Playfair Display', serif", color: cfg?.color, fontWeight: 700 }}>{i + 1}</span>
-                </div>
-              )}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}</p>
-              {pl.note && <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 3 }}>{pl.note}</p>}
+          <SwipeToReveal
+            key={pl.id}
+            actions={
+              <>
+                <button onClick={() => openEditPlace(pl)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                  <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
+                </button>
+                <button onClick={() => setConfirmDeletePlace(pl)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                  <Icon emoji="🗑️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
+                </button>
+              </>
+            }
+          >
+            <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+              {pl.image
+                ? <FadeImage src={pl.image} alt="" style={{ width: 68, height: 68, borderRadius: 14, flexShrink: 0 }} />
+                : (
+                  <div style={{ width: 68, height: 68, borderRadius: 14, background: `${cfg?.color}15`, border: `1.5px solid ${cfg?.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 25, fontFamily: "'Playfair Display', serif", color: cfg?.color, fontWeight: 700 }}>{i + 1}</span>
+                  </div>
+                )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}</p>
+                {pl.note && <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 3 }}>{pl.note}</p>}
+              </div>
             </div>
-            <button onClick={() => openEditPlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-            <button onClick={() => setConfirmDeletePlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
-          </div>
+          </SwipeToReveal>
         ))}
         {cfg && list.length === 0 && (
           <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
@@ -1500,24 +1513,32 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {filtered.map((p, i) => (
-          <div key={p.id} className="card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            {p.image
-              ? <FadeImage src={p.image} alt="" style={{ width: 60, height: 60, borderRadius: 14, flexShrink: 0 }} />
-              : <div style={{ width: 60, height: 60, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={p.emoji} size={26} /></div>}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
-              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
-              {p.releaseDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Released {formatReleaseDate(p.releaseDate)}</p>}
-              {p.note && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-              <p style={{ fontSize: 10, color: 'var(--ink-2)' }}>by {p.addedBy}</p>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => openEditSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-                <button onClick={() => setConfirmDeleteSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
+          <SwipeToReveal
+            key={p.id}
+            actions={
+              <>
+                <button onClick={() => openEditSong(p)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                  <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
+                </button>
+                <button onClick={() => setConfirmDeleteSong(p)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                  <Icon emoji="🗑️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
+                </button>
+              </>
+            }
+          >
+            <div className="card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+              {p.image
+                ? <FadeImage src={p.image} alt="" style={{ width: 60, height: 60, borderRadius: 14, flexShrink: 0 }} />
+                : <div style={{ width: 60, height: 60, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={p.emoji} size={26} /></div>}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
+                {p.releaseDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Released {formatReleaseDate(p.releaseDate)}</p>}
+                {p.note && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
               </div>
+              <p style={{ fontSize: 10, color: 'var(--ink-2)', flexShrink: 0 }}>by {p.addedBy}</p>
             </div>
-          </div>
+          </SwipeToReveal>
         ))}
         {filtered.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>No songs yet. Add the first one!</div>}
       </div>
@@ -1813,34 +1834,42 @@ function DebtScreen({ onBack }: { onBack: () => void }) {
   function renderDebtCard(d: Debt) {
     const overdue = !d.paid && d.dueDate && d.dueDate < today;
     return (
-      <div key={d.id} className="card" style={{ padding: '14px 16px', opacity: d.paid ? 0.6 : 1 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: d.paid ? 'var(--bg)' : overdue ? '#FEE2E2' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Icon emoji={d.paid ? '✅' : overdue ? '⏰' : '📒'} size={18} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: d.paid ? 'line-through' : 'none' }}>{d.debtorName}</p>
-            {d.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{d.note}</p>}
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>Lent on: {formatShortDate(d.date)}{filter === 'all' && ` · ${d.createdBy === 'Both' ? 'Both' : d.createdBy}`}</p>
-            {d.dueDate && !d.paid && (
-              <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-                {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
-              </p>
-            )}
-            {d.paid && d.paidDate && <p style={{ fontSize: 11, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)' }}>{VND(d.amount)}</p>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => openEdit(d)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-              <button onClick={() => setConfirmDeleteId(d.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+      <SwipeToReveal
+        key={d.id}
+        actions={
+          <>
+            <button onClick={() => openEdit(d)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+              <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
+            </button>
+            <button onClick={() => setConfirmDeleteId(d.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+              <Icon emoji="✕" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
+            </button>
+          </>
+        }
+      >
+        <div className="card" style={{ padding: '14px 16px', opacity: d.paid ? 0.6 : 1 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: d.paid ? 'var(--bg)' : overdue ? '#FEE2E2' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon emoji={d.paid ? '✅' : overdue ? '⏰' : '📒'} size={18} />
             </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: d.paid ? 'line-through' : 'none' }}>{d.debtorName}</p>
+              {d.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{d.note}</p>}
+              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>Lent on: {formatShortDate(d.date)}{filter === 'all' && ` · ${d.createdBy === 'Both' ? 'Both' : d.createdBy}`}</p>
+              {d.dueDate && !d.paid && (
+                <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
+                </p>
+              )}
+              {d.paid && d.paidDate && <p style={{ fontSize: 11, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
+            </div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)', flexShrink: 0 }}>{VND(d.amount)}</p>
           </div>
+          <button onClick={() => toggleDebtPaid(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: d.paid ? '1.5px solid var(--border)' : 'none', background: d.paid ? 'var(--bg)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: d.paid ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            {d.paid ? 'Mark as unpaid' : <>Mark as paid <Icon emoji="🎉" size={12} /></>}
+          </button>
         </div>
-        <button onClick={() => toggleDebtPaid(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: d.paid ? '1.5px solid var(--border)' : 'none', background: d.paid ? 'var(--bg)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: d.paid ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-          {d.paid ? 'Mark as unpaid' : <>Mark as paid <Icon emoji="🎉" size={12} /></>}
-        </button>
-      </div>
+      </SwipeToReveal>
     );
   }
 
