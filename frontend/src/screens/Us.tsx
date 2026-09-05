@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { useApp } from '../context';
@@ -11,14 +11,33 @@ import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
 import { uploadPlaceImage } from '../places';
 import { uploadWishImage } from '../wishes';
-import FutureUs from './FutureUs';
-import Calendar from './Calendar';
-import TripPlanner from './TripPlanner';
-import TimeCapsule from './TimeCapsule';
-import DateIdeaJar from './DateIdeaJar';
-import GratitudeJournal from './GratitudeJournal';
-import DatePermit from './DatePermit';
 import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem, StoryQuote, Debt, Place } from '../types';
+
+// These sub-screens are only ever visited from within Us's own internal
+// navigation (never all at once), so — same as App.tsx's top-level
+// screens — they're lazy-loaded rather than statically bundled straight
+// into Us's own chunk, which was otherwise the second-largest in the app
+// (191KB) purely from sub-screens most sessions never open. Calendar and
+// FutureUs are lazy() here for the same reason AND to match how App.tsx
+// itself lazy-imports them for their own top-level routes — two static
+// imports of the same module (one here, one there) risked Vite bundling
+// the same code twice instead of sharing one async chunk.
+const FutureUs = lazy(() => import('./FutureUs'));
+const Calendar = lazy(() => import('./Calendar'));
+const TripPlanner = lazy(() => import('./TripPlanner'));
+const TimeCapsule = lazy(() => import('./TimeCapsule'));
+const DateIdeaJar = lazy(() => import('./DateIdeaJar'));
+const GratitudeJournal = lazy(() => import('./GratitudeJournal'));
+const DatePermit = lazy(() => import('./DatePermit'));
+
+function SubScreenLoadingFallback() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
+      <div style={{ width: 30, height: 30, borderRadius: '50%', border: '3px solid var(--border)', borderTopColor: 'var(--sakura-accent)', animation: 'palvin-us-sub-spin 0.7s linear infinite' }} />
+      <style>{`@keyframes palvin-us-sub-spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 type SubScreen = 'main' | 'story' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'debts' | 'places';
 
@@ -301,7 +320,11 @@ export default function Us() {
   );
   }
 
-  return <div key={sub} className="screen-transition">{content}</div>;
+  return (
+    <div key={sub} className="screen-transition">
+      <Suspense fallback={<SubScreenLoadingFallback />}>{content}</Suspense>
+    </div>
+  );
 }
 
 function OurFavouritesScreen({ onBack }: { onBack: () => void }) {

@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabaseClient';
+import { compressImage } from './lib/imageCompress';
 import type { WishItem, User } from './types';
 
 type ProfileNames = Record<string, User>;
@@ -58,9 +59,9 @@ export async function updateWishRow(id: string, w: { wish: string; price?: strin
 // bucket/RLS as the other couple-photo uploads (favourite places, posts,
 // ...), just its own subfolder.
 export async function uploadWishImage(coupleId: string, file: File): Promise<string | null> {
-  const ext = file.name.split('.').pop() || 'jpg';
+  const { blob, ext } = await compressImage(file, file.name.split('.').pop() || 'jpg');
   const path = `${coupleId}/wishes/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  const { error } = await supabase.storage.from('post-images').upload(path, blob);
   if (error) return null;
   const { data } = supabase.storage.from('post-images').getPublicUrl(path);
   return data.publicUrl;

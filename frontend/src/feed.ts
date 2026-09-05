@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabaseClient';
+import { compressImage } from './lib/imageCompress';
 import type { Post, User } from './types';
 
 type ProfileNames = Record<string, User>;
@@ -96,12 +97,12 @@ export async function deletePostRow(id: string) {
 }
 
 export async function uploadPostImage(coupleId: string, file: File): Promise<string | null> {
-  const ext = file.name.split('.').pop() || 'jpg';
+  const { blob, ext } = await compressImage(file, file.name.split('.').pop() || 'jpg');
   // Path is prefixed with the couple's own id — the storage RLS policy
   // (0024 migration) only allows a couple to read/write under their own
   // prefix, so anyone who signs up for the app can't touch another couple's photos.
   const path = `${coupleId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  const { error } = await supabase.storage.from('post-images').upload(path, blob);
   if (error) return null;
   const { data } = supabase.storage.from('post-images').getPublicUrl(path);
   return data.publicUrl;

@@ -12,7 +12,7 @@ import type { NewChatMessage } from './chat';
 import { readBootCache, writeBootCache, clearBootCache } from './bootCache';
 import { supabase } from './lib/supabaseClient';
 import {
-  updatePhoto as authUpdatePhoto, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
+  updatePhoto as authUpdatePhoto, uploadAvatarImage, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
   sendInvite as apiSendInvite, respondInvite as apiRespondInvite, cancelInvite as apiCancelInvite, getMyInvites,
   updateDisplayName as authUpdateDisplayName, changePassword as authChangePassword, touchLastActive, setForegroundState, updateDarkModePref,
   type PendingInvite, type AuthProfile, type NotifyPrefs,
@@ -289,7 +289,7 @@ interface AppContextType {
 
   // Profile photos
   profilePhotos: Record<string, string>;
-  updateProfilePhoto: (photoUrl: string) => void;
+  updateProfilePhoto: (file: File) => Promise<void>;
 
   // Chat
   sendChatMessage: (msg: NewChatMessage) => void;
@@ -1977,8 +1977,11 @@ const refreshMoods = useCallback(async () => {
     refreshInvites();
   }, [refreshInvites]);
 
-  const updateProfilePhoto = async (photoUrl: string) => {
-    const res = await authUpdatePhoto(photoUrl);
+  const updateProfilePhoto = async (file: File) => {
+    if (!myProfile?.coupleId) return;
+    const url = await uploadAvatarImage(myProfile.coupleId, file);
+    if (!url) { toast('Something went wrong', '⚠️'); return; }
+    const res = await authUpdatePhoto(url);
     if (!res.ok) { toast(res.error || 'Something went wrong', '⚠️'); return; }
     await refreshProfiles();
     toast('Photo updated! ✨');

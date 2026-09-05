@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabaseClient';
+import { compressImage } from './lib/imageCompress';
 
 export interface NotifyPrefs {
   love: boolean;
@@ -120,6 +121,20 @@ export async function fetchActivityStatuses(coupleId: string): Promise<{ id: str
   const { data, error } = await supabase.from('profiles').select('id, display_name, last_active_at').eq('couple_id', coupleId);
   if (error || !data) return [];
   return data.map(r => ({ id: r.id, displayName: r.display_name, lastActiveAt: r.last_active_at }));
+}
+
+// Used to go straight to a base64 data URL stored in the `avatar_url` text
+// column itself — a full-resolution photo re-sent in full on every profile
+// refresh (boot, and several other actions), rather than the one-time
+// Storage upload + small cached URL every other image in the app already
+// gets. 512px is plenty for the largest avatar size actually rendered.
+export async function uploadAvatarImage(coupleId: string, file: File): Promise<string | null> {
+  const { blob, ext } = await compressImage(file, file.name.split('.').pop() || 'jpg', 512, 0.85);
+  const path = `${coupleId}/avatars/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from('post-images').upload(path, blob);
+  if (error) return null;
+  const { data } = supabase.storage.from('post-images').getPublicUrl(path);
+  return data.publicUrl;
 }
 
 export async function updatePhoto(photoUrl: string): Promise<Result> {

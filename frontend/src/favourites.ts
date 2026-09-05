@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabaseClient';
+import { compressImage } from './lib/imageCompress';
 import type { FavCategory, FavCategoryItem, FavPlace } from './types';
 
 // Dark mode used to live here too (couples.dark_mode), but that meant
@@ -110,9 +111,9 @@ export async function deleteFavPlace(id: string) {
 // policy only checks the couple-id folder prefix, so a fav-places/ subfolder
 // is covered with zero new bucket or migration.
 export async function uploadFavPlaceImage(coupleId: string, file: File): Promise<string | null> {
-  const ext = file.name.split('.').pop() || 'jpg';
+  const { blob, ext } = await compressImage(file, file.name.split('.').pop() || 'jpg');
   const path = `${coupleId}/fav-places/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  const { error } = await supabase.storage.from('post-images').upload(path, blob);
   if (error) return null;
   const { data } = supabase.storage.from('post-images').getPublicUrl(path);
   return data.publicUrl;

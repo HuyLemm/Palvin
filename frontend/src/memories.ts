@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabaseClient';
+import { compressImage } from './lib/imageCompress';
 import type { Memory, User } from './types';
 
 type ProfileNames = Record<string, User>;
@@ -66,9 +67,9 @@ export async function setMemoryFavorite(id: string, favorite: boolean) {
 // its policy only checks the couple-id folder prefix, so a `memories/`
 // subfolder is already covered without any new bucket or migration.
 export async function uploadMemoryImage(coupleId: string, file: File): Promise<string | null> {
-  const ext = file.name.split('.').pop() || 'jpg';
+  const { blob, ext } = await compressImage(file, file.name.split('.').pop() || 'jpg');
   const path = `${coupleId}/memories/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  const { error } = await supabase.storage.from('post-images').upload(path, blob);
   if (error) return null;
   const { data } = supabase.storage.from('post-images').getPublicUrl(path);
   return data.publicUrl;

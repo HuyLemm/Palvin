@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabaseClient';
+import { compressImage } from './lib/imageCompress';
 
 export interface ChatMessageRow {
   id: string;
@@ -65,8 +66,9 @@ export async function fetchUnreadChatCount(partnerProfileId: string): Promise<nu
 // prefix scoped, no mime-type restriction) under a chat/ subfolder — covers
 // both photos and voice-message audio with zero new bucket or migration.
 export async function uploadChatFile(coupleId: string, file: File | Blob, ext: string): Promise<string | null> {
-  const path = `${coupleId}/chat/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  const { blob, ext: finalExt } = await compressImage(file, ext);
+  const path = `${coupleId}/chat/${crypto.randomUUID()}.${finalExt}`;
+  const { error } = await supabase.storage.from('post-images').upload(path, blob);
   if (error) return null;
   const { data } = supabase.storage.from('post-images').getPublicUrl(path);
   return data.publicUrl;

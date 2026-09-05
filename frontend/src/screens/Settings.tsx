@@ -57,6 +57,7 @@ export default function Settings() {
     updateNotifyPrefs, setRelationshipStart, updateDisplayName, changePassword,
   } = useApp();
   const [responding, setResponding] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const notifyPrefs = myProfile?.notifyPrefs ?? DEFAULT_NOTIFY_PREFS;
   const darkMode = myProfile?.darkMode ?? false;
   const [showLogout, setShowLogout] = useState(false);
@@ -201,15 +202,13 @@ export default function Settings() {
     updateNotifyPrefs({ ...notifyPrefs, [key]: !notifyPrefs[key] });
   };
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const url = ev.target?.result as string;
-      if (url) updateProfilePhoto(url);
-    };
-    reader.readAsDataURL(file);
+    setPhotoUploading(true);
+    await updateProfilePhoto(file);
+    setPhotoUploading(false);
   }
 
   return (
@@ -222,10 +221,14 @@ export default function Settings() {
             <Avatar user={currentUser} size={64} ring />
             <button
               onClick={() => fileRef.current?.click()}
+              disabled={photoUploading}
               style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--sakura-deep)', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
             >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+              {photoUploading
+                ? <div style={{ width: 10, height: 10, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.35)', borderTopColor: 'white', animation: 'palvin-settings-spin 0.7s linear infinite' }} />
+                : <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M17 3a2.828 2.828 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>}
             </button>
+            <style>{`@keyframes palvin-settings-spin { to { transform: rotate(360deg); } }`}</style>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
           </div>
           <div style={{ flex: 1 }}>

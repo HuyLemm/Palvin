@@ -1,4 +1,5 @@
 import { supabase } from './lib/supabaseClient';
+import { compressImage } from './lib/imageCompress';
 import type { Place } from './types';
 
 interface PlaceRow {
@@ -45,9 +46,9 @@ export async function deletePlaceRow(id: string) {
 // its policy only checks the couple-id folder prefix, so a `places/`
 // subfolder is already covered without any new bucket or migration.
 export async function uploadPlaceImage(coupleId: string, file: File): Promise<string | null> {
-  const ext = file.name.split('.').pop() || 'jpg';
+  const { blob, ext } = await compressImage(file, file.name.split('.').pop() || 'jpg');
   const path = `${coupleId}/places/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from('post-images').upload(path, file);
+  const { error } = await supabase.storage.from('post-images').upload(path, blob);
   if (error) return null;
   const { data } = supabase.storage.from('post-images').getPublicUrl(path);
   return data.publicUrl;
