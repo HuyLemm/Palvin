@@ -326,16 +326,58 @@ export default function App() {
   // sometimes the very input the keyboard is for — hidden underneath it.
   // Scoped to its own variable rather than repurposing --app-vh, since that
   // one exists specifically to keep the rest of the app from reflowing when
-  // the keyboard opens. Consumed by the `.kb-modal-overlay` class (see
-  // index.css) that every input-carrying modal's backdrop uses.
+  // the keyboard opens.
+  //
+  // Applying that shrink unconditionally made EVERY modal reflow the moment
+  // any field was focused, even ones nowhere near the keyboard — visually
+  // restrictive/jumpy for no reason. So this only engages it (via the
+  // `.kb-covered` modifier the `.kb-modal-overlay` CSS reacts to — see
+  // index.css) on whichever single overlay currently has a focused field
+  // that the keyboard would actually hide, leaving every other open modal's
+  // sizing untouched.
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv || !window.matchMedia('(max-width: 480px)').matches) return;
-    const update = () => document.documentElement.style.setProperty('--kb-vh', `${vv.height}px`);
-    update();
-    vv.addEventListener('resize', update);
-    vv.addEventListener('scroll', update);
-    return () => { vv.removeEventListener('resize', update); vv.removeEventListener('scroll', update); };
+    document.documentElement.style.setProperty('--kb-vh', `${vv.height}px`);
+
+    const isTextEntry = (el: EventTarget | null): el is HTMLElement => {
+      if (el instanceof HTMLTextAreaElement) return true;
+      if (el instanceof HTMLInputElement) return !['checkbox', 'radio', 'button', 'submit', 'file', 'range', 'color'].includes(el.type);
+      return false;
+    };
+
+    let coveredOverlay: HTMLElement | null = null;
+    const setCovered = (overlay: HTMLElement | null) => {
+      if (coveredOverlay && coveredOverlay !== overlay) coveredOverlay.classList.remove('kb-covered');
+      coveredOverlay = overlay;
+      overlay?.classList.add('kb-covered');
+    };
+
+    // Re-checked both once the keyboard finishes opening (focusin fires
+    // before the viewport has actually shrunk) and on every later resize —
+    // covers the keyboard opening/closing and the field itself scrolling.
+    const checkActiveField = () => {
+      document.documentElement.style.setProperty('--kb-vh', `${vv.height}px`);
+      const el = document.activeElement;
+      if (!isTextEntry(el)) { setCovered(null); return; }
+      const overlay = el.closest<HTMLElement>('.kb-modal-overlay');
+      if (!overlay) { setCovered(null); return; }
+      const visibleBottom = vv.offsetTop + vv.height;
+      setCovered(el.getBoundingClientRect().bottom > visibleBottom ? overlay : null);
+    };
+    const onFocusIn = (e: FocusEvent) => { if (isTextEntry(e.target)) setTimeout(checkActiveField, 50); };
+    const onFocusOut = () => setCovered(null);
+
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+    vv.addEventListener('resize', checkActiveField);
+    vv.addEventListener('scroll', checkActiveField);
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+      vv.removeEventListener('resize', checkActiveField);
+      vv.removeEventListener('scroll', checkActiveField);
+    };
   }, []);
 
   // iOS Safari only auto-scrolls a focused input into view if it's visible

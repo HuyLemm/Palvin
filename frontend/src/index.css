@@ -149,13 +149,14 @@ html, body {
   .chat-input-bar { padding-bottom: calc(-30px + env(safe-area-inset-bottom)) !important; }
 }
 
-/* Backdrop for any modal that contains a text input — sized to the live,
-   keyboard-shrunk visible area (see App.tsx's --kb-vh) rather than a fixed
-   `inset: 0`, so the flexbox centering inside it re-centers the modal
-   within whatever's actually still visible instead of half-hiding it (and
-   the input the keyboard opened for) underneath the keyboard. Falls back to
-   100dvh on desktop/before the JS has run, matching the old inset:0 look. */
-.kb-modal-overlay { height: var(--kb-vh, 100dvh); }
+/* Backdrop for any modal that contains a text input. Normally just the
+   plain `inset: 0` fixed backdrop — the shrink to the live, keyboard-aware
+   height (App.tsx's --kb-vh) only switches on via `.kb-covered`, which
+   App.tsx adds ONLY to the one open modal whose currently-focused field
+   the keyboard would actually hide. Sizing every open modal to the
+   keyboard-shrunk height unconditionally made any field focus reflow the
+   whole modal even when nothing was actually covered. */
+.kb-modal-overlay.kb-covered { height: var(--kb-vh, 100dvh); }
 
 * { box-sizing: border-box; }
 
