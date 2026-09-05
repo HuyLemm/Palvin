@@ -1732,14 +1732,24 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {state.storyQuotes.map(q => (
-            <div key={q.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-              <Icon emoji="🌸" size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-              <p style={{ flex: 1, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: 15, color: 'var(--ink)', lineHeight: 1.5 }}>"{q.text}"</p>
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button onClick={() => openEdit(q)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-                <button onClick={() => setConfirmDeleteId(q.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            <SwipeToReveal
+              key={q.id}
+              actions={
+                <>
+                  <button onClick={() => openEdit(q)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                    <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
+                  </button>
+                  <button onClick={() => setConfirmDeleteId(q.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                    <Icon emoji="✕" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
+                  </button>
+                </>
+              }
+            >
+              <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                <Icon emoji="🌸" size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+                <p style={{ flex: 1, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: 15, color: 'var(--ink)', lineHeight: 1.5 }}>"{q.text}"</p>
               </div>
-            </div>
+            </SwipeToReveal>
           ))}
         </div>
       )}

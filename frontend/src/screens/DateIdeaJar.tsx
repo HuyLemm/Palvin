@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
+import SwipeToReveal from '../components/SwipeToReveal';
 
 interface Props { onBack: () => void; }
 
@@ -163,18 +164,27 @@ export default function DateIdeaJar({ onBack }: Props) {
         <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>All ideas ({editableIdeas.length})</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {editableIdeas.map(idea => (
-            <div key={`${idea.source}-${idea.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--white)', borderRadius: 12, border: '1px solid var(--border)' }}>
-              <Icon emoji={idea.emoji} size={20} />
-              <p style={{ fontSize: 13, color: 'var(--ink)', flex: 1 }}>{idea.text}</p>
-              <button
-                onClick={() => { setEditingIdea(idea); setEditIdeaText(idea.text); }}
-                style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 24, height: 24, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              ><Icon emoji="✏️" size={11} /></button>
-              <button
-                onClick={() => setConfirmDelete({ id: idea.id, source: idea.source })}
-                style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 24, height: 24, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              ><Icon emoji="🗑️" size={11} /></button>
-            </div>
+            <SwipeToReveal
+              key={`${idea.source}-${idea.id}`}
+              borderRadius={12}
+              actions={
+                <>
+                  <button
+                    onClick={() => { setEditingIdea(idea); setEditIdeaText(idea.text); }}
+                    style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}
+                  ><Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span></button>
+                  <button
+                    onClick={() => setConfirmDelete({ id: idea.id, source: idea.source })}
+                    style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}
+                  ><Icon emoji="🗑️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span></button>
+                </>
+              }
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--white)', borderRadius: 12, border: '1px solid var(--border)' }}>
+                <Icon emoji={idea.emoji} size={20} />
+                <p style={{ fontSize: 13, color: 'var(--ink)', flex: 1 }}>{idea.text}</p>
+              </div>
+            </SwipeToReveal>
           ))}
         </div>
       </div>

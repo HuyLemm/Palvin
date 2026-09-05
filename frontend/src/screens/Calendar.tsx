@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import AddEventForm from '../components/forms/AddEventForm';
 import Icon from '../components/Icon';
+import SwipeToReveal from '../components/SwipeToReveal';
 import type { CalendarEvent, CycleLog } from '../types';
 import { eventOccursOn, nextOccurrence, toDateStr, oneMonthFrom } from '../calendarRecurrence';
 
@@ -160,28 +161,36 @@ function EventCard({ event: ev, displayDate, onEdit, onDelete }: { event: Calend
   const [confirm, setConfirm] = useState(false);
   const d = new Date((displayDate ?? ev.date) + 'T12:00:00');
   return (
-    <div className="card" style={{ padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-      <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={CAT_EMOJI[ev.category]} size={22} /></div>
-      <div style={{ flex: 1 }}>
-        <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 5 }}>
-          {ev.title}
-          {ev.recurrence !== 'none' && <Icon emoji="🔁" size={12} style={{ opacity: 0.6 }} />}
-        </p>
-        <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{ev.time ? ` · ${ev.time}` : ''}</p>
-        {ev.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={12} /> {ev.location}</p>}
-        {ev.notes && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 4 }}>{ev.notes}</p>}
-      </div>
-      {!confirm
-        ? <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            <button onClick={() => onEdit(ev)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-            <button onClick={() => setConfirm(true)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
-          </div>
-        : <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-            <button onClick={() => onDelete(ev.id)} style={{ background: 'var(--sakura-deep)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Delete</button>
-            <button onClick={() => setConfirm(false)} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 12, color: 'var(--ink-2)' }}>No</button>
-          </div>
+    <SwipeToReveal
+      actions={
+        !confirm
+          ? <>
+              <button onClick={() => onEdit(ev)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
+              </button>
+              <button onClick={() => setConfirm(true)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                <Icon emoji="✕" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
+              </button>
+            </>
+          : <>
+              <button onClick={() => onDelete(ev.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+              <button onClick={() => setConfirm(false)} style={{ width: 64, border: 'none', background: 'var(--ink-2)', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>No</button>
+            </>
       }
-    </div>
+    >
+      <div className="card" style={{ padding: '12px 16px', marginBottom: 8, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={CAT_EMOJI[ev.category]} size={22} /></div>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            {ev.title}
+            {ev.recurrence !== 'none' && <Icon emoji="🔁" size={12} style={{ opacity: 0.6 }} />}
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{ev.time ? ` · ${ev.time}` : ''}</p>
+          {ev.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={12} /> {ev.location}</p>}
+          {ev.notes && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 4 }}>{ev.notes}</p>}
+        </div>
+      </div>
+    </SwipeToReveal>
   );
 }
 
@@ -337,23 +346,33 @@ function CycleTrackerTab() {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {sorted.map((l, i) => (
-              <div key={l.id} className="card" style={{ padding: '14px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: (!l.endDate) ? 10 : 0 }}>
-                  <div style={{ width: 42, height: 42, borderRadius: 12, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🩸" size={19} /></div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 11, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>Period #{sorted.length - i}</p>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{formatShortDate(l.startDate)}{l.endDate ? ` → ${formatShortDate(l.endDate)}` : ''}</p>
-                    <p style={{ fontSize: 12, color: l.endDate ? 'var(--ink-2)' : '#5AC26A', fontWeight: l.endDate ? 400 : 700 }}>{l.endDate ? `${daysBetweenISO(l.startDate, l.endDate) + 1}-day period` : '● Ongoing'}</p>
+              <SwipeToReveal
+                key={l.id}
+                actions={
+                  <>
+                    <button onClick={() => setEditing(l)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                      <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
+                    </button>
+                    <button onClick={() => setConfirmDeleteId(l.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                      <Icon emoji="✕" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
+                    </button>
+                  </>
+                }
+              >
+                <div className="card" style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: (!l.endDate) ? 10 : 0 }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 12, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🩸" size={19} /></div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 11, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>Period #{sorted.length - i}</p>
+                      <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{formatShortDate(l.startDate)}{l.endDate ? ` → ${formatShortDate(l.endDate)}` : ''}</p>
+                      <p style={{ fontSize: 12, color: l.endDate ? 'var(--ink-2)' : '#5AC26A', fontWeight: l.endDate ? 400 : 700 }}>{l.endDate ? `${daysBetweenISO(l.startDate, l.endDate) + 1}-day period` : '● Ongoing'}</p>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button onClick={() => setEditing(l)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-                    <button onClick={() => setConfirmDeleteId(l.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
-                  </div>
+                  {!l.endDate && (
+                    <button onClick={() => updateCycleLog(l.id, { startDate: l.startDate, endDate: today })} style={{ width: '100%', background: 'var(--sakura-light)', border: 'none', borderRadius: 10, padding: '8px', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Mark ended today</button>
+                  )}
                 </div>
-                {!l.endDate && (
-                  <button onClick={() => updateCycleLog(l.id, { startDate: l.startDate, endDate: today })} style={{ width: '100%', background: 'var(--sakura-light)', border: 'none', borderRadius: 10, padding: '8px', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Mark ended today</button>
-                )}
-              </div>
+              </SwipeToReveal>
             ))}
           </div>
         </>

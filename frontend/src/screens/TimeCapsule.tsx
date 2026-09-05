@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
 import FilterCountBadge from '../components/FilterCountBadge';
+import SwipeToReveal from '../components/SwipeToReveal';
 import type { Capsule } from '../types';
 
 function truncate(text: string, max = 100): string {
@@ -89,54 +90,64 @@ export default function TimeCapsule() {
               const mine = isRecipient(c);
               const days = daysUntilOpen(c.unlockDate);
               return (
-                <div key={c.id} className="card" style={{ padding: '16px 18px', borderLeft: `3px solid ${unlockable && mine ? '#5AC26A' : 'var(--sakura-accent)'}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                        <Icon emoji={c.to === 'both' ? '💑' : c.to === currentUser ? '💙' : '💗'} size={18} />
-                        <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{c.title}</p>
-                      </div>
-                      <p style={{ fontSize: 11, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>From {c.from} <Icon emoji="→" size={11} /> {c.to === 'both' ? 'both' : c.to}</p>
-                      {c.occasion && <p style={{ fontSize: 11, color: 'var(--sakura-deep)', fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="🎉" size={11} /> {c.occasion}</p>}
-                      <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>Created: {formatDate(c.createdDate)}</p>
-                    </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                      {unlockable ? (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: '#5AC26A', background: 'rgba(90,194,106,0.1)', padding: '3px 8px', borderRadius: 99 }}>Ready to open!</span>
-                      ) : (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', padding: '3px 8px', borderRadius: 99 }}>{days}d to go</span>
+                <SwipeToReveal
+                  key={c.id}
+                  actions={
+                    <>
+                      {isSender(c) && (
+                        <button onClick={() => setEditing(c)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                          <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
+                        </button>
                       )}
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        {isSender(c) && <button onClick={() => setEditing(c)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>}
-                        <button onClick={() => setConfirmDeleteId(c.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', marginBottom: (unlockable && mine) ? 10 : 0 }}>
-                    {unlockable ? (
-                      mine ? (
-                        <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.6, whiteSpace: 'pre-line', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🔓" size={16} /> Open to read...</p>
-                      ) : (
-                        <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🔒" size={16} /> Only {c.to === 'both' ? 'both of you' : c.to} can open this letter</p>
-                      )
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Icon emoji="🔒" size={20} />
-                        <div>
-                          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Opens on</p>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{formatDate(c.unlockDate)}</p>
+                      <button onClick={() => setConfirmDeleteId(c.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                        <Icon emoji="🗑️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
+                      </button>
+                    </>
+                  }
+                >
+                  <div className="card" style={{ padding: '16px 18px', borderLeft: `3px solid ${unlockable && mine ? '#5AC26A' : 'var(--sakura-accent)'}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                          <Icon emoji={c.to === 'both' ? '💑' : c.to === currentUser ? '💙' : '💗'} size={18} />
+                          <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{c.title}</p>
                         </div>
+                        <p style={{ fontSize: 11, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>From {c.from} <Icon emoji="→" size={11} /> {c.to === 'both' ? 'both' : c.to}</p>
+                        {c.occasion && <p style={{ fontSize: 11, color: 'var(--sakura-deep)', fontWeight: 600, marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="🎉" size={11} /> {c.occasion}</p>}
+                        <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>Created: {formatDate(c.createdDate)}</p>
                       </div>
+                      {unlockable ? (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#5AC26A', background: 'rgba(90,194,106,0.1)', padding: '3px 8px', borderRadius: 99, flexShrink: 0 }}>Ready to open!</span>
+                      ) : (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', padding: '3px 8px', borderRadius: 99, flexShrink: 0 }}>{days}d to go</span>
+                      )}
+                    </div>
+
+                    <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', marginBottom: (unlockable && mine) ? 10 : 0 }}>
+                      {unlockable ? (
+                        mine ? (
+                          <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.6, whiteSpace: 'pre-line', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🔓" size={16} /> Open to read...</p>
+                        ) : (
+                          <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🔒" size={16} /> Only {c.to === 'both' ? 'both of you' : c.to} can open this letter</p>
+                        )
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Icon emoji="🔒" size={20} />
+                          <div>
+                            <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Opens on</p>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{formatDate(c.unlockDate)}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {unlockable && mine && (
+                      <button onClick={() => handleOpenLetter(c)} style={{ width: '100%', padding: '10px', background: '#5AC26A', color: 'white', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                        <Icon emoji="💌" size={16} /> Open Letter
+                      </button>
                     )}
                   </div>
-
-                  {unlockable && mine && (
-                    <button onClick={() => handleOpenLetter(c)} style={{ width: '100%', padding: '10px', background: '#5AC26A', color: 'white', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                      <Icon emoji="💌" size={16} /> Open Letter
-                    </button>
-                  )}
-                </div>
+                </SwipeToReveal>
               );
             })}
           </div>
@@ -149,22 +160,34 @@ export default function TimeCapsule() {
           <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Opened · {opened.length}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {opened.map(c => (
-              <div key={c.id} onClick={() => setViewing(c)} className="card" style={{ padding: '16px 18px', opacity: 0.85, cursor: 'pointer' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                  <Icon emoji={c.to === 'both' ? '💑' : c.to === currentUser ? '💙' : '💗'} size={18} />
-                  <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{c.title}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: '#5AC26A', background: 'rgba(90,194,106,0.1)', padding: '2px 8px', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji="✓" size={10} /> Read</span>
-                    {isSender(c) && <button onClick={e => { e.stopPropagation(); setEditing(c); }} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>}
-                    <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(c.id); }} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
+              <SwipeToReveal
+                key={c.id}
+                actions={
+                  <>
+                    {isSender(c) && (
+                      <button onClick={() => setEditing(c)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                        <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
+                      </button>
+                    )}
+                    <button onClick={() => setConfirmDeleteId(c.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+                      <Icon emoji="🗑️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
+                    </button>
+                  </>
+                }
+              >
+                <div onClick={() => setViewing(c)} className="card" style={{ padding: '16px 18px', opacity: 0.85, cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <Icon emoji={c.to === 'both' ? '💑' : c.to === currentUser ? '💙' : '💗'} size={18} />
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{c.title}</p>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#5AC26A', background: 'rgba(90,194,106,0.1)', padding: '2px 8px', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 3, flexShrink: 0 }}><Icon emoji="✓" size={10} /> Read</span>
                   </div>
+                  <p style={{ fontSize: 11, color: 'var(--ink-2)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>From {c.from} <Icon emoji="→" size={11} /> {c.to === 'both' ? 'both' : c.to}{c.occasion && ` · ${c.occasion}`}</p>
+                  <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '12px 14px' }}>
+                    <p style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.7 }}>{truncate(c.message)}</p>
+                  </div>
+                  <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 6 }}>Opens: {formatDate(c.unlockDate)}</p>
                 </div>
-                <p style={{ fontSize: 11, color: 'var(--ink-2)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>From {c.from} <Icon emoji="→" size={11} /> {c.to === 'both' ? 'both' : c.to}{c.occasion && ` · ${c.occasion}`}</p>
-                <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '12px 14px' }}>
-                  <p style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.7 }}>{truncate(c.message)}</p>
-                </div>
-                <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 6 }}>Opens: {formatDate(c.unlockDate)}</p>
-              </div>
+              </SwipeToReveal>
             ))}
           </div>
         </div>

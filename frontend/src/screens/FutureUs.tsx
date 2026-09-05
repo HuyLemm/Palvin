@@ -3,6 +3,7 @@ import { useApp } from '../context';
 import Icon from '../components/Icon';
 import AmountInput from '../components/AmountInput';
 import FilterCountBadge from '../components/FilterCountBadge';
+import SwipeToReveal from '../components/SwipeToReveal';
 import type { Goal } from '../types';
 
 const VND = (n: number) => `${Math.round(n).toLocaleString('en-US')} VND`;
@@ -170,6 +171,19 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
   };
 
   return (
+    <SwipeToReveal
+      actions={
+        <>
+          <button onClick={() => onEdit(g)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+            <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
+          </button>
+          <button onClick={() => onDelete(g.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
+            <Icon emoji="✕" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
+          </button>
+        </>
+      }
+      borderRadius={14}
+    >
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 16px', background: 'var(--white)', borderRadius: 14, border: '1px solid var(--border)', transition: 'box-shadow 0.15s' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={() => onToggle(g.id)} style={{ width: 24, height: 24, borderRadius: 8, border: `2px solid ${g.completed ? 'var(--sakura-accent)' : 'var(--border)'}`, background: g.completed ? 'var(--sakura-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s' }}>
@@ -180,10 +194,6 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
           <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }}>{g.title}</p>
           {g.completed && g.completedDate && <p style={{ fontSize: 11, color: 'var(--sakura-accent)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>Achieved {g.completedDate} <Icon emoji="✨" size={11} /></p>}
           {!g.completed && hasTarget && g.deadline && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatRemaining(g.deadline)}</p>}
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button onClick={() => onEdit(g)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-          <button onClick={() => onDelete(g.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
         </div>
       </div>
 
@@ -209,6 +219,7 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
         </div>
       )}
     </div>
+    </SwipeToReveal>
   );
 }
 
