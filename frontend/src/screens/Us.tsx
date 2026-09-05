@@ -90,6 +90,8 @@ export default function Us() {
     // value alone is enough — a "wish deleted" notification, or any old one
     // from before target_id existed, still has no selectedId at all.
     if (screen === 'wishlist') return 'wishjar';
+    // Same idea, for the dashboard's Gratitude stat tile.
+    if (screen === 'gratitude') return 'gratitude';
     if (screen === 'us' && lastNavWasPop) return lastUsSub;
     return 'main';
   });
@@ -108,6 +110,7 @@ export default function Us() {
   useEffect(() => {
     if (screen === 'us' && selectedId) setSub('permit');
     if (screen === 'wishlist') setSub('wishjar');
+    if (screen === 'gratitude') setSub('gratitude');
   }, [screen, selectedId]);
 
   // Re-tapping the Us tab while already sitting inside it doesn't remount

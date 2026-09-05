@@ -318,12 +318,12 @@ export default function Home() {
       {/* Couple Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
         {[
-          { emoji: '🌸', value: state.memories.length, label: 'Memories' },
-          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes' },
-          { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist' },
-          { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude' },
+          { emoji: '🌸', value: state.memories.length, label: 'Memories', target: 'memories' },
+          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes', target: 'love-notes' },
+          { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist', target: 'wishlist' },
+          { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude', target: 'gratitude' },
         ].map(s => (
-          <div key={s.label} className="card" style={{ padding: '12px 6px', textAlign: 'center' }}>
+          <div key={s.label} onClick={() => navigate(s.target)} className="card" style={{ padding: '12px 6px', textAlign: 'center', cursor: 'pointer' }}>
             <p style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={s.emoji} size={20} /></p>
             <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--sakura-deep)', lineHeight: 1 }}>{s.value}</p>
             <p style={{ fontSize: 10, color: 'var(--ink-2)', marginTop: 2 }}>{s.label}</p>
