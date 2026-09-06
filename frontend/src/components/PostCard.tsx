@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../context';
 import Avatar from './Avatar';
 import Icon from './Icon';
@@ -187,9 +188,18 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
           </div>
         )}
 
-        {/* Comment input */}
-        {commentingId && (
-          <div style={{ marginTop: 10, display: 'flex', gap: 8, alignItems: 'center' }}>
+        {/* Comment input — portaled to a fixed bar riding just above the
+            keyboard (see below), Facebook-style, instead of an inline field
+            that scrolls away with the card and needs Safari's own "scroll
+            the focused input into view" to even stay visible. */}
+        {commentingId && createPortal(
+          <div style={{
+            position: 'fixed', left: 0, right: 0, top: 'var(--kb-vh, 100dvh)', transform: 'translateY(-100%)',
+            zIndex: 250, background: 'var(--card)', borderTop: '1px solid var(--border)',
+            display: 'flex', gap: 8, alignItems: 'center', padding: '10px 14px',
+            paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
+            animation: 'slideUp 0.2s cubic-bezier(0.32,0.72,0,1)',
+          }}>
             <Avatar user={currentUser} size={28} />
             <input
               className="input-field"
@@ -200,8 +210,10 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
               autoFocus
               style={{ flex: 1, padding: '8px 12px', fontSize: 13 }}
             />
-            <button onClick={handleComment} style={{ background: 'var(--sakura-accent)', color: 'white', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Post</button>
-          </div>
+            <button onClick={handleComment} style={{ background: 'var(--sakura-accent)', color: 'white', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>Post</button>
+            <button onClick={() => setCommentingId(false)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 }}><Icon emoji="✕" size={16} /></button>
+          </div>,
+          document.body
         )}
       </div>
     </div>
