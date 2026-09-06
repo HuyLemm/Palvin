@@ -90,7 +90,14 @@ export default function PullToRefresh({ containerRef, onRefresh, children }: {
           transform: refreshing ? undefined : `rotate(${Math.min(pull / THRESHOLD, 1) * 360}deg)`,
         }} />
       </div>
-      <div style={{ transform: `translateY(${pull}px)`, transition: dragging ? 'none' : 'transform 0.25s ease' }}>
+      {/* No `transform` at all when idle (not just translateY(0)) — ANY
+          non-none transform value, even a no-op one, makes this the
+          containing block for every `position: fixed` descendant instead
+          of the real viewport (per spec, and every browser implements it),
+          which silently broke centering for every fixed-overlay modal in
+          the app the instant this wrapper was added. Only actually needs
+          a transform while a drag is genuinely in progress. */}
+      <div style={pull !== 0 ? { transform: `translateY(${pull}px)`, transition: dragging ? 'none' : 'transform 0.25s ease' } : undefined}>
         {children}
       </div>
       <style>{`@keyframes palvin-ptr-spin { to { transform: rotate(360deg); } }`}</style>
