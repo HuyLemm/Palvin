@@ -50,6 +50,32 @@ body[data-theme="dark"] {
   background: linear-gradient(135deg, #1A0F12 0%, #200D17 40%, #1A0D1F 100%);
 }
 
+/* AuthScreen's own background (AuthBg in AuthScreen.tsx) is a fixed light
+   gradient regardless of dark mode — dark mode is a per-account preference
+   applied globally via [data-theme="dark"] on <html>, which can still be
+   set here (logging out, or a password-reset link opened fresh) even
+   though this screen never turns dark itself. Re-pin every color variable
+   this screen actually uses back to its light-mode value so text never
+   inherits dark mode's near-white --ink against this always-light card. */
+.auth-always-light {
+  --bg: #FFF8FA;
+  --sakura: #F3A6B9;
+  --sakura-light: #FADCE4;
+  --sakura-accent: #E67F9A;
+  --sakura-deep: #C95F7C;
+  --ink: #332A2D;
+  --ink-2: #8C7A80;
+  --white: #FFFFFF;
+  --card: #FFFFFF;
+  --border: #F0E4E8;
+  --pink-glow: #FFF0F4;
+  --lavender-glow: #F5F0FF;
+  --lavender-light: #EDE6FF;
+  --lavender: #8B6FD4;
+  --glass: rgba(255,255,255,0.7);
+  --glass-strong: rgba(255,255,255,0.9);
+}
+
 html, body {
   height: 100%;
   background: linear-gradient(135deg, #f7d4df 0%, #fce8f0 40%, #ede0f5 100%);

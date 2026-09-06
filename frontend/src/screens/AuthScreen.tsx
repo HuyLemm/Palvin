@@ -120,7 +120,14 @@ function Petals() {
 /* ── Full-screen background shell ── */
 function AuthBg({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{
+    // auth-always-light (index.css) re-pins every color variable to its
+    // light-mode value regardless of dark mode — dark mode is a per-account
+    // preference applied globally via [data-theme="dark"] on <html>, but
+    // this screen's own background here is a fixed light gradient (not
+    // theme-aware), so inheriting dark mode's near-white --ink text color
+    // made it unreadable against it whenever data-theme lingered from a
+    // previous session (e.g. logging out, or a password-reset deep link).
+    <div className="auth-always-light" style={{
       flex: 1,
       display: 'flex',
       flexDirection: 'column',
