@@ -7,7 +7,6 @@ import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
 import AmountInput from '../components/AmountInput';
 import FilterCountBadge from '../components/FilterCountBadge';
-import SwipeToReveal from '../components/SwipeToReveal';
 import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
 import { uploadPlaceImage } from '../places';
@@ -40,7 +39,7 @@ function SubScreenLoadingFallback() {
   );
 }
 
-type SubScreen = 'main' | 'story' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'debts' | 'places';
+type SubScreen = 'main' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'debts' | 'places';
 
 // Remembers which sub-screen was showing when the user drilled into a
 // separate top-level screen (e.g. a memory's detail page) from within Us —
@@ -91,8 +90,10 @@ export default function Us() {
     // value alone is enough — a "wish deleted" notification, or any old one
     // from before target_id existed, still has no selectedId at all.
     if (screen === 'wishlist') return 'wishjar';
-    // Same idea, for the dashboard's Gratitude stat tile.
+    // Same idea, for the dashboard's Gratitude/Places/Love notes stat tiles.
     if (screen === 'gratitude') return 'gratitude';
+    if (screen === 'places') return 'places';
+    if (screen === 'capsule') return 'capsule';
     if (screen === 'us' && lastNavWasPop) return lastUsSub;
     return 'main';
   });
@@ -112,6 +113,8 @@ export default function Us() {
     if (screen === 'us' && selectedId) setSub('permit');
     if (screen === 'wishlist') setSub('wishjar');
     if (screen === 'gratitude') setSub('gratitude');
+    if (screen === 'places') setSub('places');
+    if (screen === 'capsule') setSub('capsule');
   }, [screen, selectedId]);
 
   // Re-tapping the Us tab while already sitting inside it doesn't remount
@@ -158,43 +161,6 @@ export default function Us() {
   else if (sub === 'dateidea') content = <DateIdeaJar onBack={() => setSub('main')} />;
   else if (sub === 'gratitude') content = <GratitudeJournal onBack={() => setSub('main')} />;
   else if (sub === 'permit')   content = <DatePermit onBack={() => setSub('main')} initialRequestId={selectedId ?? undefined} />;
-  else if (sub === 'story') {
-    const timeline = [...state.memories].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    content = (
-      <div style={{ paddingBottom: 32 }}>
-        <Back />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)' }}>Our Story</p>
-          <button onClick={() => openCreate('memory')} style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 12, padding: '8px 14px', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            + Add memory <Icon emoji="🌸" size={14} />
-          </button>
-        </div>
-        {timeline.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-            <Icon emoji="🌸" size={40} style={{ marginBottom: 12 }} />
-            <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink)' }}>No memories yet</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Add a memory to start your story together.</p>
-          </div>
-        ) : (
-          <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 29, top: 0, bottom: 0, width: 3, background: 'var(--sakura-light)' }} />
-            {timeline.map(m => (
-              <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ display: 'flex', gap: 18, marginBottom: 28, position: 'relative', cursor: 'pointer' }}>
-                <div style={{ width: 60, height: 60, borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--sakura)', flexShrink: 0, zIndex: 1, background: 'var(--sakura-light)' }}>
-                  <FadeImage src={m.image} alt="" style={{ width: '100%', height: '100%' }} />
-                </div>
-                <div style={{ paddingTop: 10 }}>
-                  <p style={{ fontSize: 13, color: 'var(--sakura-accent)', fontWeight: 600, marginBottom: 3 }}>{m.date}</p>
-                  <p style={{ fontSize: 17, color: 'var(--ink)', fontWeight: 700 }}>{m.title}</p>
-                  {m.location && <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}><Icon emoji="📍" size={13} /> {m.location}</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
   else if (sub === 'favorites') content = <OurFavouritesScreen onBack={() => setSub('main')} />;
   else if (sub === 'future')   content = <div style={{ paddingBottom: 0 }}><Back /><FutureUs /></div>;
   else if (sub === 'calendar') content = <div style={{ paddingBottom: 0 }}><Back /><Calendar /></div>;
@@ -295,7 +261,6 @@ export default function Us() {
           title: 'Memories & keepsakes',
           items: [
             { label: 'Time Capsule', labelIcon: '💌', emoji: '⏳', key: 'capsule' as SubScreen, sub: `${state.capsules.length} letters` },
-            { label: 'Our Story', emoji: '📖', key: 'story' as SubScreen, sub: 'Relationship timeline' },
             { label: 'Photo Collage', emoji: '🖼️', key: 'collage' as SubScreen, sub: 'A month-by-month recap from your memories' },
             { label: "Places We've Been", emoji: '🗺️', key: 'places' as SubScreen, sub: `${state.places.length} saved places` },
           ],
@@ -460,33 +425,21 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
       {/* Place list */}
       <div key={activeTab} className="screen-transition" style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
         {list.map((pl, i) => (
-          <SwipeToReveal
-            key={pl.id}
-            actions={
-              <>
-                <button onClick={() => openEditPlace(pl)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-                  <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
-                </button>
-                <button onClick={() => setConfirmDeletePlace(pl)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-                  <Icon emoji="🗑️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
-                </button>
-              </>
-            }
-          >
-            <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-              {pl.image
-                ? <FadeImage src={pl.image} alt="" style={{ width: 68, height: 68, borderRadius: 14, flexShrink: 0 }} />
-                : (
-                  <div style={{ width: 68, height: 68, borderRadius: 14, background: `${cfg?.color}15`, border: `1.5px solid ${cfg?.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 25, fontFamily: "'Playfair Display', serif", color: cfg?.color, fontWeight: 700 }}>{i + 1}</span>
-                  </div>
-                )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}</p>
-                {pl.note && <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 3 }}>{pl.note}</p>}
-              </div>
+          <div key={pl.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            {pl.image
+              ? <FadeImage src={pl.image} alt="" style={{ width: 68, height: 68, borderRadius: 14, flexShrink: 0 }} />
+              : (
+                <div style={{ width: 68, height: 68, borderRadius: 14, background: `${cfg?.color}15`, border: `1.5px solid ${cfg?.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <span style={{ fontSize: 25, fontFamily: "'Playfair Display', serif", color: cfg?.color, fontWeight: 700 }}>{i + 1}</span>
+                </div>
+              )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}</p>
+              {pl.note && <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 3 }}>{pl.note}</p>}
             </div>
-          </SwipeToReveal>
+            <button onClick={() => openEditPlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+            <button onClick={() => setConfirmDeletePlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+          </div>
         ))}
         {cfg && list.length === 0 && (
           <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
@@ -1513,32 +1466,24 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {filtered.map((p, i) => (
-          <SwipeToReveal
-            key={p.id}
-            actions={
-              <>
-                <button onClick={() => openEditSong(p)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-                  <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
-                </button>
-                <button onClick={() => setConfirmDeleteSong(p)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-                  <Icon emoji="🗑️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
-                </button>
-              </>
-            }
-          >
-            <div className="card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-              {p.image
-                ? <FadeImage src={p.image} alt="" style={{ width: 60, height: 60, borderRadius: 14, flexShrink: 0 }} />
-                : <div style={{ width: 60, height: 60, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={p.emoji} size={26} /></div>}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
-                {p.releaseDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Released {formatReleaseDate(p.releaseDate)}</p>}
-                {p.note && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
-              </div>
-              <p style={{ fontSize: 10, color: 'var(--ink-2)', flexShrink: 0 }}>by {p.addedBy}</p>
+          <div key={p.id} className="card" style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            {p.image
+              ? <FadeImage src={p.image} alt="" style={{ width: 60, height: 60, borderRadius: 14, flexShrink: 0 }} />
+              : <div style={{ width: 60, height: 60, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={p.emoji} size={26} /></div>}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
+              {p.releaseDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Released {formatReleaseDate(p.releaseDate)}</p>}
+              {p.note && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
             </div>
-          </SwipeToReveal>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+              <p style={{ fontSize: 10, color: 'var(--ink-2)' }}>by {p.addedBy}</p>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={() => openEditSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+                <button onClick={() => setConfirmDeleteSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
+              </div>
+            </div>
+          </div>
         ))}
         {filtered.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>No songs yet. Add the first one!</div>}
       </div>
@@ -1732,24 +1677,14 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {state.storyQuotes.map(q => (
-            <SwipeToReveal
-              key={q.id}
-              actions={
-                <>
-                  <button onClick={() => openEdit(q)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-                    <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
-                  </button>
-                  <button onClick={() => setConfirmDeleteId(q.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-                    <Icon emoji="✕" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
-                  </button>
-                </>
-              }
-            >
-              <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <Icon emoji="🌸" size={16} style={{ flexShrink: 0, marginTop: 2 }} />
-                <p style={{ flex: 1, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: 15, color: 'var(--ink)', lineHeight: 1.5 }}>"{q.text}"</p>
+            <div key={q.id} className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+              <Icon emoji="🌸" size={16} style={{ flexShrink: 0, marginTop: 2 }} />
+              <p style={{ flex: 1, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: 15, color: 'var(--ink)', lineHeight: 1.5 }}>"{q.text}"</p>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button onClick={() => openEdit(q)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+                <button onClick={() => setConfirmDeleteId(q.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
               </div>
-            </SwipeToReveal>
+            </div>
           ))}
         </div>
       )}
@@ -1844,42 +1779,34 @@ function DebtScreen({ onBack }: { onBack: () => void }) {
   function renderDebtCard(d: Debt) {
     const overdue = !d.paid && d.dueDate && d.dueDate < today;
     return (
-      <SwipeToReveal
-        key={d.id}
-        actions={
-          <>
-            <button onClick={() => openEdit(d)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-              <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
-            </button>
-            <button onClick={() => setConfirmDeleteId(d.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-              <Icon emoji="✕" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
-            </button>
-          </>
-        }
-      >
-        <div className="card" style={{ padding: '14px 16px', opacity: d.paid ? 0.6 : 1 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: d.paid ? 'var(--bg)' : overdue ? '#FEE2E2' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon emoji={d.paid ? '✅' : overdue ? '⏰' : '📒'} size={18} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: d.paid ? 'line-through' : 'none' }}>{d.debtorName}</p>
-              {d.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{d.note}</p>}
-              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>Lent on: {formatShortDate(d.date)}{filter === 'all' && ` · ${d.createdBy === 'Both' ? 'Both' : d.createdBy}`}</p>
-              {d.dueDate && !d.paid && (
-                <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
-                </p>
-              )}
-              {d.paid && d.paidDate && <p style={{ fontSize: 11, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
-            </div>
-            <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)', flexShrink: 0 }}>{VND(d.amount)}</p>
+      <div key={d.id} className="card" style={{ padding: '14px 16px', opacity: d.paid ? 0.6 : 1 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: d.paid ? 'var(--bg)' : overdue ? '#FEE2E2' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon emoji={d.paid ? '✅' : overdue ? '⏰' : '📒'} size={18} />
           </div>
-          <button onClick={() => toggleDebtPaid(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: d.paid ? '1.5px solid var(--border)' : 'none', background: d.paid ? 'var(--bg)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: d.paid ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            {d.paid ? 'Mark as unpaid' : <>Mark as paid <Icon emoji="🎉" size={12} /></>}
-          </button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: d.paid ? 'line-through' : 'none' }}>{d.debtorName}</p>
+            {d.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{d.note}</p>}
+            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>Lent on: {formatShortDate(d.date)}{filter === 'all' && ` · ${d.createdBy === 'Both' ? 'Both' : d.createdBy}`}</p>
+            {d.dueDate && !d.paid && (
+              <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
+              </p>
+            )}
+            {d.paid && d.paidDate && <p style={{ fontSize: 11, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)' }}>{VND(d.amount)}</p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => openEdit(d)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+              <button onClick={() => setConfirmDeleteId(d.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            </div>
+          </div>
         </div>
-      </SwipeToReveal>
+        <button onClick={() => toggleDebtPaid(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: d.paid ? '1.5px solid var(--border)' : 'none', background: d.paid ? 'var(--bg)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: d.paid ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          {d.paid ? 'Mark as unpaid' : <>Mark as paid <Icon emoji="🎉" size={12} /></>}
+        </button>
+      </div>
     );
   }
 

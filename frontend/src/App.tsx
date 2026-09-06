@@ -198,13 +198,14 @@ function ScreenRouter() {
   // screen (same component, different starting tab) — normalized to the same
   // key as 'money' so they share one kept-alive instance instead of each
   // minting a second, independent <Money/> that always opens on the
-  // Expenses tab regardless of which entry point was used. 'wishlist' and
-  // 'gratitude' are the same trick for Us's internal Gift Wishlist/Gratitude
-  // Journal sub-screens (see Us.tsx's own `sub` state, which reads the live
+  // Expenses tab regardless of which entry point was used. 'wishlist',
+  // 'gratitude', 'places', and 'capsule' are the same trick for Us's
+  // internal Gift Wishlist/Gratitude Journal/Places We've Been/Time Capsule
+  // sub-screens (see Us.tsx's own `sub` state, which reads the live
   // `screen`/`selectedId` to land on the right sub-screen and highlight the
   // specific wish a notification pointed at).
   const normalizedScreen = (screen === 'stats' || screen === 'bills' || screen === 'goals') ? 'money'
-    : (screen === 'wishlist' || screen === 'gratitude') ? 'us'
+    : (screen === 'wishlist' || screen === 'gratitude' || screen === 'places' || screen === 'capsule') ? 'us'
     : screen;
   const key = screen === 'chat' ? null : (selectedId ? `${normalizedScreen}:${selectedId}` : normalizedScreen);
 

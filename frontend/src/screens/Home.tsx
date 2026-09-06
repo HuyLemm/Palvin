@@ -318,8 +318,8 @@ export default function Home() {
       {/* Couple Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
         {[
-          { emoji: '🌸', value: state.memories.length, label: 'Memories', target: 'memories' },
-          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes', target: 'love-notes' },
+          { emoji: '🗺️', value: state.places.length, label: 'Places', target: 'places' },
+          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes', target: 'capsule' },
           { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist', target: 'wishlist' },
           { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude', target: 'gratitude' },
         ].map(s => (

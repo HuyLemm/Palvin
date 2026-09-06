@@ -3,7 +3,6 @@ import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import FilterCountBadge from '../components/FilterCountBadge';
-import SwipeToReveal from '../components/SwipeToReveal';
 
 const PROMPTS = [
   "Today I'm grateful for...",
@@ -135,39 +134,32 @@ export default function GratitudeJournal({ onBack }: Props) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {filtered.map((g, i) => {
-            const canEditThis = g.from === currentUser || isAdmin;
-            const card = (
-              <div className="card gratitude-in" style={{ padding: '16px', animationDelay: `${i * 0.04}s` }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                  <Avatar user={g.from} size={32} ring />
-                  <div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{g.from}</p>
-                    <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatDate(g.date)}</p>
-                  </div>
-                  {!canEditThis && <Icon emoji="🌸" size={18} style={{ marginLeft: 'auto' }} />}
+          {filtered.map((g, i) => (
+            <div key={g.id} className="card gratitude-in" style={{ padding: '16px', animationDelay: `${i * 0.04}s` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <Avatar user={g.from} size={32} ring />
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{g.from}</p>
+                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatDate(g.date)}</p>
                 </div>
-                <p style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.6, fontStyle: 'italic', borderLeft: '3px solid var(--sakura)', paddingLeft: 12 }}>"{g.text}"</p>
+                {(g.from === currentUser || isAdmin) ? (
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                    <button
+                      onClick={() => startEdit(g.id, g.text)}
+                      style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    ><Icon emoji="✏️" size={12} /></button>
+                    <button
+                      onClick={() => setConfirmDeleteId(g.id)}
+                      style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    ><Icon emoji="🗑️" size={12} /></button>
+                  </div>
+                ) : (
+                  <Icon emoji="🌸" size={18} style={{ marginLeft: 'auto' }} />
+                )}
               </div>
-            );
-            return canEditThis ? (
-              <SwipeToReveal
-                key={g.id}
-                actions={
-                  <>
-                    <button onClick={() => startEdit(g.id, g.text)} style={{ width: 64, border: 'none', background: '#4A8AE8', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-                      <Icon emoji="✏️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Edit</span>
-                    </button>
-                    <button onClick={() => setConfirmDeleteId(g.id)} style={{ width: 64, border: 'none', background: '#DC2626', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, cursor: 'pointer' }}>
-                      <Icon emoji="🗑️" size={16} /><span style={{ fontSize: 10, fontWeight: 700 }}>Delete</span>
-                    </button>
-                  </>
-                }
-              >
-                {card}
-              </SwipeToReveal>
-            ) : <div key={g.id}>{card}</div>;
-          })}
+              <p style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.6, fontStyle: 'italic', borderLeft: '3px solid var(--sakura)', paddingLeft: 12 }}>"{g.text}"</p>
+            </div>
+          ))}
         </div>
       )}
 
