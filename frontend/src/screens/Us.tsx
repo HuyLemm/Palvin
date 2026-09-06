@@ -11,7 +11,7 @@ import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
 import { uploadPlaceImage } from '../places';
 import { uploadWishImage } from '../wishes';
-import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem, StoryQuote, Debt, Place } from '../types';
+import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem, StoryQuote, Debt, Place, Todo } from '../types';
 
 // These sub-screens are only ever visited from within Us's own internal
 // navigation (never all at once), so — same as App.tsx's top-level
@@ -39,7 +39,7 @@ function SubScreenLoadingFallback() {
   );
 }
 
-type SubScreen = 'main' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'debts' | 'places';
+type SubScreen = 'main' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'debts' | 'places' | 'todos';
 
 // Remembers which sub-screen was showing when the user drilled into a
 // separate top-level screen (e.g. a memory's detail page) from within Us —
@@ -171,6 +171,7 @@ export default function Us() {
   else if (sub === 'quotes')   content = <StoryQuotesScreen onBack={() => setSub('main')} />;
   else if (sub === 'debts')    content = <DebtScreen onBack={() => setSub('main')} />;
   else if (sub === 'places')   content = <OurPlacesScreen onBack={() => setSub('main')} />;
+  else if (sub === 'todos')    content = <TodoScreen onBack={() => setSub('main')} />;
   else {
 
   // Main
@@ -254,6 +255,11 @@ export default function Us() {
               sub: (() => {
                 const unpaid = state.debts.filter(d => !d.paid);
                 return unpaid.length > 0 ? `${unpaid.length} people owe you` : 'No one owes you yet';
+              })() },
+            { label: 'To Do List', emoji: '✅', key: 'todos' as SubScreen,
+              sub: (() => {
+                const left = state.todos.filter(t => !t.completed).length;
+                return left > 0 ? `${left} task(s) left` : 'All caught up';
               })() },
           ],
         },
@@ -1904,6 +1910,213 @@ function DebtScreen({ onBack }: { onBack: () => void }) {
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
               <button onClick={() => { deleteDebt(confirmingDebt.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── To Do List ── */
+
+const TODO_CATEGORIES = [
+  { key: 'work', emoji: '💼', label: 'Work' },
+  { key: 'gym', emoji: '🏋️', label: 'Gym' },
+  { key: 'home', emoji: '🏠', label: 'Home' },
+  { key: 'errands', emoji: '🛒', label: 'Errands' },
+  { key: 'health', emoji: '💊', label: 'Health' },
+  { key: 'other', emoji: '📌', label: 'Other' },
+];
+function categoryMeta(key: string) {
+  return TODO_CATEGORIES.find(c => c.key === key) ?? TODO_CATEGORIES[TODO_CATEGORIES.length - 1];
+}
+
+function TodoScreen({ onBack }: { onBack: () => void }) {
+  const { state, currentUser, partnerProfile, addTodo, updateTodo, toggleTodoDone, deleteTodo } = useApp();
+  const partnerName = partnerProfile?.displayName;
+  const [filter, setFilter] = useState('all');
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Todo | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState('other');
+  const [kind, setKind] = useState<'daily' | 'once'>('daily');
+  const [date, setDate] = useState(todayISO());
+  const [owner, setOwner] = useState(currentUser);
+  const [error, setError] = useState('');
+
+  const openAdd = () => {
+    setTitle(''); setCategory('other'); setKind('daily'); setDate(todayISO()); setOwner(currentUser); setError('');
+    setShowForm(true);
+  };
+  const openEdit = (t: Todo) => {
+    setTitle(t.title); setCategory(t.category); setKind(t.kind); setDate(t.date ?? todayISO()); setOwner(t.owner); setError('');
+    setEditing(t);
+  };
+  const closeForm = () => { setShowForm(false); setEditing(null); };
+
+  const handleSubmit = () => {
+    if (!title.trim()) { setError('Enter a task title.'); return; }
+    const data = { owner, title: title.trim(), category, kind, date: kind === 'once' ? date : undefined };
+    if (editing) updateTodo(editing.id, data);
+    else addTodo(data);
+    closeForm();
+  };
+
+  const filteredTodos = filter === 'all' ? state.todos : state.todos.filter(t => t.owner === filter);
+  const dailyTodos = filteredTodos.filter(t => t.kind === 'daily');
+  const today = todayISO();
+  const onceTodos = filteredTodos.filter(t => t.kind === 'once').sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'));
+  const oncePending = onceTodos.filter(t => !t.completed && (t.date ?? today) >= today);
+  const onceOverdue = onceTodos.filter(t => !t.completed && (t.date ?? today) < today);
+  const onceDone = onceTodos.filter(t => t.completed);
+  const confirmingTodo = state.todos.find(t => t.id === confirmDeleteId);
+
+  function renderTodoRow(t: Todo, overdue = false) {
+    const meta = categoryMeta(t.category);
+    return (
+      <div key={t.id} className="card" style={{ padding: '12px 14px', opacity: t.completed ? 0.6 : 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={() => toggleTodoDone(t.id)} title={t.completed ? 'Mark as not done' : 'Mark as done'} style={{ width: 26, height: 26, borderRadius: 99, flexShrink: 0, border: t.completed ? 'none' : '1.5px solid var(--border)', background: t.completed ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'var(--bg)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {t.completed && <Icon emoji="✓" size={13} />}
+          </button>
+          <div style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon emoji={meta.emoji} size={14} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: t.completed ? 'line-through' : 'none' }}>{t.title}</p>
+            <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 2 }}>
+              {meta.label}{filter === 'all' && ` · ${t.owner}`}{t.kind === 'once' && t.date && ` · ${formatShortDate(t.date)}${overdue ? ' — overdue' : ''}`}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <button onClick={() => openEdit(t)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+            <button onClick={() => setConfirmDeleteId(t.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ paddingBottom: 32 }}>
+      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>To Do List <Icon emoji="✅" size={20} /></p>
+        <button onClick={openAdd} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add task</button>
+      </div>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Recurring daily habits and one-off tasks, shared between you two. No notifications — just check back here.</p>
+
+      {/* Filter — whose task */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {f === 'all' ? 'All' : f}
+            <FilterCountBadge count={f === 'all' ? state.todos.length : state.todos.filter(t => t.owner === f).length} />
+          </button>
+        ))}
+      </div>
+
+      {filteredTodos.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '50px 20px' }}>
+          <div style={{ marginBottom: 12 }}><Icon emoji="✅" size={44} /></div>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>{state.todos.length === 0 ? 'No tasks yet' : 'No tasks found'}</p>
+          <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Tap "+ Add task" for a daily habit or a one-off to-do.</p>
+        </div>
+      ) : (
+        <>
+          {dailyTodos.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Daily · {dailyTodos.filter(t => !t.completed).length} left today</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {dailyTodos.map(t => renderTodoRow(t))}
+              </div>
+            </div>
+          )}
+          {onceOverdue.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Overdue · {onceOverdue.length}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {onceOverdue.map(t => renderTodoRow(t, true))}
+              </div>
+            </div>
+          )}
+          {oncePending.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Upcoming · {oncePending.length}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {oncePending.map(t => renderTodoRow(t))}
+              </div>
+            </div>
+          )}
+          {onceDone.length > 0 && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Done · {onceDone.length}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {onceDone.map(t => renderTodoRow(t))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {(showForm || editing) && (
+        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeForm}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="✅" size={18} /> {editing ? 'Edit task' : 'Add a new task'}</p>
+              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <input className="input-field" placeholder="Task title" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Category</p>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {TODO_CATEGORIES.map(c => (
+                    <button key={c.key} onClick={() => setCategory(c.key)} style={{ padding: '7px 11px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: category === c.key ? 'var(--sakura-light)' : 'var(--bg)', border: category === c.key ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: category === c.key ? 'var(--sakura-deep)' : 'var(--ink-2)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <Icon emoji={c.emoji} size={12} /> {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Repeats</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setKind('daily')} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: kind === 'daily' ? 'var(--sakura-light)' : 'var(--bg)', border: kind === 'daily' ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: kind === 'daily' ? 'var(--sakura-deep)' : 'var(--ink-2)' }}>Every day</button>
+                  <button onClick={() => setKind('once')} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: kind === 'once' ? 'var(--sakura-light)' : 'var(--bg)', border: kind === 'once' ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: kind === 'once' ? 'var(--sakura-deep)' : 'var(--ink-2)' }}>Just one day</button>
+                </div>
+              </div>
+              {kind === 'once' && (
+                <div>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Date</p>
+                  <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+                </div>
+              )}
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>For</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[currentUser, ...(partnerName ? [partnerName] : []), 'Both'].map(u => (
+                    <button key={u} onClick={() => setOwner(u)} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: owner === u ? 'var(--sakura-light)' : 'var(--bg)', border: owner === u ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: owner === u ? 'var(--sakura-deep)' : 'var(--ink-2)' }}>{u === 'Both' ? 'Both' : u}</button>
+                  ))}
+                </div>
+              </div>
+              {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Add task'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmingTodo && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteId(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Delete this task?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>{confirmingTodo.title}</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { deleteTodo(confirmingTodo.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>

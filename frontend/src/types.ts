@@ -218,6 +218,20 @@ export interface StoryQuote {
   text: string;
 }
 
+export interface Todo {
+  id: string;
+  owner: User; // a partner's display name, or 'Both'
+  title: string;
+  category: string;
+  kind: 'daily' | 'once';
+  date?: string; // only set (and meaningful) for kind === 'once'
+  // For 'once': the row's own persisted state. For 'daily': whether TODAY
+  // specifically has been checked off (derived client-side against
+  // todo_daily_completions) — the task itself has no standing "done" state.
+  completed: boolean;
+  createdBy: User;
+}
+
 export interface Debt {
   id: string;
   debtorName: string;
@@ -378,6 +392,7 @@ export interface AppState {
   cycleLogs: CycleLog[];
   storyQuotes: StoryQuote[];
   debts: Debt[];
+  todos: Todo[];
   notifications: AppNotification[];
   chatMessages: ChatMessage[];
   unreadChatCount: number;

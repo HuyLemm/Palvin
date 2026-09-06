@@ -153,7 +153,11 @@ export default function Home() {
     .sort((a, b) => a.displayDate.localeCompare(b.displayDate))
     .slice(0, 3);
 
-  const recentMemories = state.memories.slice(0, 5);
+  // "Recent Moments" — the same photos Photo Collage draws from (each
+  // post's own cover image), not state.memories; state.posts already
+  // arrives newest-first (see Feed.tsx), so this is just the first few
+  // that actually have a photo.
+  const recentMoments = state.posts.filter(p => p.images.length > 0).slice(0, 5);
 
   const rollPick = (cat: FavCategory) => {
     const list = state.favPlaces[cat] ?? [];
@@ -509,20 +513,21 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Recent Memories */}
+      {/* Recent Moments — cover photos from recent posts, same source Photo
+          Collage (Us tab) draws from. */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Recent Memories</p>
-          <button onClick={() => navigate('memories')} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>View all</button>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Recent Moments</p>
+          <button onClick={() => navigate('feed')} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>View all</button>
         </div>
         <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4 }}>
-          {recentMemories.map(m => (
-            <div key={m.id} onClick={() => navigate('memory-detail', m.id)} style={{ flexShrink: 0, width: 140, cursor: 'pointer' }}>
+          {recentMoments.map(p => (
+            <div key={p.id} onClick={() => navigate('post-detail', p.id)} style={{ flexShrink: 0, width: 140, cursor: 'pointer' }}>
               <div style={{ width: 140, height: 160, borderRadius: 16, overflow: 'hidden', marginBottom: 8, background: 'var(--sakura-light)' }}>
-                <FadeImage src={m.image} alt={m.title} style={{ width: '100%', height: '100%' }} />
+                <FadeImage src={p.images[0]} alt={p.caption} style={{ width: '100%', height: '100%' }} />
               </div>
-              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{m.title}</p>
-              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{m.date}</p>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{p.caption || p.author}</p>
+              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{p.date}</p>
             </div>
           ))}
         </div>

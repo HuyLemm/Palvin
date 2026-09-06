@@ -50,6 +50,7 @@ export const initialState: AppState = {
 
   // Loaded from Supabase (see context.tsx's refreshDebts) once the couple is linked.
   debts: [],
+  todos: [],
 
   // Loaded from Supabase (see context.tsx's refreshNotifications) once the couple is linked.
   notifications: [],

@@ -561,12 +561,23 @@ export default function App() {
                 <div className="heart-beat" style={{ marginBottom: 18, position: 'relative', zIndex: 1 }}>
                   <Icon emoji="🌸" size={44} style={{ color: 'var(--sakura-accent)' }} />
                 </div>
-                <div style={{ width: 130, height: 7, background: 'var(--sakura-light)', borderRadius: 99, overflow: 'hidden', position: 'relative', zIndex: 1 }}>
+                {/* A little bunny riding the fill's leading edge — sits in
+                    its own taller, non-clipped box above the bar itself
+                    (which stays overflow:hidden for its own rounded fill),
+                    so its hop can poke up without being cut off. */}
+                <div style={{ width: 130, height: 26, position: 'relative', zIndex: 1 }}>
                   <div style={{
-                    width: `${loadProgress}%`, height: '100%', borderRadius: 99,
-                    background: 'linear-gradient(90deg, var(--sakura-accent), var(--sakura-deep))',
-                    transition: 'width 0.2s ease',
-                  }} />
+                    position: 'absolute', bottom: 5, left: `calc(${loadProgress}% - 11px)`,
+                    fontSize: 18, lineHeight: 1, transform: 'scaleX(-1)',
+                    transition: 'left 0.2s ease', animation: 'miffyHop 0.5s ease-in-out infinite',
+                  }}>🐰</div>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 7, background: 'var(--sakura-light)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{
+                      width: `${loadProgress}%`, height: '100%', borderRadius: 99,
+                      background: 'linear-gradient(90deg, var(--sakura-accent), var(--sakura-deep))',
+                      transition: 'width 0.2s ease',
+                    }} />
+                  </div>
                 </div>
                 <p style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', letterSpacing: '0.02em', position: 'relative', zIndex: 1 }}>{Math.round(loadProgress)}%</p>
                 <p style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-2)', position: 'relative', zIndex: 1 }}>Loading...</p>
@@ -574,6 +585,10 @@ export default function App() {
                   @keyframes floatBob {
                     0%, 100% { transform: translate(-50%, -50%) translateY(0) scale(1); opacity: 0.5; }
                     50% { transform: translate(-50%, -50%) translateY(-16px) scale(1.1); opacity: 0.85; }
+                  }
+                  @keyframes miffyHop {
+                    0%, 100% { transform: scaleX(-1) translateY(0); }
+                    50% { transform: scaleX(-1) translateY(-6px); }
                   }
                 `}</style>
               </div>

@@ -5,7 +5,7 @@ if (import.meta.hot) {
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { initialState } from './data';
-import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage, CustomSticker } from './types';
+import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Todo, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage, CustomSticker } from './types';
 import { fetchChatMessages, sendChatMessageRow, markChatReadFrom, fetchUnreadChatCount, uploadChatFile } from './chat';
 import { fetchCustomStickers, createCustomSticker, deleteCustomStickerRow, uploadCustomStickerImage } from './customStickers';
 import type { NewChatMessage } from './chat';
@@ -38,6 +38,9 @@ import {
 import {
   fetchDebts, createDebt, updateDebtRow, setDebtPaidRow, deleteDebtRow,
 } from './debts';
+import {
+  fetchTodos, createTodo, updateTodoRow, setTodoCompletedRow, deleteTodoRow,
+} from './todos';
 import {
   fetchExpenses, createExpense, updateExpenseRow, deleteExpenseRow,
   fetchBills, createBill, updateBillRow, setBillPaid, deleteBillRow, rollBillsForward,
@@ -193,6 +196,12 @@ interface AppContextType {
   updateDebt: (id: string, d: Omit<Debt, 'id' | 'paid' | 'paidDate'>) => void;
   toggleDebtPaid: (id: string) => void;
   deleteDebt: (id: string) => void;
+
+  // To Do
+  addTodo: (t: Omit<Todo, 'id' | 'completed' | 'createdBy'>) => void;
+  updateTodo: (id: string, t: Omit<Todo, 'id' | 'completed' | 'createdBy'>) => void;
+  toggleTodoDone: (id: string) => void;
+  deleteTodo: (id: string) => void;
 
   // Goals
   addGoal: (g: Omit<Goal, 'id' | 'completed' | 'current'>) => void;
@@ -411,6 +420,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // the live channel without needing its own subscription.
   const chatChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const partnerTypingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set by the streak realtime effect further down; markActive uses it to
+  // broadcast "I just marked active today" to the partner's own session.
+  const streakChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const navigate = useCallback((s: string, id?: string) => {
     setStack(prev => [...prev, { screen: s, id }]);
@@ -431,7 +443,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // controls the flame's color — stays accurate too.
   const markActive = useCallback(() => {
     markActiveToday().then(() => {
-      fetchStreak().then(({ count, litToday }) => setState(s => ({ ...s, streak: count, streakLitToday: litToday })));
+      fetchStreak().then(({ count, litToday }) => {
+        setState(s => ({ ...s, streak: count, streakLitToday: litToday }));
+        // Nothing else raises a notification for this, so without telling
+        // the partner's own already-open session directly, they'd never
+        // see the flame light up (or the count bump) until something
+        // unrelated triggered a refetch, or they reloaded.
+        streakChannelRef.current?.send({ type: 'broadcast', event: 'streak-updated', payload: {} });
+      });
     });
   }, []);
 
@@ -741,6 +760,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, debts: s.debts.filter(x => x.id !== id) }));
     const { error } = await deleteDebtRow(id);
     if (error) refreshDebts();
+  };
+
+  // To Do — deliberately quiet: no toast, no notification, no realtime of
+  // its own. Just a shared checklist, refreshed like everything else that
+  // doesn't have its own subscription (mount, pull-to-refresh, and whatever
+  // else's notification happens to sweep it up).
+  const addTodo = async (t: Omit<Todo, 'id' | 'completed' | 'createdBy'>) => {
+    setState(s => ({ ...s, todos: [...s.todos, { ...t, id: `temp-${uid()}`, completed: false, createdBy: currentUser }] }));
+    const { error } = await createTodo(t);
+    if (error) { toast('Something went wrong', '⚠️'); }
+    await refreshTodos();
+  };
+
+  const updateTodo = async (id: string, t: Omit<Todo, 'id' | 'completed' | 'createdBy'>) => {
+    setState(s => ({ ...s, todos: s.todos.map(x => x.id === id ? { ...x, ...t } : x) }));
+    const { error } = await updateTodoRow(id, t);
+    if (error) { toast('Something went wrong', '⚠️'); refreshTodos(); }
+  };
+
+  const toggleTodoDone = async (id: string) => {
+    const todo = state.todos.find(x => x.id === id);
+    if (!todo) return;
+    const next = !todo.completed;
+    setState(s => ({ ...s, todos: s.todos.map(x => x.id === id ? { ...x, completed: next } : x) }));
+    const { error } = await setTodoCompletedRow(todo, next);
+    if (error) { toast('Something went wrong', '⚠️'); refreshTodos(); }
+  };
+
+  const deleteTodo = async (id: string) => {
+    setState(s => ({ ...s, todos: s.todos.filter(x => x.id !== id) }));
+    const { error } = await deleteTodoRow(id);
+    if (error) refreshTodos();
   };
 
   // Goals
@@ -1434,6 +1485,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isLinked && myProfile) refreshDebts();
   }, [isLinked, myProfile, refreshDebts]);
 
+  const refreshTodos = useCallback(async () => {
+    if (!myProfile) return;
+    const names: Record<string, User> = {};
+    names[myProfile.id] = myProfile.displayName;
+    if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
+    const todos = await fetchTodos(names, myProfile.displayName);
+    setState(s => ({ ...s, todos }));
+    markLoaded('todos');
+  }, [myProfile, partnerProfile, markLoaded]);
+
+  useEffect(() => {
+    if (isLinked && myProfile) refreshTodos();
+  }, [isLinked, myProfile, refreshTodos]);
+
   const refreshMoney = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
@@ -1689,7 +1754,7 @@ const refreshMoods = useCallback(async () => {
       refreshGoals(), refreshFavorites(), refreshPlaces(), refreshPlaylist(),
       refreshTrips(), refreshCapsules(), refreshWishes(), refreshDateIdeas(),
       refreshDateIdeaPresets(), refreshDateIdeaHistory(), refreshGratitude(),
-      refreshMoods(), refreshStreak(), refreshNotifications(),
+      refreshMoods(), refreshStreak(), refreshNotifications(), refreshTodos(),
     ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1744,7 +1809,7 @@ const refreshMoods = useCallback(async () => {
           refreshGoals(); refreshFavorites(); refreshPlaces(); refreshPlaylist();
           refreshTrips(); refreshCapsules(); refreshWishes(); refreshDateIdeas();
           refreshDateIdeaPresets(); refreshDateIdeaHistory(); refreshGratitude();
-          refreshMoods(); refreshStreak();
+          refreshMoods(); refreshStreak(); refreshTodos();
         }
       )
       .subscribe();
@@ -1770,6 +1835,30 @@ const refreshMoods = useCallback(async () => {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [isLinked, myProfile, refreshDateRequests]);
+
+  // Realtime: the streak (couples.streak_count/streak_last_active) only
+  // ever changes when the OTHER partner's own action marks them active
+  // today — nothing raises a notification row for it, so without this an
+  // already-open session never saw the flame light up (or the count bump)
+  // until something unrelated triggered a refetch, or the app was reloaded.
+  // An ephemeral broadcast (markActive sends 'streak-updated' after its own
+  // refetch succeeds) rather than a postgres_changes subscription on
+  // `couples` — that table isn't added to the supabase_realtime publication,
+  // and this project's remote migration history is currently out of sync
+  // with what's actually applied (a `supabase db push` here tried to re-run
+  // migration 0000, a full schema reset, before Postgres itself refused —
+  // needs a deliberate, separate migration-repair pass before touching
+  // publications is safe), so this avoids that catalog change entirely.
+  useEffect(() => {
+    if (!isLinked || !myProfile?.coupleId) return;
+    const coupleId = myProfile.coupleId;
+    const channel = supabase
+      .channel(`couple-streak-${coupleId}`)
+      .on('broadcast', { event: 'streak-updated' }, () => { refreshStreak(); })
+      .subscribe();
+    streakChannelRef.current = channel;
+    return () => { supabase.removeChannel(channel); streakChannelRef.current = null; };
+  }, [isLinked, myProfile, refreshStreak]);
 
   // Chat — one live DM thread per couple, Instagram-style. Realtime covers
   // both new messages (INSERT) and read receipts (UPDATE sets read_at).
@@ -2079,6 +2168,7 @@ const refreshMoods = useCallback(async () => {
       addCycleLog, updateCycleLog, deleteCycleLog,
       addStoryQuote, updateStoryQuote, deleteStoryQuote,
       addDebt, updateDebt, toggleDebtPaid, deleteDebt,
+      addTodo, updateTodo, toggleTodoDone, deleteTodo,
       addGoal, updateGoal, toggleGoal, deleteGoal, contributeToGoal,
       setMood,
       markNotifRead, markAllRead, deleteNotification, updateNotifyPrefs, updateDisplayName, changePassword,
