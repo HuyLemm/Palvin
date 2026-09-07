@@ -565,14 +565,14 @@ export default function App() {
                     its own taller, non-clipped box above the bar itself
                     (which stays overflow:hidden for its own rounded fill),
                     so its hop can poke up without being cut off. */}
-                <div style={{ width: 130, height: 26, position: 'relative', zIndex: 1 }}>
+                <div style={{ width: 130, height: 34, position: 'relative', zIndex: 1 }}>
                   {/* Firefly.png has a lot of transparent padding above/below the
                       character (feet sit at ~82.7% of the image's own height) —
                       bottom is offset up just enough that the feet, not the
                       image's bounding box, land on the bar's top edge. */}
                   <div style={{
-                    position: 'absolute', bottom: 1.5, left: `calc(${loadProgress}% - 17px)`,
-                    width: 34, height: 32,
+                    position: 'absolute', bottom: -0.6, left: `calc(${loadProgress}% - 23.5px)`,
+                    width: 47, height: 44,
                     transition: 'left 0.2s ease', animation: 'miffyHop 0.5s ease-in-out infinite',
                   }}>
                     <img src="/Firefly.png" alt="" style={{ width: '100%', height: '100%', display: 'block' }} />
