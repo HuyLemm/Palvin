@@ -566,11 +566,17 @@ export default function App() {
                     (which stays overflow:hidden for its own rounded fill),
                     so its hop can poke up without being cut off. */}
                 <div style={{ width: 130, height: 26, position: 'relative', zIndex: 1 }}>
+                  {/* Firefly.png has a lot of transparent padding above/below the
+                      character (feet sit at ~82.7% of the image's own height) —
+                      bottom is offset up just enough that the feet, not the
+                      image's bounding box, land on the bar's top edge. */}
                   <div style={{
-                    position: 'absolute', bottom: 5, left: `calc(${loadProgress}% - 11px)`,
-                    fontSize: 18, lineHeight: 1, transform: 'scaleX(-1)',
+                    position: 'absolute', bottom: 1.5, left: `calc(${loadProgress}% - 17px)`,
+                    width: 34, height: 32,
                     transition: 'left 0.2s ease', animation: 'miffyHop 0.5s ease-in-out infinite',
-                  }}>🐰</div>
+                  }}>
+                    <img src="/Firefly.png" alt="" style={{ width: '100%', height: '100%', display: 'block' }} />
+                  </div>
                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 7, background: 'var(--sakura-light)', borderRadius: 99, overflow: 'hidden' }}>
                     <div style={{
                       width: `${loadProgress}%`, height: '100%', borderRadius: 99,
@@ -587,8 +593,8 @@ export default function App() {
                     50% { transform: translate(-50%, -50%) translateY(-16px) scale(1.1); opacity: 0.85; }
                   }
                   @keyframes miffyHop {
-                    0%, 100% { transform: scaleX(-1) translateY(0); }
-                    50% { transform: scaleX(-1) translateY(-6px); }
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-6px); }
                   }
                 `}</style>
               </div>
