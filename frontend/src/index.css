@@ -198,6 +198,28 @@ html, body {
   from { transform: translateY(40px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+/* For the comment bar pinned above the keyboard (top: var(--kb-vh);
+   transform: translateY(-100%) at rest) — animating `transform` with plain
+   slideUp would blow away that -100% positioning for the animation's
+   duration and then snap back to it the instant the animation ended.
+   Composing both translateY()s into the keyframe itself, plus
+   fill-mode: forwards holding the "to" state, keeps it pinned throughout. */
+@keyframes commentBarIn {
+  from { transform: translateY(-100%) translateY(24px); opacity: 0; }
+  to   { transform: translateY(-100%) translateY(0); opacity: 1; }
+}
+@keyframes commentBarOut {
+  from { transform: translateY(-100%) translateY(0); opacity: 1; }
+  to   { transform: translateY(-100%) translateY(24px); opacity: 0; }
+}
+/* A little bounce on a checkbox's checkmark right when it's ticked off
+   (To Do list) — 0 -> overshoot -> settle, instead of just popping into
+   existence at full size. */
+@keyframes checkPop {
+  0% { transform: scale(0); }
+  60% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
 @keyframes screenTransitionIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }

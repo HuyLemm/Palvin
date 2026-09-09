@@ -9,14 +9,15 @@ import EditBillForm from '../components/forms/EditBillForm';
 import AmountInput from '../components/AmountInput';
 import Icon from '../components/Icon';
 import FilterCountBadge from '../components/FilterCountBadge';
-import type { Bill, Expense, SavingsGoal } from '../types';
+import type { Bill, Debt, Expense, SavingsGoal } from '../types';
 
-type Tab = 'expenses' | 'goals' | 'stats' | 'bills';
+type Tab = 'expenses' | 'goals' | 'stats' | 'bills' | 'debts';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'expenses', label: 'Expenses', icon: '💸' },
   { key: 'goals', label: 'Goals', icon: '💰' },
   { key: 'bills', label: 'Bills', icon: '🧾' },
+  { key: 'debts', label: 'Debts', icon: '📒' },
   { key: 'stats', label: 'Stats', icon: '📊' },
 ];
 
@@ -79,13 +80,14 @@ export default function Money() {
     if (screen === 'stats') setTab('stats');
     else if (screen === 'bills') setTab('bills');
     else if (screen === 'goals') setTab('goals');
+    else if (screen === 'debts') setTab('debts');
   }, [screen]);
 
   return (
     <div style={{ paddingBottom: 32 }}>
       {/* Tab bar */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 3,
+        display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 3,
         background: 'var(--bg)', borderRadius: 16, padding: 4, marginBottom: 20,
         border: '1px solid var(--border)',
       }}>
@@ -109,6 +111,7 @@ export default function Money() {
         {tab === 'goals' && <GoalsTab goals={state.savingsGoals} addToGoal={addToGoal} withdrawFromGoal={withdrawFromGoal} />}
         {tab === 'stats' && <StatsTab expenses={state.expenses} />}
         {tab === 'bills' && <BillsTab bills={state.bills} onAdd={addBill} onTogglePaid={toggleBillPaid} />}
+        {tab === 'debts' && <DebtsTab />}
       </div>
 
       {showAddExpense && <AddExpenseForm onClose={() => setShowAddExpense(false)} />}
@@ -929,6 +932,258 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
           }}>Add bill</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Debt tracker ("Sổ nợ") — money owed between you and someone outside the couple ── */
+
+function debtTodayISO(): string {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function formatShortDate(d: string): string {
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'numeric', year: 'numeric' });
+}
+
+function DebtsTab() {
+  const { state, currentUser, partnerProfile, addDebt, updateDebt, toggleDebtPaid, payDebt, resetDebtPayments, deleteDebt } = useApp();
+  const partnerName = partnerProfile?.displayName;
+  // Which half of the tracker you're looking at — money owed to you, or
+  // money you owe someone else. Two fully separate lists/totals sharing
+  // the same underlying `debts` table (see the `direction` column).
+  const [viewDirection, setViewDirection] = useState<'they_owe' | 'i_owe'>('they_owe');
+  const [filter, setFilter] = useState('all');
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<Debt | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [payingDebt, setPayingDebt] = useState<Debt | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentError, setPaymentError] = useState('');
+
+  const [direction, setDirection] = useState<'they_owe' | 'i_owe'>('they_owe');
+  const [debtorName, setDebtorName] = useState('');
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [date, setDate] = useState(debtTodayISO());
+  const [dueDate, setDueDate] = useState('');
+  const [createdByChoice, setCreatedByChoice] = useState(currentUser);
+  const [error, setError] = useState('');
+
+  const openAdd = () => {
+    setDirection(viewDirection);
+    setDebtorName(''); setAmount(''); setNote(''); setDate(debtTodayISO()); setDueDate(''); setCreatedByChoice(currentUser); setError('');
+    setShowForm(true);
+  };
+  const openEdit = (d: Debt) => {
+    setDirection(d.direction);
+    setDebtorName(d.debtorName); setAmount(String(Math.round(d.amount))); setNote(d.note ?? ''); setDate(d.date); setDueDate(d.dueDate ?? ''); setCreatedByChoice(d.createdBy); setError('');
+    setEditing(d);
+  };
+  const closeForm = () => { setShowForm(false); setEditing(null); };
+
+  const handleSubmit = () => {
+    if (!debtorName.trim()) { setError(direction === 'they_owe' ? "Enter the debtor's name." : 'Enter who you owe.'); return; }
+    if (!amount || isNaN(+amount) || +amount <= 0) { setError('Enter a valid amount.'); return; }
+    const data = { direction, debtorName: debtorName.trim(), amount: +amount, note: note.trim() || undefined, date, dueDate: dueDate || undefined, createdBy: createdByChoice };
+    if (editing) updateDebt(editing.id, data);
+    else addDebt(data);
+    closeForm();
+  };
+
+  const openPay = (d: Debt) => {
+    setPaymentAmount(String(Math.round(d.amount - d.paidAmount)));
+    setPaymentError('');
+    setPayingDebt(d);
+  };
+  const handlePay = () => {
+    if (!payingDebt) return;
+    const n = +paymentAmount;
+    if (!paymentAmount || isNaN(n) || n <= 0) { setPaymentError('Enter a valid amount.'); return; }
+    payDebt(payingDebt.id, n);
+    setPayingDebt(null);
+  };
+
+  const inView = state.debts.filter(d => d.direction === viewDirection);
+  const filteredDebts = filter === 'all' ? inView : inView.filter(d => d.createdBy === filter);
+  const unpaid = filteredDebts.filter(d => !d.paid)
+    .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'));
+  const paid = filteredDebts.filter(d => d.paid);
+  const totalOwed = unpaid.reduce((s, d) => s + (d.amount - d.paidAmount), 0);
+  const confirmingDebt = state.debts.find(d => d.id === confirmDeleteId);
+  const today = debtTodayISO();
+
+  function renderDebtCard(d: Debt) {
+    const overdue = !d.paid && d.dueDate && d.dueDate < today;
+    const remaining = d.amount - d.paidAmount;
+    return (
+      <div key={d.id} className="card" style={{ padding: '14px 16px', opacity: d.paid ? 0.6 : 1 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: 12, background: d.paid ? 'var(--bg)' : overdue ? '#FEE2E2' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Icon emoji={d.paid ? '✅' : overdue ? '⏰' : d.direction === 'they_owe' ? '📒' : '📤'} size={18} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: d.paid ? 'line-through' : 'none' }}>{d.debtorName}</p>
+            {d.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{d.note}</p>}
+            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>{d.direction === 'they_owe' ? 'Lent on' : 'Borrowed on'}: {formatShortDate(d.date)}{filter === 'all' && ` · ${d.createdBy === 'Both' ? 'Both' : d.createdBy}`}</p>
+            {d.dueDate && !d.paid && (
+              <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+                {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
+              </p>
+            )}
+            {d.direction === 'i_owe' && d.paidAmount > 0 && !d.paid && (
+              <p style={{ fontSize: 11, color: 'var(--lavender)', fontWeight: 600, marginTop: 1 }}>Paid {VND(d.paidAmount)} of {VND(d.amount)} so far</p>
+            )}
+            {d.paid && d.paidDate && <p style={{ fontSize: 11, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)' }}>{VND(d.direction === 'i_owe' && !d.paid ? remaining : d.amount)}</p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => openEdit(d)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+              <button onClick={() => setConfirmDeleteId(d.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            </div>
+          </div>
+        </div>
+        {d.direction === 'i_owe' ? (
+          d.paid ? (
+            <button onClick={() => resetDebtPayments(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Undo — mark as unpaid</button>
+          ) : (
+            <button onClick={() => openPay(d)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, var(--lavender), #6B52B8)', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Log a payment <Icon emoji="💸" size={12} /></button>
+          )
+        ) : (
+          <button onClick={() => toggleDebtPaid(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: d.paid ? '1.5px solid var(--border)' : 'none', background: d.paid ? 'var(--bg)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: d.paid ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            {d.paid ? 'Mark as unpaid' : <>Mark as paid <Icon emoji="🎉" size={12} /></>}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* They owe you / You owe them */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12, background: 'var(--bg)', borderRadius: 12, padding: 4 }}>
+        {([['they_owe', 'They owe you'], ['i_owe', 'You owe']] as const).map(([key, label]) => (
+          <button key={key} onClick={() => { setViewDirection(key); setFilter('all'); }} style={{ flex: 1, padding: '9px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, background: viewDirection === key ? 'var(--card)' : 'none', color: viewDirection === key ? 'var(--sakura-deep)' : 'var(--ink-2)', boxShadow: viewDirection === key ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ background: viewDirection === 'they_owe' ? 'linear-gradient(135deg, var(--sakura-deep), #a8436a)' : 'linear-gradient(135deg, var(--lavender), #6B52B8)', borderRadius: 20, padding: '20px', marginBottom: 16, color: 'white' }}>
+        <p style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>{viewDirection === 'they_owe' ? 'Total owed to you' : 'Total you owe'}</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 31 }}>{VND(totalOwed)}</p>
+        <p style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{unpaid.length} unpaid debt(s)</p>
+      </div>
+
+      <button onClick={openAdd} style={{
+        width: '100%', padding: '11px', marginBottom: 16, borderRadius: 14, border: 'none', cursor: 'pointer',
+        background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
+        color: 'white', fontWeight: 700, fontSize: 14,
+      }}>+ Log debt</button>
+
+      {/* Filter — who logged this debt */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {f === 'all' ? 'All' : f}
+            <FilterCountBadge count={f === 'all' ? inView.length : inView.filter(d => d.createdBy === f).length} />
+          </button>
+        ))}
+      </div>
+
+      {filteredDebts.length === 0 ? (
+        <EmptyState icon="📒" title={inView.length === 0 ? 'No debts logged yet' : 'No debts found'}
+          sub={viewDirection === 'they_owe' ? 'Tap "+ Log debt" whenever you lend someone money.' : 'Tap "+ Log debt" whenever you borrow money from someone.'} />
+      ) : (
+        <>
+          {unpaid.length > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Unpaid · {unpaid.length}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {unpaid.map(renderDebtCard)}
+              </div>
+            </div>
+          )}
+          {paid.length > 0 && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Paid · {paid.length}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {paid.map(renderDebtCard)}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {(showForm || editing) && (
+        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeForm}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="📒" size={18} /> {editing ? 'Edit debt' : 'Log a new debt'}</p>
+              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {([['they_owe', 'They owe you'], ['i_owe', 'You owe them']] as const).map(([key, label]) => (
+                  <button key={key} onClick={() => setDirection(key)} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: direction === key ? 'var(--sakura-light)' : 'var(--bg)', border: direction === key ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: direction === key ? 'var(--sakura-deep)' : 'var(--ink-2)' }}>{label}</button>
+                ))}
+              </div>
+              <input className="input-field" placeholder={direction === 'they_owe' ? "Debtor's name" : 'Who do you owe?'} value={debtorName} onChange={e => setDebtorName(e.target.value)} autoFocus />
+              <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
+              <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Logged by</p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[currentUser, ...(partnerName ? [partnerName] : []), 'Both'].map(u => (
+                    <button key={u} onClick={() => setCreatedByChoice(u)} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: createdByChoice === u ? 'var(--sakura-light)' : 'var(--bg)', border: createdByChoice === u ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: createdByChoice === u ? 'var(--sakura-deep)' : 'var(--ink-2)' }}>{u === 'Both' ? 'Both' : u}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>{direction === 'they_owe' ? 'Date lent' : 'Date borrowed'}</p>
+                <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+              </div>
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Due date (optional)</p>
+                <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+              </div>
+              {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Log debt'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {payingDebt && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setPayingDebt(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 320, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="💸" size={17} /> Log a payment</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>To {payingDebt.debtorName} — {VND(payingDebt.amount - payingDebt.paidAmount)} remaining</p>
+            <AmountInput placeholder="Amount paid (VND)" value={paymentAmount} onChange={setPaymentAmount} />
+            {paymentError && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, marginTop: 8 }}>{paymentError}</p>}
+            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 8 }}>This will also be logged as an expense in Thu chi.</p>
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={() => setPayingDebt(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handlePay} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, var(--lavender), #6B52B8)', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Log payment</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmingDebt && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteId(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Delete this debt?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>{confirmingDebt.debtorName} — {VND(confirmingDebt.amount)}</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { deleteDebt(confirmingDebt.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

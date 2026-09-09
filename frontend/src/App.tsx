@@ -194,8 +194,8 @@ function ScreenRouter() {
   // ScreenRouter trying to track/mount a 'chat' entry of its own (which
   // has no case in renderScreen and would fall through to a second, wasted
   // <Home/> instance, plus wrongly occupy one of the bounded detail slots).
-  // 'stats'/'bills'/'goals' are just alternate entry points into the Money
-  // screen (same component, different starting tab) — normalized to the same
+  // 'stats'/'bills'/'goals'/'debts' are just alternate entry points into the
+  // Money screen (same component, different starting tab) — normalized to the same
   // key as 'money' so they share one kept-alive instance instead of each
   // minting a second, independent <Money/> that always opens on the
   // Expenses tab regardless of which entry point was used. 'wishlist',
@@ -204,7 +204,7 @@ function ScreenRouter() {
   // sub-screens (see Us.tsx's own `sub` state, which reads the live
   // `screen`/`selectedId` to land on the right sub-screen and highlight the
   // specific wish a notification pointed at).
-  const normalizedScreen = (screen === 'stats' || screen === 'bills' || screen === 'goals') ? 'money'
+  const normalizedScreen = (screen === 'stats' || screen === 'bills' || screen === 'goals' || screen === 'debts') ? 'money'
     : (screen === 'wishlist' || screen === 'gratitude' || screen === 'places' || screen === 'capsule') ? 'us'
     : screen;
   const key = screen === 'chat' ? null : (selectedId ? `${normalizedScreen}:${selectedId}` : normalizedScreen);

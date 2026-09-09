@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef, Suspense, lazy } from 're
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { useApp } from '../context';
+import { usePortalPanel } from '../hooks/usePortalPanel';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
@@ -11,7 +12,7 @@ import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
 import { uploadPlaceImage } from '../places';
 import { uploadWishImage } from '../wishes';
-import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem, StoryQuote, Debt, Place, Todo } from '../types';
+import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem, StoryQuote, Place, Todo } from '../types';
 
 // These sub-screens are only ever visited from within Us's own internal
 // navigation (never all at once), so — same as App.tsx's top-level
@@ -30,16 +31,40 @@ const DateIdeaJar = lazy(() => import('./DateIdeaJar'));
 const GratitudeJournal = lazy(() => import('./GratitudeJournal'));
 const DatePermit = lazy(() => import('./DatePermit'));
 
+// Shimmer block — same shimmering gradient FadeImage uses for a loading
+// photo, reused here as a generic skeleton piece.
+function SkeletonBlock({ width, height, radius = 8 }: { width: string | number; height: number; radius?: number }) {
+  return (
+    <div style={{
+      width, height, borderRadius: radius,
+      background: 'linear-gradient(90deg, var(--bg) 25%, var(--border) 40%, var(--bg) 55%)',
+      backgroundSize: '200% 100%', animation: 'shimmer 1.4s ease-in-out infinite',
+    }} />
+  );
+}
+
+// Every Us sub-screen shares roughly this shape (a back link, a header, a
+// handful of cards) — a generic skeleton in that shape reads as "this
+// screen is arriving" far better than a bare spinner, without needing to
+// know which specific sub-screen is actually loading behind it.
 function SubScreenLoadingFallback() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-      <div style={{ width: 30, height: 30, borderRadius: '50%', border: '3px solid var(--border)', borderTopColor: 'var(--sakura-accent)', animation: 'palvin-us-sub-spin 0.7s linear infinite' }} />
-      <style>{`@keyframes palvin-us-sub-spin { to { transform: rotate(360deg); } }`}</style>
+    <div style={{ paddingBottom: 32 }}>
+      <SkeletonBlock width={70} height={16} radius={6} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '16px 0 20px' }}>
+        <SkeletonBlock width={160} height={25} radius={6} />
+        <SkeletonBlock width={90} height={34} radius={10} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {[0, 1, 2, 3].map(i => (
+          <SkeletonBlock key={i} width="100%" height={72} radius={16} />
+        ))}
+      </div>
     </div>
   );
 }
 
-type SubScreen = 'main' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'debts' | 'places' | 'todos';
+type SubScreen = 'main' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'places' | 'todos';
 
 // Remembers which sub-screen was showing when the user drilled into a
 // separate top-level screen (e.g. a memory's detail page) from within Us —
@@ -169,7 +194,6 @@ export default function Us() {
   else if (sub === 'playlist') content = <PlaylistScreen onBack={() => setSub('main')} />;
   else if (sub === 'collage')  content = <PhotoCollage onBack={() => setSub('main')} />;
   else if (sub === 'quotes')   content = <StoryQuotesScreen onBack={() => setSub('main')} />;
-  else if (sub === 'debts')    content = <DebtScreen onBack={() => setSub('main')} />;
   else if (sub === 'places')   content = <OurPlacesScreen onBack={() => setSub('main')} />;
   else if (sub === 'todos')    content = <TodoScreen onBack={() => setSub('main')} />;
   else {
@@ -251,11 +275,6 @@ export default function Us() {
               sub: `${state.wishes.filter(w => !w.drawn).length} item(s) waiting to be bought` },
             { label: 'Our Favourites', emoji: '💕', key: 'favorites' as SubScreen,
               sub: `${Object.values(state.favPlaces).flat().length} favourite spots` },
-            { label: 'Debt Tracker', emoji: '📒', key: 'debts' as SubScreen,
-              sub: (() => {
-                const unpaid = state.debts.filter(d => !d.paid);
-                return unpaid.length > 0 ? `${unpaid.length} people owe you` : 'No one owes you yet';
-              })() },
             { label: 'To Do List', emoji: '✅', key: 'todos' as SubScreen,
               sub: (() => {
                 const left = state.todos.filter(t => !t.completed).length;
@@ -1306,9 +1325,13 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
   releaseDate?: string;
   onPick: (r: SongResult) => void;
 }) {
+  const { screen } = useApp();
   const [results, setResults] = useState<SongResult[]>([]);
   const [searching, setSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
+  // Portaled straight to document.body (below) — usePortalPanel force-
+  // closes it if the Us tab stops being the active screen while this
+  // modal's still open, the same leak the comment bar had.
+  const { open: showResults, show: showDropdown, hide: hideDropdown } = usePortalPanel(screen);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -1322,7 +1345,7 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
       const r = el.getBoundingClientRect();
       setDropdownRect({ top: r.bottom + 4, left: r.left, width: r.width });
     }
-    setShowResults(true);
+    showDropdown();
     setSearching(true);
     setHasSearched(false);
     setSearchError(false);
@@ -1344,7 +1367,7 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
             className="input-field"
             placeholder="Song title"
             value={title}
-            onChange={e => { onTitleChange(e.target.value); setShowResults(false); setHasSearched(false); setSearchError(false); }}
+            onChange={e => { onTitleChange(e.target.value); hideDropdown(); setHasSearched(false); setSearchError(false); }}
             onKeyDown={e => e.key === 'Enter' && runSearch()}
             style={{ flex: 1 }}
           />
@@ -1363,7 +1386,7 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
             {!searching && hasSearched && searchError && <p style={{ fontSize: 12, color: '#E8524A', padding: '10px 12px' }}>Couldn't connect to the song search service — check your network/wifi and try again.</p>}
             {!searching && hasSearched && !searchError && results.length === 0 && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>No songs found, try a different title.</p>}
             {!searching && results.map((r, i) => (
-              <button key={i} onClick={() => { onPick(r); setShowResults(false); setResults([]); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 12px', background: 'none', border: 'none', borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', textAlign: 'left' }}>
+              <button key={i} onClick={() => { onPick(r); hideDropdown(); setResults([]); }} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '8px 12px', background: 'none', border: 'none', borderBottom: i < results.length - 1 ? '1px solid var(--border)' : 'none', cursor: 'pointer', textAlign: 'left' }}>
                 {r.image
                   ? <FadeImage src={r.image} alt="" style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0 }} />
                   : <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🎵" size={16} /></div>}
@@ -1724,12 +1747,6 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
-/* ─── Debt tracker ("Sổ nợ") — who owes you money outside the couple ── */
-
-function VND(n: number): string {
-  return `${Math.round(n).toLocaleString('en-US')} VND`;
-}
-
 function todayISO(): string {
   const d = new Date();
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -1737,185 +1754,6 @@ function todayISO(): string {
 
 function formatShortDate(d: string): string {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'numeric', year: 'numeric' });
-}
-
-function DebtScreen({ onBack }: { onBack: () => void }) {
-  const { state, currentUser, partnerProfile, addDebt, updateDebt, toggleDebtPaid, deleteDebt } = useApp();
-  const partnerName = partnerProfile?.displayName;
-  const [filter, setFilter] = useState('all');
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<Debt | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-
-  const [debtorName, setDebtorName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [note, setNote] = useState('');
-  const [date, setDate] = useState(todayISO());
-  const [dueDate, setDueDate] = useState('');
-  const [createdByChoice, setCreatedByChoice] = useState(currentUser);
-  const [error, setError] = useState('');
-
-  const openAdd = () => {
-    setDebtorName(''); setAmount(''); setNote(''); setDate(todayISO()); setDueDate(''); setCreatedByChoice(currentUser); setError('');
-    setShowForm(true);
-  };
-  const openEdit = (d: Debt) => {
-    setDebtorName(d.debtorName); setAmount(String(Math.round(d.amount))); setNote(d.note ?? ''); setDate(d.date); setDueDate(d.dueDate ?? ''); setCreatedByChoice(d.createdBy); setError('');
-    setEditing(d);
-  };
-  const closeForm = () => { setShowForm(false); setEditing(null); };
-
-  const handleSubmit = () => {
-    if (!debtorName.trim()) { setError("Enter the debtor's name."); return; }
-    if (!amount || isNaN(+amount) || +amount <= 0) { setError('Enter a valid amount.'); return; }
-    const data = { debtorName: debtorName.trim(), amount: +amount, note: note.trim() || undefined, date, dueDate: dueDate || undefined, createdBy: createdByChoice };
-    if (editing) updateDebt(editing.id, data);
-    else addDebt(data);
-    closeForm();
-  };
-
-  const filteredDebts = filter === 'all' ? state.debts : state.debts.filter(d => d.createdBy === filter);
-  const unpaid = filteredDebts.filter(d => !d.paid)
-    .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'));
-  const paid = filteredDebts.filter(d => d.paid);
-  const totalOwed = unpaid.reduce((s, d) => s + d.amount, 0);
-  const confirmingDebt = state.debts.find(d => d.id === confirmDeleteId);
-  const today = todayISO();
-
-  function renderDebtCard(d: Debt) {
-    const overdue = !d.paid && d.dueDate && d.dueDate < today;
-    return (
-      <div key={d.id} className="card" style={{ padding: '14px 16px', opacity: d.paid ? 0.6 : 1 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 12, background: d.paid ? 'var(--bg)' : overdue ? '#FEE2E2' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <Icon emoji={d.paid ? '✅' : overdue ? '⏰' : '📒'} size={18} />
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: d.paid ? 'line-through' : 'none' }}>{d.debtorName}</p>
-            {d.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{d.note}</p>}
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>Lent on: {formatShortDate(d.date)}{filter === 'all' && ` · ${d.createdBy === 'Both' ? 'Both' : d.createdBy}`}</p>
-            {d.dueDate && !d.paid && (
-              <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-                {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
-              </p>
-            )}
-            {d.paid && d.paidDate && <p style={{ fontSize: 11, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)' }}>{VND(d.amount)}</p>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button onClick={() => openEdit(d)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-              <button onClick={() => setConfirmDeleteId(d.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
-            </div>
-          </div>
-        </div>
-        <button onClick={() => toggleDebtPaid(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: d.paid ? '1.5px solid var(--border)' : 'none', background: d.paid ? 'var(--bg)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: d.paid ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-          {d.paid ? 'Mark as unpaid' : <>Mark as paid <Icon emoji="🎉" size={12} /></>}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ paddingBottom: 32 }}>
-      <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Debt Tracker <Icon emoji="📒" size={20} /></p>
-        <button onClick={openAdd} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Log debt</button>
-      </div>
-      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Keep track of who owes you, so you never forget to ask for it back.</p>
-
-      {/* Filter — who logged this debt */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            {f === 'all' ? 'All' : f}
-            <FilterCountBadge count={f === 'all' ? state.debts.length : state.debts.filter(d => d.createdBy === f).length} />
-          </button>
-        ))}
-      </div>
-
-      <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 20, color: 'white' }}>
-        <p style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>Total owed to you</p>
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 31 }}>{VND(totalOwed)}</p>
-        <p style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{unpaid.length} unpaid debt(s)</p>
-      </div>
-
-      {filteredDebts.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '50px 20px' }}>
-          <div style={{ marginBottom: 12 }}><Icon emoji="📒" size={44} /></div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>{state.debts.length === 0 ? 'No debts logged yet' : 'No debts found'}</p>
-          <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Tap "+ Log debt" whenever you lend someone money.</p>
-        </div>
-      ) : (
-        <>
-          {unpaid.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Unpaid · {unpaid.length}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {unpaid.map(renderDebtCard)}
-              </div>
-            </div>
-          )}
-          {paid.length > 0 && (
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Paid · {paid.length}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {paid.map(renderDebtCard)}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-
-      {(showForm || editing) && (
-        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeForm}>
-          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="📒" size={18} /> {editing ? 'Edit debt' : 'Log a new debt'}</p>
-              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <input className="input-field" placeholder="Debtor's name" value={debtorName} onChange={e => setDebtorName(e.target.value)} autoFocus />
-              <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
-              <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
-              <div>
-                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Logged by</p>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {[currentUser, ...(partnerName ? [partnerName] : []), 'Both'].map(u => (
-                    <button key={u} onClick={() => setCreatedByChoice(u)} style={{ flex: 1, padding: '8px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: createdByChoice === u ? 'var(--sakura-light)' : 'var(--bg)', border: createdByChoice === u ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: createdByChoice === u ? 'var(--sakura-deep)' : 'var(--ink-2)' }}>{u === 'Both' ? 'Both' : u}</button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Date lent</p>
-                <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
-              </div>
-              <div>
-                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Due date (optional)</p>
-                <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
-              </div>
-              {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Log debt'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {confirmingDebt && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteId(null)}>
-          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Delete this debt?</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>{confirmingDebt.debtorName} — {VND(confirmingDebt.amount)}</p>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={() => { deleteDebt(confirmingDebt.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }
 
 /* ─── To Do List ── */
@@ -1939,6 +1777,10 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Todo | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // Which row just got checked off, purely for a one-shot checkPop
+  // animation on its checkmark — cleared right after it plays so it
+  // doesn't replay on every re-render of an already-completed task.
+  const [justCompletedId, setJustCompletedId] = useState<string | null>(null);
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('other');
@@ -1946,6 +1788,14 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
   const [date, setDate] = useState(todayISO());
   const [owner, setOwner] = useState(currentUser);
   const [error, setError] = useState('');
+
+  const handleToggle = (t: Todo) => {
+    if (!t.completed) {
+      setJustCompletedId(t.id);
+      setTimeout(() => setJustCompletedId(cur => (cur === t.id ? null : cur)), 400);
+    }
+    toggleTodoDone(t.id);
+  };
 
   const openAdd = () => {
     setTitle(''); setCategory('other'); setKind('daily'); setDate(todayISO()); setOwner(currentUser); setError('');
@@ -1979,8 +1829,8 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
     return (
       <div key={t.id} className="card" style={{ padding: '12px 14px', opacity: t.completed ? 0.6 : 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={() => toggleTodoDone(t.id)} title={t.completed ? 'Mark as not done' : 'Mark as done'} style={{ width: 26, height: 26, borderRadius: 99, flexShrink: 0, border: t.completed ? 'none' : '1.5px solid var(--border)', background: t.completed ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'var(--bg)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {t.completed && <Icon emoji="✓" size={13} />}
+          <button onClick={() => handleToggle(t)} title={t.completed ? 'Mark as not done' : 'Mark as done'} style={{ width: 26, height: 26, borderRadius: 99, flexShrink: 0, border: t.completed ? 'none' : '1.5px solid var(--border)', background: t.completed ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'var(--bg)', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {t.completed && <Icon emoji="✓" size={13} style={justCompletedId === t.id ? { display: 'inline-flex', animation: 'checkPop 0.4s cubic-bezier(0.34,1.56,0.64,1)' } : undefined} />}
           </button>
           <div style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Icon emoji={meta.emoji} size={14} />

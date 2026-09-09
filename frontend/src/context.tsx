@@ -36,7 +36,7 @@ import {
   fetchStoryQuotes, createStoryQuote, updateStoryQuoteRow, deleteStoryQuoteRow,
 } from './storyQuotes';
 import {
-  fetchDebts, createDebt, updateDebtRow, setDebtPaidRow, deleteDebtRow,
+  fetchDebts, createDebt, updateDebtRow, setDebtPaidRow, payDebtRow, deleteDebtRow,
 } from './debts';
 import {
   fetchTodos, createTodo, updateTodoRow, setTodoCompletedRow, deleteTodoRow,
@@ -192,9 +192,11 @@ interface AppContextType {
   addStoryQuote: (text: string) => void;
   updateStoryQuote: (id: string, text: string) => void;
   deleteStoryQuote: (id: string) => void;
-  addDebt: (d: Omit<Debt, 'id' | 'paid' | 'paidDate'>) => void;
-  updateDebt: (id: string, d: Omit<Debt, 'id' | 'paid' | 'paidDate'>) => void;
+  addDebt: (d: Omit<Debt, 'id' | 'paid' | 'paidDate' | 'paidAmount'>) => void;
+  updateDebt: (id: string, d: Omit<Debt, 'id' | 'paid' | 'paidDate' | 'paidAmount'>) => void;
   toggleDebtPaid: (id: string) => void;
+  payDebt: (id: string, amount: number) => void;
+  resetDebtPayments: (id: string) => void;
   deleteDebt: (id: string) => void;
 
   // To Do
@@ -731,20 +733,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Debts ("Sổ nợ") — backed by Supabase
-  const addDebt = async (d: Omit<Debt, 'id' | 'paid' | 'paidDate'>) => {
+  const addDebt = async (d: Omit<Debt, 'id' | 'paid' | 'paidDate' | 'paidAmount'>) => {
     const { error } = await createDebt(resolveProfileId(d.createdBy), d);
     if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshDebts();
     toast('Debt recorded 📝');
   };
 
-  const updateDebt = async (id: string, d: Omit<Debt, 'id' | 'paid' | 'paidDate'>) => {
+  const updateDebt = async (id: string, d: Omit<Debt, 'id' | 'paid' | 'paidDate' | 'paidAmount'>) => {
     setState(s => ({ ...s, debts: s.debts.map(x => x.id === id ? { ...x, ...d } : x) }));
     const { error } = await updateDebtRow(id, resolveProfileId(d.createdBy), d);
     if (error) { toast('Something went wrong', '⚠️'); refreshDebts(); return; }
     toast('Debt updated ✏️');
   };
 
+  // Plain all-or-nothing toggle — used for 'they_owe' debts (see payDebt
+  // below for 'i_owe' debts, which track partial progress instead).
   const toggleDebtPaid = async (id: string) => {
     const debt = state.debts.find(x => x.id === id);
     if (!debt) return;
@@ -756,10 +760,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toast(nextPaid ? 'Marked as paid 🎉' : 'Marked as unpaid');
   };
 
+  // Logs an actual payment toward an 'i_owe' debt — can be partial, unlike
+  // toggleDebtPaid's binary flip — and mirrors it into Thu chi as a real
+  // expense, the same way a bill payment or goal contribution does.
+  const payDebt = async (id: string, amount: number) => {
+    const debt = state.debts.find(x => x.id === id);
+    if (!debt || amount <= 0) return;
+    const nextPaidAmount = Math.min(debt.paidAmount + amount, debt.amount);
+    const delta = nextPaidAmount - debt.paidAmount;
+    if (delta <= 0) return;
+    const nextPaid = nextPaidAmount >= debt.amount;
+    const paidDate = nextPaid ? new Date().toISOString().slice(0, 10) : undefined;
+    setState(s => ({ ...s, debts: s.debts.map(x => x.id === id ? { ...x, paidAmount: nextPaidAmount, paid: nextPaid, paidDate } : x) }));
+    const { error } = await payDebtRow(id, nextPaidAmount, nextPaid, paidDate ?? null);
+    if (error) { toast('Something went wrong', '⚠️'); refreshDebts(); return; }
+    const today = new Date().toISOString().slice(0, 10);
+    await createExpense(resolveProfileId(currentUser), {
+      title: `Paid back ${debt.debtorName}`, category: 'Debt', categoryEmoji: '📒',
+      amount: delta, date: today, note: `Payment toward what you owe ${debt.debtorName}`, type: 'expense', debtId: debt.id,
+    });
+    await refreshMoney();
+    toast(nextPaid ? 'Debt fully paid off! 🎉' : 'Payment logged 💸');
+  };
+
+  // Undoes all logged payments on an 'i_owe' debt (a mistake, or starting
+  // over) — mirrors the reversal into Thu chi as income, same as a bill's
+  // "mark unpaid" or a goal withdrawal.
+  const resetDebtPayments = async (id: string) => {
+    const debt = state.debts.find(x => x.id === id);
+    if (!debt || debt.paidAmount <= 0) return;
+    const reversedAmount = debt.paidAmount;
+    setState(s => ({ ...s, debts: s.debts.map(x => x.id === id ? { ...x, paidAmount: 0, paid: false, paidDate: undefined } : x) }));
+    const { error } = await payDebtRow(id, 0, false, null);
+    if (error) { toast('Something went wrong', '⚠️'); refreshDebts(); return; }
+    const today = new Date().toISOString().slice(0, 10);
+    await createExpense(resolveProfileId(currentUser), {
+      title: `Undid payment to ${debt.debtorName}`, category: 'Debt', categoryEmoji: '📒',
+      amount: reversedAmount, date: today, note: `Reversed payment progress on what you owe ${debt.debtorName}`, type: 'income', debtId: debt.id,
+    });
+    await refreshMoney();
+    toast('Payment progress reset');
+  };
+
   const deleteDebt = async (id: string) => {
     setState(s => ({ ...s, debts: s.debts.filter(x => x.id !== id) }));
     const { error } = await deleteDebtRow(id);
-    if (error) refreshDebts();
+    if (error) { toast('Something went wrong', '⚠️'); refreshDebts(); return; }
+    // A deleted debt's linked Thu chi transactions are removed by the DB's
+    // on-delete cascade — refresh so the local expenses list reflects that too.
+    await refreshMoney();
   };
 
   // To Do — deliberately quiet: no toast, no notification, no realtime of
@@ -784,6 +833,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!todo) return;
     const next = !todo.completed;
     setState(s => ({ ...s, todos: s.todos.map(x => x.id === id ? { ...x, completed: next } : x) }));
+    // A quiet, local toast (not a cross-partner notification — the feature
+    // stays notification-free) just for a little satisfaction on your own
+    // checkmark tap.
+    if (next) toast('Task done! 🎉');
     const { error } = await setTodoCompletedRow(todo, next);
     if (error) { toast('Something went wrong', '⚠️'); refreshTodos(); }
   };
@@ -2167,7 +2220,7 @@ const refreshMoods = useCallback(async () => {
       addEvent, updateEvent, deleteEvent,
       addCycleLog, updateCycleLog, deleteCycleLog,
       addStoryQuote, updateStoryQuote, deleteStoryQuote,
-      addDebt, updateDebt, toggleDebtPaid, deleteDebt,
+      addDebt, updateDebt, toggleDebtPaid, payDebt, resetDebtPayments, deleteDebt,
       addTodo, updateTodo, toggleTodoDone, deleteTodo,
       addGoal, updateGoal, toggleGoal, deleteGoal, contributeToGoal,
       setMood,

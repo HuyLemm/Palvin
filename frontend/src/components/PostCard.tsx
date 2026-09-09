@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context';
+import { usePortalPanel } from '../hooks/usePortalPanel';
 import Avatar from './Avatar';
 import Icon from './Icon';
 import FadeImage from './FadeImage';
@@ -28,8 +29,9 @@ function MoreIcon() {
 }
 
 export default function PostCard({ post, reactions }: { post: Post; reactions: Record<string, { count: number; reacted: boolean }> }) {
-  const { toggleLike, toggleSave, addComment, addReaction, navigate, currentUser, isAdmin, deletePost } = useApp();
-  const [commentingId, setCommentingId] = useState(false);
+  const { toggleLike, toggleSave, addComment, addReaction, navigate, currentUser, isAdmin, deletePost, screen } = useApp();
+  const { open: commentingId, closing: commentClosing, show: openComment, hide: closeComment } = usePortalPanel(screen);
+  const toggleComment = () => ((commentingId && !commentClosing) ? closeComment(200) : openComment());
   const [commentText, setCommentText] = useState('');
   const [likedAnim, setLikedAnim] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
@@ -51,7 +53,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
     if (!commentText.trim()) return;
     addComment(post.id, commentText);
     setCommentText('');
-    setCommentingId(false);
+    closeComment(200);
   };
 
   const handleReaction = (emoji: string) => {
@@ -126,7 +128,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
           </button>
 
           {/* Comment */}
-          <button onClick={() => setCommentingId(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: 'var(--ink-2)', padding: 0 }}>
+          <button onClick={toggleComment} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: 'var(--ink-2)', padding: 0 }}>
             <Icon emoji="💬" size={18} /> {post.comments.length}
           </button>
 
@@ -194,11 +196,13 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
             the focused input into view" to even stay visible. */}
         {commentingId && createPortal(
           <div style={{
-            position: 'fixed', left: 0, right: 0, top: 'var(--kb-vh, 100dvh)', transform: 'translateY(-100%)',
+            position: 'fixed', left: 0, right: 0, top: 'var(--kb-vh, 100dvh)',
             zIndex: 250, background: 'var(--card)', borderTop: '1px solid var(--border)',
             display: 'flex', gap: 8, alignItems: 'center', padding: '10px 14px',
             paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
-            animation: 'slideUp 0.2s cubic-bezier(0.32,0.72,0,1)',
+            animation: commentClosing
+              ? 'commentBarOut 0.2s cubic-bezier(0.32,0.72,0,1) forwards'
+              : 'commentBarIn 0.25s cubic-bezier(0.32,0.72,0,1) forwards',
           }}>
             <Avatar user={currentUser} size={28} />
             <input
@@ -211,7 +215,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
               style={{ flex: 1, padding: '8px 12px', fontSize: 13 }}
             />
             <button onClick={handleComment} style={{ background: 'var(--sakura-accent)', color: 'white', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>Post</button>
-            <button onClick={() => setCommentingId(false)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 }}><Icon emoji="✕" size={16} /></button>
+            <button onClick={() => closeComment(200)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 }}><Icon emoji="✕" size={16} /></button>
           </div>,
           document.body
         )}

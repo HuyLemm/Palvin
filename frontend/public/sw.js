@@ -5,7 +5,7 @@
 // fetch fresh in the background and update the cache for next time. Never
 // touches cross-origin requests (Supabase REST/Realtime/Storage), so actual
 // app data always comes straight from the network as before.
-const CACHE_NAME = 'palvin-shell-v1';
+const CACHE_NAME = 'palvin-shell-v1.1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

@@ -234,6 +234,9 @@ export interface Todo {
 
 export interface Debt {
   id: string;
+  // 'they_owe': debtorName owes you (the original, only shape). 'i_owe':
+  // debtorName is who YOU owe instead.
+  direction: 'they_owe' | 'i_owe';
   debtorName: string;
   amount: number;
   note?: string;
@@ -241,6 +244,10 @@ export interface Debt {
   dueDate?: string;
   paid: boolean;
   paidDate?: string;
+  // How much of `amount` has actually been paid back so far — lets an
+  // 'i_owe' debt be settled gradually instead of all at once. Always 0 or
+  // `amount` for 'they_owe' debts, which only ever use the plain toggle.
+  paidAmount: number;
   createdBy: User;
 }
 

@@ -441,7 +441,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
 
         {/* Response form */}
         {isResponding && (
-          <div style={{ marginTop: 8, background: '#FAFAFA', borderRadius: 14, padding: '14px', border: '1.5px solid var(--border)' }}>
+          <div style={{ marginTop: 8, background: 'var(--bg)', borderRadius: 14, padding: '14px', border: '1.5px solid var(--border)' }}>
             <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', marginBottom: 8 }}>Add a note (optional)</p>
             <input
               className="permit-input"
@@ -464,7 +464,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
 
 function InfoCell({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <div style={{ background: '#FAFAFA', borderRadius: 10, padding: '8px 12px', border: '1px solid var(--border)' }}>
+    <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', border: '1px solid var(--border)' }}>
       <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji={icon} size={11} /> {label}</p>
       <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{value || '—'}</p>
     </div>

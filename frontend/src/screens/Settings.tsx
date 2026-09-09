@@ -496,7 +496,7 @@ export default function Settings() {
         )}
       </div>
 
-      <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--ink-2)', marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>PALVIN v1.0 · Made with <Icon emoji="❤️" size={13} /> for Alvin & Paoi</p>
+      <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--ink-2)', marginTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>PALVIN v1.1 · Made with <Icon emoji="❤️" size={13} /> for Alvin & Paoi</p>
     </div>
   );
 }

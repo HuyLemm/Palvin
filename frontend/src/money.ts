@@ -43,7 +43,7 @@ export async function fetchExpenses(names: ProfileNames, myName: string): Promis
 
 export async function createExpense(
   paidByProfileId: string | null,
-  e: { title: string; category: string; categoryEmoji: string; amount: number; date: string; note?: string; type?: 'expense' | 'income'; billId?: string },
+  e: { title: string; category: string; categoryEmoji: string; amount: number; date: string; note?: string; type?: 'expense' | 'income'; billId?: string; debtId?: string },
 ) {
   return supabase.from('expenses').insert({
     title: e.title,
@@ -55,6 +55,7 @@ export async function createExpense(
     note: e.note || null,
     type: e.type ?? 'expense',
     bill_id: e.billId ?? null,
+    debt_id: e.debtId ?? null,
   });
 }
 
