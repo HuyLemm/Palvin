@@ -71,14 +71,15 @@ export default function Money() {
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddIncome, setShowAddIncome] = useState(false);
 
-  // The bottom-nav's dedicated Stats button, a Bill/Savings-goal
-  // notification, and the Money tab itself all land on this same kept-alive
-  // screen (see App.tsx's ScreenRouter) — this is the only way to tell them
-  // apart post-mount, since a repeat tap on any of them doesn't remount the
-  // component.
+  // A Bill/Savings-goal notification and the Money tab itself all land on
+  // this same kept-alive screen (see App.tsx's ScreenRouter) — this is the
+  // only way to tell them apart post-mount, since a repeat tap on any of
+  // them doesn't remount the component. The bottom nav's own Money button
+  // uses the plain 'money' screen value (no case here), so it always opens
+  // on whichever tab was last showing — Expenses by default — rather than
+  // being forced onto one tab every time.
   useEffect(() => {
-    if (screen === 'stats') setTab('stats');
-    else if (screen === 'bills') setTab('bills');
+    if (screen === 'bills') setTab('bills');
     else if (screen === 'goals') setTab('goals');
     else if (screen === 'debts') setTab('debts');
   }, [screen]);
@@ -949,12 +950,11 @@ function formatShortDate(d: string): string {
 
 function DebtsTab() {
   const { state, currentUser, partnerProfile, addDebt, updateDebt, toggleDebtPaid, payDebt, resetDebtPayments, deleteDebt } = useApp();
-  const partnerName = partnerProfile?.displayName;
-  // Which half of the tracker you're looking at — money owed to you, or
-  // money you owe someone else. Two fully separate lists/totals sharing
-  // the same underlying `debts` table (see the `direction` column).
-  const [viewDirection, setViewDirection] = useState<'they_owe' | 'i_owe'>('they_owe');
-  const [filter, setFilter] = useState('all');
+  const partnerName = partnerProfile?.displayName ?? '';
+  // Just the two of you — no "All", since with only two people it's
+  // always more useful to see one person's full picture (what they owe,
+  // and what's owed to them) at a glance.
+  const [filter, setFilter] = useState(currentUser);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Debt | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -972,8 +972,8 @@ function DebtsTab() {
   const [error, setError] = useState('');
 
   const openAdd = () => {
-    setDirection(viewDirection);
-    setDebtorName(''); setAmount(''); setNote(''); setDate(debtTodayISO()); setDueDate(''); setCreatedByChoice(currentUser); setError('');
+    setDirection('they_owe');
+    setDebtorName(''); setAmount(''); setNote(''); setDate(debtTodayISO()); setDueDate(''); setCreatedByChoice(filter); setError('');
     setShowForm(true);
   };
   const openEdit = (d: Debt) => {
@@ -1005,14 +1005,24 @@ function DebtsTab() {
     setPayingDebt(null);
   };
 
-  const inView = state.debts.filter(d => d.direction === viewDirection);
-  const filteredDebts = filter === 'all' ? inView : inView.filter(d => d.createdBy === filter);
-  const unpaid = filteredDebts.filter(d => !d.paid)
-    .sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'));
-  const paid = filteredDebts.filter(d => d.paid);
-  const totalOwed = unpaid.reduce((s, d) => s + (d.amount - d.paidAmount), 0);
+  // A debt logged as "Both" concerns either partner, so it shows up under
+  // whichever of the two tabs you're looking at.
+  const personDebts = state.debts.filter(d => d.createdBy === filter || d.createdBy === 'Both');
+  const unpaidCount = personDebts.filter(d => !d.paid).length;
+  const paidCount = personDebts.filter(d => d.paid).length;
   const confirmingDebt = state.debts.find(d => d.id === confirmDeleteId);
   const today = debtTodayISO();
+
+  const sortDebts = (list: Debt[]) => [
+    ...list.filter(d => !d.paid).sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999')),
+    ...list.filter(d => d.paid),
+  ];
+  // "{filter} owes" — i_owe debts logged for them. "Owed to {filter}" —
+  // they_owe debts logged for them (someone else owes this person).
+  const iOweList = sortDebts(personDebts.filter(d => d.direction === 'i_owe'));
+  const theyOweList = sortDebts(personDebts.filter(d => d.direction === 'they_owe'));
+  const iOweUnpaidTotal = iOweList.filter(d => !d.paid).reduce((s, d) => s + (d.amount - d.paidAmount), 0);
+  const theyOweUnpaidTotal = theyOweList.filter(d => !d.paid).reduce((s, d) => s + d.amount, 0);
 
   function renderDebtCard(d: Debt) {
     const overdue = !d.paid && d.dueDate && d.dueDate < today;
@@ -1026,7 +1036,7 @@ function DebtsTab() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: d.paid ? 'line-through' : 'none' }}>{d.debtorName}</p>
             {d.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{d.note}</p>}
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>{d.direction === 'they_owe' ? 'Lent on' : 'Borrowed on'}: {formatShortDate(d.date)}{filter === 'all' && ` · ${d.createdBy === 'Both' ? 'Both' : d.createdBy}`}</p>
+            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>{d.direction === 'they_owe' ? 'Lent on' : 'Borrowed on'}: {formatShortDate(d.date)}{d.createdBy === 'Both' && ' · Both'}</p>
             {d.dueDate && !d.paid && (
               <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
                 {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
@@ -1060,60 +1070,57 @@ function DebtsTab() {
     );
   }
 
+  function renderSection(label: string, icon: string, list: Debt[], unpaidTotal: number) {
+    if (list.length === 0) return null;
+    return (
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji={icon} size={12} /> {label}</p>
+          {unpaidTotal > 0 && <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)' }}>{VND(unpaidTotal)}</p>}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {list.map(renderDebtCard)}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      {/* They owe you / You owe them */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 12, background: 'var(--bg)', borderRadius: 12, padding: 4 }}>
-        {([['they_owe', 'They owe you'], ['i_owe', 'You owe']] as const).map(([key, label]) => (
-          <button key={key} onClick={() => { setViewDirection(key); setFilter('all'); }} style={{ flex: 1, padding: '9px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, background: viewDirection === key ? 'var(--card)' : 'none', color: viewDirection === key ? 'var(--sakura-deep)' : 'var(--ink-2)', boxShadow: viewDirection === key ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
-            {label}
+      {/* Alvin / Paoi */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+        {[currentUser, partnerName].map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            {f}
+            <FilterCountBadge count={state.debts.filter(d => d.createdBy === f || d.createdBy === 'Both').length} />
           </button>
         ))}
       </div>
 
-      <div style={{ background: viewDirection === 'they_owe' ? 'linear-gradient(135deg, var(--sakura-deep), #a8436a)' : 'linear-gradient(135deg, var(--lavender), #6B52B8)', borderRadius: 20, padding: '20px', marginBottom: 16, color: 'white' }}>
-        <p style={{ fontSize: 12, opacity: 0.85, marginBottom: 4 }}>{viewDirection === 'they_owe' ? 'Total owed to you' : 'Total you owe'}</p>
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 31 }}>{VND(totalOwed)}</p>
-        <p style={{ fontSize: 12, opacity: 0.85, marginTop: 4 }}>{unpaid.length} unpaid debt(s)</p>
+      {/* Overview */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <div className="card" style={{ flex: 1, textAlign: 'center', padding: '16px 8px' }}>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: unpaidCount > 0 ? 'var(--sakura-deep)' : 'var(--ink)' }}>{unpaidCount}</p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600, marginTop: 2 }}>Owing</p>
+        </div>
+        <div className="card" style={{ flex: 1, textAlign: 'center', padding: '16px 8px' }}>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: '#5AC26A' }}>{paidCount}</p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600, marginTop: 2 }}>Settled</p>
+        </div>
       </div>
 
       <button onClick={openAdd} style={{
-        width: '100%', padding: '11px', marginBottom: 16, borderRadius: 14, border: 'none', cursor: 'pointer',
+        width: '100%', padding: '11px', marginBottom: 20, borderRadius: 14, border: 'none', cursor: 'pointer',
         background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
         color: 'white', fontWeight: 700, fontSize: 14,
       }}>+ Log debt</button>
 
-      {/* Filter — who logged this debt */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            {f === 'all' ? 'All' : f}
-            <FilterCountBadge count={f === 'all' ? inView.length : inView.filter(d => d.createdBy === f).length} />
-          </button>
-        ))}
-      </div>
-
-      {filteredDebts.length === 0 ? (
-        <EmptyState icon="📒" title={inView.length === 0 ? 'No debts logged yet' : 'No debts found'}
-          sub={viewDirection === 'they_owe' ? 'Tap "+ Log debt" whenever you lend someone money.' : 'Tap "+ Log debt" whenever you borrow money from someone.'} />
+      {personDebts.length === 0 ? (
+        <EmptyState icon="📒" title="No debts logged yet" sub={`Tap "+ Log debt" whenever ${filter} lends or borrows money.`} />
       ) : (
         <>
-          {unpaid.length > 0 && (
-            <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Unpaid · {unpaid.length}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {unpaid.map(renderDebtCard)}
-              </div>
-            </div>
-          )}
-          {paid.length > 0 && (
-            <div>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Paid · {paid.length}</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {paid.map(renderDebtCard)}
-              </div>
-            </div>
-          )}
+          {renderSection(`${filter} owes`, '📤', iOweList, iOweUnpaidTotal)}
+          {renderSection(`Owed to ${filter}`, '📒', theyOweList, theyOweUnpaidTotal)}
         </>
       )}
 

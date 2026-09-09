@@ -119,7 +119,7 @@ const SCREEN_TITLES: Record<string, string> = {
   home: 'PALVIN', feed: 'Feed', money: 'Our Money', us: 'Us',
   memories: 'Memories', 'love-notes': 'For You', calendar: 'Our Calendar',
   'future-us': 'Future Us', search: 'Search', notifications: 'Notifications',
-  settings: 'Settings', stats: 'Spending', bills: 'Bills', goals: 'Savings Goals',
+  settings: 'Settings', stats: 'Our Money', bills: 'Bills', goals: 'Savings Goals',
   wishlist: 'Gift Wishlist',
   'post-detail': 'Post', 'memory-detail': 'Memory', 'saved-posts': 'Saved',
 };
@@ -128,7 +128,7 @@ const SCREEN_TITLES: Record<string, string> = {
 // above — kept separate so SCREEN_TITLES stays plain text and the icon is
 // rendered explicitly next to it.
 const SCREEN_TITLE_EMOJI: Record<string, string> = {
-  money: '💰', us: '🌸', memories: '🌸', 'love-notes': '💌', stats: '📊',
+  money: '💰', us: '🌸', memories: '🌸', 'love-notes': '💌', stats: '💰',
   bills: '🧾', goals: '💰', wishlist: '🎁',
 };
 
