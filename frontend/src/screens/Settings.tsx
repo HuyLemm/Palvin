@@ -6,6 +6,7 @@ import type { User } from '../types';
 import type { NotifyPrefs } from '../auth';
 import { fetchActivityStatuses } from '../auth';
 import { fetchActivityLog, type ActivityLogEntry } from '../activityLog';
+import { fetchDailyCompliance, type DailyComplianceReport } from '../dailyCompliance';
 import { isPushSupported, isPushSubscribed, subscribeToPush, unsubscribeFromPush } from '../push';
 
 const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true };
@@ -90,6 +91,8 @@ export default function Settings() {
   const [activityStatuses, setActivityStatuses] = useState<{ id: string; displayName: string; lastActiveAt: string | null }[]>([]);
   const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
   const [showLogModal, setShowLogModal] = useState(false);
+  const [compliance, setCompliance] = useState<DailyComplianceReport>({ streakMisses: [], todoMisses: [] });
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [, setTick] = useState(0);
 
   function renderLogEntry(entry: ActivityLogEntry) {
@@ -101,6 +104,26 @@ export default function Settings() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.4 }}>{entry.message}</p>
           <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{formatRelativeTime(entry.createdAt)}</p>
+        </div>
+      </div>
+    );
+  }
+
+  function formatMissDate(dateStr: string): string {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function renderMissRow(kind: 'streak' | 'todo', m: { profileName: string; date: string }, key: string) {
+    return (
+      <div key={key} className="activity-log-row" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ width: 26, height: 26, borderRadius: 99, background: kind === 'streak' ? '#FEE2E2' : '#FEF3E2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <Icon emoji={kind === 'streak' ? '🔥' : '✅'} size={12} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 13, color: 'var(--ink)' }}>
+            <strong>{m.profileName}</strong> {kind === 'streak' ? "didn't keep the streak" : "left a daily task unfinished"}
+          </p>
+          <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{formatMissDate(m.date)}</p>
         </div>
       </div>
     );
@@ -118,14 +141,19 @@ export default function Settings() {
     if (myProfile) names[myProfile.id] = myProfile.displayName;
     if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
 
+    const profiles = [myProfile, partnerProfile].filter((p): p is NonNullable<typeof p> => !!p).map(p => ({ id: p.id, displayName: p.displayName }));
+
     const loadStatuses = () => fetchActivityStatuses(coupleId).then(setActivityStatuses);
     const loadLog = () => fetchActivityLog(names, myProfile.displayName).then(setActivityLog);
+    const loadCompliance = () => fetchDailyCompliance(coupleId, profiles).then(setCompliance);
     loadStatuses();
     loadLog();
+    loadCompliance();
     const statusTimer = setInterval(loadStatuses, 20000);
     const logTimer = setInterval(loadLog, 30000);
+    const complianceTimer = setInterval(loadCompliance, 60000);
     const tickTimer = setInterval(() => setTick(t => t + 1), 15000);
-    return () => { clearInterval(statusTimer); clearInterval(logTimer); clearInterval(tickTimer); };
+    return () => { clearInterval(statusTimer); clearInterval(logTimer); clearInterval(complianceTimer); clearInterval(tickTimer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, myProfile?.coupleId, screen]);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -210,6 +238,14 @@ export default function Settings() {
     await updateProfilePhoto(file);
     setPhotoUploading(false);
   }
+
+  // Merged, newest-first, for the "View all" modal — each entry tagged with
+  // which of the two categories it is so renderMissRow can pick the icon.
+  const complianceEntries = [
+    ...compliance.streakMisses.map(m => ({ kind: 'streak' as const, ...m })),
+    ...compliance.todoMisses.map(m => ({ kind: 'todo' as const, ...m })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
+  const complianceNames = [myProfile, partnerProfile].filter((p): p is NonNullable<typeof p> => !!p).map(p => p.displayName);
 
   return (
     <div style={{ paddingBottom: 32 }}>
@@ -428,7 +464,48 @@ export default function Settings() {
               )}
             </div>
           </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8, padding: '0 4px' }}>Daily Compliance</p>
+            <div className="card" style={{ padding: '16px' }}>
+              <div style={{ display: 'flex', gap: 10, marginBottom: complianceEntries.length > 0 ? 14 : 0 }}>
+                {complianceNames.map(name => (
+                  <div key={name} style={{ flex: 1, textAlign: 'center', padding: '10px 6px', borderRadius: 12, background: 'var(--bg)' }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>{name}</p>
+                    <p style={{ fontSize: 11, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                      <Icon emoji="🔥" size={11} /> {compliance.streakMisses.filter(m => m.profileName === name).length} streak miss{compliance.streakMisses.filter(m => m.profileName === name).length === 1 ? '' : 'es'}
+                    </p>
+                    <p style={{ fontSize: 11, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 2 }}>
+                      <Icon emoji="✅" size={11} /> {compliance.todoMisses.filter(m => m.profileName === name).length} incomplete day{compliance.todoMisses.filter(m => m.profileName === name).length === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              {complianceEntries.length === 0 ? (
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', textAlign: 'center' }}>No misses logged yet — everyone's kept up so far.</p>
+              ) : (
+                <button onClick={() => setShowComplianceModal(true)} style={{ display: 'block', width: '100%', padding: '10px', border: '1.5px solid var(--border)', borderRadius: 10, background: 'none', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', textAlign: 'center' }}>
+                  View log ({complianceEntries.length})
+                </button>
+              )}
+            </div>
+          </div>
         </>
+      )}
+
+      {showComplianceModal && (
+        <div onClick={() => setShowComplianceModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', borderRadius: 20, padding: '16px 0 4px', width: '100%', maxWidth: 400, maxHeight: '75vh', display: 'flex', flexDirection: 'column', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 16px' }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>Daily Compliance Log</p>
+              <button onClick={() => setShowComplianceModal(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="✕" size={14} /></button>
+            </div>
+            <style>{`.activity-log-row:last-child { border-bottom: none !important; }`}</style>
+            <div style={{ overflowY: 'auto' }}>
+              {complianceEntries.map(e => renderMissRow(e.kind, e, `${e.kind}:${e.profileName}:${e.date}`))}
+            </div>
+          </div>
+        </div>
       )}
 
       {showLogModal && (

@@ -182,6 +182,14 @@ html, body {
    the keyboard would actually hide. Sizing every open modal to the
    keyboard-shrunk height unconditionally made any field focus reflow the
    whole modal even when nothing was actually covered. */
+/* An explicit base height (not just left to `inset:0`'s implicit auto
+   sizing) so toggling .kb-covered on/off actually has two resolvable pixel
+   values to animate between — a CSS transition can't animate to/from the
+   `auto` that `height` would otherwise compute to here, so without this
+   the moment the keyboard dismisses (blur removes .kb-covered first, often
+   slightly before the keyboard itself finishes closing) snapped instantly
+   instead of easing, reading as a jittery jump. */
+.kb-modal-overlay { height: 100dvh; transition: height 0.2s ease; }
 .kb-modal-overlay.kb-covered { height: var(--kb-vh, 100dvh); }
 
 * { box-sizing: border-box; }
@@ -358,6 +366,7 @@ select.input-field { cursor: pointer; }
   z-index: 50;
   animation: fadeIn 0.2s ease-out;
 }
+.bottom-sheet-overlay.closing { animation: fadeOut 0.2s ease-in forwards; }
 .bottom-sheet {
   position: fixed;
   bottom: 0; left: 0; right: 0;
@@ -369,6 +378,11 @@ select.input-field { cursor: pointer; }
   max-height: 90vh;
   overflow-y: auto;
 }
+/* Slides back down instead of just vanishing the instant onClose fires —
+   BottomSheet.tsx delays the actual unmount by this long so it gets to play. */
+.bottom-sheet.closing { animation: slideDown 0.2s cubic-bezier(0.32,0.72,0,1) forwards; }
+@keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes slideDown { from { transform: translateY(0); opacity: 1; } to { transform: translateY(40px); opacity: 0; } }
 .sheet-handle {
   width: 36px; height: 4px;
   background: var(--border);

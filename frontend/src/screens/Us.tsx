@@ -1772,8 +1772,10 @@ function categoryMeta(key: string) {
 
 function TodoScreen({ onBack }: { onBack: () => void }) {
   const { state, currentUser, partnerProfile, addTodo, updateTodo, toggleTodoDone, deleteTodo } = useApp();
-  const partnerName = partnerProfile?.displayName;
-  const [filter, setFilter] = useState('all');
+  const partnerName = partnerProfile?.displayName ?? '';
+  // Just the two of you — no "All", same as Debts: with only two people,
+  // one person's own list is always the more useful default view.
+  const [filter, setFilter] = useState(currentUser);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Todo | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -1798,7 +1800,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
   };
 
   const openAdd = () => {
-    setTitle(''); setCategory('other'); setKind('daily'); setDate(todayISO()); setOwner(currentUser); setError('');
+    setTitle(''); setCategory('other'); setKind('daily'); setDate(todayISO()); setOwner(filter); setError('');
     setShowForm(true);
   };
   const openEdit = (t: Todo) => {
@@ -1815,7 +1817,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
     closeForm();
   };
 
-  const filteredTodos = filter === 'all' ? state.todos : state.todos.filter(t => t.owner === filter);
+  const filteredTodos = state.todos.filter(t => t.owner === filter || t.owner === 'Both');
   const dailyTodos = filteredTodos.filter(t => t.kind === 'daily');
   const today = todayISO();
   const onceTodos = filteredTodos.filter(t => t.kind === 'once').sort((a, b) => (a.date ?? '9999').localeCompare(b.date ?? '9999'));
@@ -1838,7 +1840,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: t.completed ? 'line-through' : 'none' }}>{t.title}</p>
             <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 2 }}>
-              {meta.label}{filter === 'all' && ` · ${t.owner}`}{t.kind === 'once' && t.date && ` · ${formatShortDate(t.date)}${overdue ? ' — overdue' : ''}`}
+              {meta.label}{t.owner === 'Both' && ' · Both'}{t.kind === 'once' && t.date && ` · ${formatShortDate(t.date)}${overdue ? ' — overdue' : ''}`}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -1861,10 +1863,10 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
 
       {/* Filter — whose task */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-        {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
+        {[currentUser, partnerName].map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{ flex: 1, padding: '8px', borderRadius: 10, border: filter === f ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: filter === f ? 'var(--sakura-light)' : 'var(--bg)', color: filter === f ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            {f === 'all' ? 'All' : f}
-            <FilterCountBadge count={f === 'all' ? state.todos.length : state.todos.filter(t => t.owner === f).length} />
+            {f}
+            <FilterCountBadge count={state.todos.filter(t => t.owner === f || t.owner === 'Both').length} />
           </button>
         ))}
       </div>

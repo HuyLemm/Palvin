@@ -949,7 +949,7 @@ function formatShortDate(d: string): string {
 }
 
 function DebtsTab() {
-  const { state, currentUser, partnerProfile, addDebt, updateDebt, toggleDebtPaid, payDebt, resetDebtPayments, deleteDebt } = useApp();
+  const { state, currentUser, partnerProfile, addDebt, updateDebt, payDebt, resetDebtPayments, deleteDebt } = useApp();
   const partnerName = partnerProfile?.displayName ?? '';
   // Just the two of you — no "All", since with only two people it's
   // always more useful to see one person's full picture (what they owe,
@@ -979,7 +979,7 @@ function DebtsTab() {
   };
   const openEdit = (d: Debt) => {
     setDirection(d.direction);
-    setDebtorName(d.debtorName); setAmount(String(Math.round(d.amount))); setNote(d.note ?? ''); setDate(d.date); setDueDate(d.dueDate ?? ''); setCreatedByChoice(d.createdBy); setError('');
+    setDebtorName(d.debtorName); setAmount(String(Math.round(d.amount))); setNote(d.note ?? ''); setDate(d.date); setDueDate(d.dueDate ?? ''); setCreatedByChoice(d.createdBy); setCountInMoney(d.countInMoney); setError('');
     setEditing(d);
   };
   const closeForm = () => { setShowForm(false); setEditing(null); };
@@ -987,9 +987,9 @@ function DebtsTab() {
   const handleSubmit = () => {
     if (!debtorName.trim()) { setError(direction === 'they_owe' ? "Enter the debtor's name." : 'Enter who you owe.'); return; }
     if (!amount || isNaN(+amount) || +amount <= 0) { setError('Enter a valid amount.'); return; }
-    const data = { direction, debtorName: debtorName.trim(), amount: +amount, note: note.trim() || undefined, date, dueDate: dueDate || undefined, createdBy: createdByChoice };
+    const data = { direction, debtorName: debtorName.trim(), amount: +amount, note: note.trim() || undefined, date, dueDate: dueDate || undefined, createdBy: createdByChoice, countInMoney };
     if (editing) updateDebt(editing.id, data);
-    else addDebt(data, countInMoney);
+    else addDebt(data);
     closeForm();
   };
 
@@ -1023,7 +1023,7 @@ function DebtsTab() {
   const iOweList = sortDebts(personDebts.filter(d => d.direction === 'i_owe'));
   const theyOweList = sortDebts(personDebts.filter(d => d.direction === 'they_owe'));
   const iOweUnpaidTotal = iOweList.filter(d => !d.paid).reduce((s, d) => s + (d.amount - d.paidAmount), 0);
-  const theyOweUnpaidTotal = theyOweList.filter(d => !d.paid).reduce((s, d) => s + d.amount, 0);
+  const theyOweUnpaidTotal = theyOweList.filter(d => !d.paid).reduce((s, d) => s + (d.amount - d.paidAmount), 0);
 
   function renderDebtCard(d: Debt) {
     const overdue = !d.paid && d.dueDate && d.dueDate < today;
@@ -1043,29 +1043,23 @@ function DebtsTab() {
                 {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
               </p>
             )}
-            {d.direction === 'i_owe' && d.paidAmount > 0 && !d.paid && (
-              <p style={{ fontSize: 11, color: 'var(--lavender)', fontWeight: 600, marginTop: 1 }}>Paid {VND(d.paidAmount)} of {VND(d.amount)} so far</p>
+            {d.paidAmount > 0 && !d.paid && (
+              <p style={{ fontSize: 11, color: d.direction === 'i_owe' ? 'var(--lavender)' : 'var(--sakura-deep)', fontWeight: 600, marginTop: 1 }}>Paid {VND(d.paidAmount)} of {VND(d.amount)} so far</p>
             )}
             {d.paid && d.paidDate && <p style={{ fontSize: 11, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-            <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)' }}>{VND(d.direction === 'i_owe' && !d.paid ? remaining : d.amount)}</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)' }}>{VND(d.paid ? d.amount : remaining)}</p>
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={() => openEdit(d)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
               <button onClick={() => setConfirmDeleteId(d.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
             </div>
           </div>
         </div>
-        {d.direction === 'i_owe' ? (
-          d.paid ? (
-            <button onClick={() => resetDebtPayments(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Undo — mark as unpaid</button>
-          ) : (
-            <button onClick={() => openPay(d)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, var(--lavender), #6B52B8)', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Log a payment <Icon emoji="💸" size={12} /></button>
-          )
+        {d.paid ? (
+          <button onClick={() => resetDebtPayments(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Undo — mark as unpaid</button>
         ) : (
-          <button onClick={() => toggleDebtPaid(d.id)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: d.paid ? '1.5px solid var(--border)' : 'none', background: d.paid ? 'var(--bg)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: d.paid ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-            {d.paid ? 'Mark as unpaid' : <>Mark as paid <Icon emoji="🎉" size={12} /></>}
-          </button>
+          <button onClick={() => openPay(d)} style={{ width: '100%', marginTop: 10, padding: '8px', borderRadius: 10, border: 'none', background: d.direction === 'i_owe' ? 'linear-gradient(135deg, var(--lavender), #6B52B8)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: 'white', fontWeight: 700, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Log a payment <Icon emoji="💸" size={12} /></button>
         )}
       </div>
     );
@@ -1157,20 +1151,19 @@ function DebtsTab() {
                 <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Due date (optional)</p>
                 <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
               </div>
-              {/* Opt-in and one-time — only offered while first logging a debt,
-                  not on later edits, so it can never double-log the same
-                  money movement into Expenses. */}
-              {!editing && (
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={countInMoney} onChange={e => setCountInMoney(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: 'var(--sakura-accent)' }} />
-                  <span>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', display: 'block' }}>Also count in Expenses</span>
-                    <span style={{ fontSize: 11, color: 'var(--ink-2)' }}>
-                      {direction === 'they_owe' ? 'Logs this as an expense — money leaving your hand now.' : 'Logs this as income — money coming into your hand now.'}
-                    </span>
+              {/* A persisted preference, not a one-time action — logging or
+                  editing the debt here never itself touches Expenses; this
+                  only decides whether payments made on it afterward
+                  (Log a payment) get mirrored there too. */}
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={countInMoney} onChange={e => setCountInMoney(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: 'var(--sakura-accent)' }} />
+                <span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', display: 'block' }}>Also count payments in Expenses</span>
+                  <span style={{ fontSize: 11, color: 'var(--ink-2)' }}>
+                    {direction === 'they_owe' ? 'Each payment logged toward this later will count as income.' : 'Each payment logged toward this later will count as an expense.'}
                   </span>
-                </label>
-              )}
+                </span>
+              </label>
               {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
               <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Log debt'}</button>
             </div>
@@ -1179,16 +1172,20 @@ function DebtsTab() {
       )}
 
       {payingDebt && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setPayingDebt(null)}>
+        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setPayingDebt(null)}>
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 320, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="💸" size={17} /> Log a payment</p>
-            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>To {payingDebt.debtorName} — {VND(payingDebt.amount - payingDebt.paidAmount)} remaining</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>{payingDebt.direction === 'i_owe' ? `To ${payingDebt.debtorName}` : `From ${payingDebt.debtorName}`} — {VND(payingDebt.amount - payingDebt.paidAmount)} remaining</p>
             <AmountInput placeholder="Amount paid (VND)" value={paymentAmount} onChange={setPaymentAmount} />
             {paymentError && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, marginTop: 8 }}>{paymentError}</p>}
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 8 }}>This will also be logged as an expense in the Expenses tab.</p>
+            {payingDebt.countInMoney && (
+              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 8 }}>
+                This will also be logged as {payingDebt.direction === 'i_owe' ? 'an expense' : 'income'} in the Expenses tab.
+              </p>
+            )}
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <button onClick={() => setPayingDebt(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handlePay} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, var(--lavender), #6B52B8)', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Log payment</button>
+              <button onClick={handlePay} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: payingDebt.direction === 'i_owe' ? 'linear-gradient(135deg, var(--lavender), #6B52B8)' : 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Log payment</button>
             </div>
           </div>
         </div>

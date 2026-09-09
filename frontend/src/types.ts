@@ -244,10 +244,13 @@ export interface Debt {
   dueDate?: string;
   paid: boolean;
   paidDate?: string;
-  // How much of `amount` has actually been paid back so far — lets an
-  // 'i_owe' debt be settled gradually instead of all at once. Always 0 or
-  // `amount` for 'they_owe' debts, which only ever use the plain toggle.
+  // How much of `amount` has actually been paid back so far — lets a debt
+  // be settled gradually via payDebt, rather than all at once.
   paidAmount: number;
+  // Opt-in, persisted, editable any time — when on, payDebt/resetDebtPayments
+  // also mirror each payment into Expenses. Logging the debt itself never
+  // touches Expenses regardless of this flag; only payments made afterward do.
+  countInMoney: boolean;
   createdBy: User;
 }
 
