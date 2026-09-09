@@ -192,7 +192,7 @@ interface AppContextType {
   addStoryQuote: (text: string) => void;
   updateStoryQuote: (id: string, text: string) => void;
   deleteStoryQuote: (id: string) => void;
-  addDebt: (d: Omit<Debt, 'id' | 'paid' | 'paidDate' | 'paidAmount'>) => void;
+  addDebt: (d: Omit<Debt, 'id' | 'paid' | 'paidDate' | 'paidAmount'>, countInMoney: boolean) => void;
   updateDebt: (id: string, d: Omit<Debt, 'id' | 'paid' | 'paidDate' | 'paidAmount'>) => void;
   toggleDebtPaid: (id: string) => void;
   payDebt: (id: string, amount: number) => void;
@@ -732,10 +732,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) { toast('Something went wrong', '⚠️'); refreshStoryQuotes(); }
   };
 
-  // Debts ("Sổ nợ") — backed by Supabase
-  const addDebt = async (d: Omit<Debt, 'id' | 'paid' | 'paidDate' | 'paidAmount'>) => {
-    const { error } = await createDebt(resolveProfileId(d.createdBy), d);
+  // Debts ("Sổ nợ") — backed by Supabase. `countInMoney` is an opt-in,
+  // one-time choice made at logging time (not a persisted property of the
+  // debt itself) — checked, it also drops a matching entry into Expenses
+  // right away: lending money out is money leaving your hand now (expense),
+  // borrowing it is money coming in (income). Left unchecked, the debt is
+  // tracked here only, same as before this existed.
+  const addDebt = async (d: Omit<Debt, 'id' | 'paid' | 'paidDate' | 'paidAmount'>, countInMoney: boolean) => {
+    const { data, error } = await createDebt(resolveProfileId(d.createdBy), d);
     if (error) { toast('Something went wrong', '⚠️'); return; }
+    if (countInMoney && data) {
+      await createExpense(resolveProfileId(currentUser), d.direction === 'they_owe' ? {
+        title: `Lent to ${d.debtorName}`, category: 'Debt', categoryEmoji: '📤',
+        amount: d.amount, date: d.date, note: `Lent money to ${d.debtorName}`, type: 'expense', debtId: data.id,
+      } : {
+        title: `Borrowed from ${d.debtorName}`, category: 'Debt', categoryEmoji: '📥',
+        amount: d.amount, date: d.date, note: `Borrowed money from ${d.debtorName}`, type: 'income', debtId: data.id,
+      });
+      await refreshMoney();
+    }
     await refreshDebts();
     toast('Debt recorded 📝');
   };
@@ -761,7 +776,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Logs an actual payment toward an 'i_owe' debt — can be partial, unlike
-  // toggleDebtPaid's binary flip — and mirrors it into Thu chi as a real
+  // toggleDebtPaid's binary flip — and mirrors it into Expenses as a real
   // expense, the same way a bill payment or goal contribution does.
   const payDebt = async (id: string, amount: number) => {
     const debt = state.debts.find(x => x.id === id);
@@ -784,7 +799,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Undoes all logged payments on an 'i_owe' debt (a mistake, or starting
-  // over) — mirrors the reversal into Thu chi as income, same as a bill's
+  // over) — mirrors the reversal into Expenses as income, same as a bill's
   // "mark unpaid" or a goal withdrawal.
   const resetDebtPayments = async (id: string) => {
     const debt = state.debts.find(x => x.id === id);
@@ -806,7 +821,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState(s => ({ ...s, debts: s.debts.filter(x => x.id !== id) }));
     const { error } = await deleteDebtRow(id);
     if (error) { toast('Something went wrong', '⚠️'); refreshDebts(); return; }
-    // A deleted debt's linked Thu chi transactions are removed by the DB's
+    // A deleted debt's linked Expenses transactions are removed by the DB's
     // on-delete cascade — refresh so the local expenses list reflects that too.
     await refreshMoney();
   };

@@ -121,7 +121,7 @@ export default function Money() {
   );
 }
 
-/* ─── Thu chi tab ─────────────────────────────────── */
+/* ─── Expenses tab ─────────────────────────────────── */
 function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; onAdd: () => void; onAddIncome: () => void }) {
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [month, setMonth] = useState('all');
@@ -969,11 +969,12 @@ function DebtsTab() {
   const [date, setDate] = useState(debtTodayISO());
   const [dueDate, setDueDate] = useState('');
   const [createdByChoice, setCreatedByChoice] = useState(currentUser);
+  const [countInMoney, setCountInMoney] = useState(false);
   const [error, setError] = useState('');
 
   const openAdd = () => {
     setDirection('they_owe');
-    setDebtorName(''); setAmount(''); setNote(''); setDate(debtTodayISO()); setDueDate(''); setCreatedByChoice(filter); setError('');
+    setDebtorName(''); setAmount(''); setNote(''); setDate(debtTodayISO()); setDueDate(''); setCreatedByChoice(filter); setCountInMoney(false); setError('');
     setShowForm(true);
   };
   const openEdit = (d: Debt) => {
@@ -988,7 +989,7 @@ function DebtsTab() {
     if (!amount || isNaN(+amount) || +amount <= 0) { setError('Enter a valid amount.'); return; }
     const data = { direction, debtorName: debtorName.trim(), amount: +amount, note: note.trim() || undefined, date, dueDate: dueDate || undefined, createdBy: createdByChoice };
     if (editing) updateDebt(editing.id, data);
-    else addDebt(data);
+    else addDebt(data, countInMoney);
     closeForm();
   };
 
@@ -1156,6 +1157,20 @@ function DebtsTab() {
                 <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Due date (optional)</p>
                 <input className="input-field" type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
               </div>
+              {/* Opt-in and one-time — only offered while first logging a debt,
+                  not on later edits, so it can never double-log the same
+                  money movement into Expenses. */}
+              {!editing && (
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer' }}>
+                  <input type="checkbox" checked={countInMoney} onChange={e => setCountInMoney(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: 'var(--sakura-accent)' }} />
+                  <span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', display: 'block' }}>Also count in Expenses</span>
+                    <span style={{ fontSize: 11, color: 'var(--ink-2)' }}>
+                      {direction === 'they_owe' ? 'Logs this as an expense — money leaving your hand now.' : 'Logs this as income — money coming into your hand now.'}
+                    </span>
+                  </span>
+                </label>
+              )}
               {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
               <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Log debt'}</button>
             </div>
@@ -1170,7 +1185,7 @@ function DebtsTab() {
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>To {payingDebt.debtorName} — {VND(payingDebt.amount - payingDebt.paidAmount)} remaining</p>
             <AmountInput placeholder="Amount paid (VND)" value={paymentAmount} onChange={setPaymentAmount} />
             {paymentError && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, marginTop: 8 }}>{paymentError}</p>}
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 8 }}>This will also be logged as an expense in Thu chi.</p>
+            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 8 }}>This will also be logged as an expense in the Expenses tab.</p>
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
               <button onClick={() => setPayingDebt(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
               <button onClick={handlePay} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, var(--lavender), #6B52B8)', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Log payment</button>

@@ -43,11 +43,14 @@ export async function fetchDebts(names: ProfileNames, myName: string): Promise<D
   return (data as DebtRow[]).map(r => rowToDebt(r, names, myName));
 }
 
+// Returns the new row's id (rather than the usual bare insert result) so a
+// caller opting to also count the debt in Expenses right away can link
+// that expense/income entry back to it via debt_id.
 export async function createDebt(createdByProfileId: string | null, d: { direction: 'they_owe' | 'i_owe'; debtorName: string; amount: number; note?: string; date: string; dueDate?: string }) {
   return supabase.from('debts').insert({
     created_by_profile_id: createdByProfileId,
     direction: d.direction, debtor_name: d.debtorName, amount: d.amount, note: d.note || null, lent_date: d.date, due_date: d.dueDate || null,
-  });
+  }).select('id').single();
 }
 
 export async function updateDebtRow(id: string, createdByProfileId: string | null, d: { direction: 'they_owe' | 'i_owe'; debtorName: string; amount: number; note?: string; date: string; dueDate?: string }) {
