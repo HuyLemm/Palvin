@@ -14,7 +14,7 @@ import { supabase } from './lib/supabaseClient';
 import {
   updatePhoto as authUpdatePhoto, uploadAvatarImage, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
   sendInvite as apiSendInvite, respondInvite as apiRespondInvite, cancelInvite as apiCancelInvite, getMyInvites,
-  updateDisplayName as authUpdateDisplayName, changePassword as authChangePassword, touchLastActive, setForegroundState, updateDarkModePref, updateQuickActionsPref,
+  updateDisplayName as authUpdateDisplayName, changePassword as authChangePassword, touchLastActive, setForegroundState, updateDarkModePref, updateQuickActionsPref, DEFAULT_QUICK_ACTIONS,
   type PendingInvite, type AuthProfile, type NotifyPrefs, type QuickActionPrefs, type QuickActionConfig,
 } from './auth';
 import {
@@ -1154,7 +1154,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!fromId) return;
     const { error } = await createHug(fromId, message, kind);
     if (error) { toast('Something went wrong', '⚠️'); return; }
-    toast(kind === 'thinking' ? `${from} is thinking of ${to} 💭` : `${from} sent ${to} a hug 🫂`, '🌸');
+    // Mirrors what notify_new_hug() builds for the partner's own notification
+    // (0084_hug_custom_labels_and_reminder_fix.sql) so this confirmation matches.
+    const cfg = myProfile?.quickActions[kind] ?? DEFAULT_QUICK_ACTIONS[kind];
+    toast(`${from}: ${cfg.label} → ${to}`, cfg.emoji);
   };
 
   // Date requests — backed by Supabase (notify_new_date_request/notify_date_request_response
