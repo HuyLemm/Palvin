@@ -14,8 +14,8 @@ import { supabase } from './lib/supabaseClient';
 import {
   updatePhoto as authUpdatePhoto, uploadAvatarImage, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
   sendInvite as apiSendInvite, respondInvite as apiRespondInvite, cancelInvite as apiCancelInvite, getMyInvites,
-  updateDisplayName as authUpdateDisplayName, changePassword as authChangePassword, touchLastActive, setForegroundState, updateDarkModePref,
-  type PendingInvite, type AuthProfile, type NotifyPrefs,
+  updateDisplayName as authUpdateDisplayName, changePassword as authChangePassword, touchLastActive, setForegroundState, updateDarkModePref, updateQuickActionsPref,
+  type PendingInvite, type AuthProfile, type NotifyPrefs, type QuickActionPrefs, type QuickActionConfig,
 } from './auth';
 import {
   fetchPosts, createPost, addPostComment, setLiked, setSaved, toggleReaction, updatePostRow, deletePostRow,
@@ -296,6 +296,7 @@ interface AppContextType {
 
   // Dark mode
   toggleDarkMode: () => void;
+  updateQuickAction: (slot: keyof QuickActionPrefs, config: QuickActionConfig) => void;
 
   // Anniversary date
   setRelationshipStart: (date: string) => void;
@@ -1315,6 +1316,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok) toast('Something went wrong', '⚠️');
   };
 
+  // Home dashboard's "Send a hug" / "Thinking of you" buttons, personalized
+  // per account — same per-profile approach as dark mode above.
+  const updateQuickAction = async (slot: keyof QuickActionPrefs, config: QuickActionConfig) => {
+    if (!myProfile) return;
+    const nextQuickActions = { ...myProfile.quickActions, [slot]: config };
+    setMyProfile(p => p ? { ...p, quickActions: nextQuickActions } : p);
+    const res = await updateQuickActionsPref(myProfile.id, nextQuickActions);
+    if (!res.ok) { toast('Something went wrong', '⚠️'); return; }
+    toast('Button updated ✏️');
+  };
+
   // Anniversary date — either partner can set/edit it, persisted per couple.
   const setRelationshipStart = async (date: string) => {
     if (!myProfile?.coupleId) return;
@@ -2245,7 +2257,7 @@ const refreshMoods = useCallback(async () => {
       addReaction,
       addFavPlace, updateFavPlace, removeFavPlace, addFavCategory, updateFavCategory, removeFavCategory,
       addPlace, updatePlace, deletePlace,
-      toggleDarkMode,
+      toggleDarkMode, updateQuickAction,
       setRelationshipStart,
       profilePhotos, updateProfilePhoto,
       sendChatMessage, markChatRead, uploadChatMedia, addCustomSticker, removeCustomSticker, sendTypingSignal,

@@ -119,6 +119,7 @@ export default function Us() {
     if (screen === 'gratitude') return 'gratitude';
     if (screen === 'places') return 'places';
     if (screen === 'capsule') return 'capsule';
+    if (screen === 'todos') return 'todos';
     if (screen === 'us' && lastNavWasPop) return lastUsSub;
     return 'main';
   });
@@ -140,6 +141,7 @@ export default function Us() {
     if (screen === 'gratitude') setSub('gratitude');
     if (screen === 'places') setSub('places');
     if (screen === 'capsule') setSub('capsule');
+    if (screen === 'todos') setSub('todos');
   }, [screen, selectedId]);
 
   // Re-tapping the Us tab while already sitting inside it doesn't remount

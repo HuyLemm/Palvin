@@ -4,12 +4,15 @@ import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import type { User } from '../types';
 import type { NotifyPrefs } from '../auth';
-import { fetchActivityStatuses } from '../auth';
+import { fetchActivityStatuses, DEFAULT_QUICK_ACTIONS } from '../auth';
 import { fetchActivityLog, type ActivityLogEntry } from '../activityLog';
 import { fetchDailyCompliance, type DailyComplianceReport } from '../dailyCompliance';
 import { isPushSupported, isPushSubscribed, subscribeToPush, unsubscribeFromPush } from '../push';
 
 const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true };
+
+const QUICK_ACTION_EMOJI_CHOICES = ['🫂', '💭', '💗', '💕', '🥰', '😘', '🤗', '💌', '✨', '🌸', '💖', '🫶'];
+const QUICK_ACTION_COLOR_CHOICES = ['#C95F7C', '#8B6FD4', '#4A8AE8', '#5AC26A', '#E8844A', '#DC2626', '#E85C97', '#C48A52'];
 
 const ONLINE_WINDOW_MS = 2 * 60000;
 
@@ -53,7 +56,7 @@ function StatusDot({ online }: { online: boolean }) {
 
 export default function Settings() {
   const {
-    currentUser, toast, updateProfilePhoto, state, screen, toggleDarkMode, logout,
+    currentUser, toast, updateProfilePhoto, state, screen, toggleDarkMode, updateQuickAction, logout,
     isLinked, isAdmin, myProfile, partnerProfile, sentInvite, invitePartner, cancelSentInvite, pendingInvite, acceptInvite, rejectInvite,
     updateNotifyPrefs, setRelationshipStart, updateDisplayName, changePassword,
   } = useApp();
@@ -61,6 +64,23 @@ export default function Settings() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const notifyPrefs = myProfile?.notifyPrefs ?? DEFAULT_NOTIFY_PREFS;
   const darkMode = myProfile?.darkMode ?? false;
+  const quickActions = myProfile?.quickActions ?? DEFAULT_QUICK_ACTIONS;
+
+  const [editingQuickAction, setEditingQuickAction] = useState<'hug' | 'thinking' | null>(null);
+  const [qaLabel, setQaLabel] = useState('');
+  const [qaEmoji, setQaEmoji] = useState('');
+  const [qaColor, setQaColor] = useState('');
+
+  const openEditQuickAction = (slot: 'hug' | 'thinking') => {
+    const cfg = quickActions[slot];
+    setQaLabel(cfg.label); setQaEmoji(cfg.emoji); setQaColor(cfg.color);
+    setEditingQuickAction(slot);
+  };
+  const saveQuickAction = () => {
+    if (!editingQuickAction || !qaLabel.trim()) return;
+    updateQuickAction(editingQuickAction, { label: qaLabel.trim(), emoji: qaEmoji, color: qaColor });
+    setEditingQuickAction(null);
+  };
   const [showLogout, setShowLogout] = useState(false);
 
   // Push notifications — a real system notification even with Palvin fully
@@ -393,6 +413,13 @@ export default function Settings() {
         <ToggleRow emoji="🌙" label="Dark mode" value={darkMode} onToggle={toggleDarkMode} />
       </Section>
 
+      {/* Dashboard's quick-action buttons — personal to this account, doesn't
+          change what your partner sees on theirs. */}
+      <Section title="Quick Actions">
+        <SettingRow emoji={quickActions.hug.emoji} label="Hug button" value={quickActions.hug.label} onEdit={() => openEditQuickAction('hug')} />
+        <SettingRow emoji={quickActions.thinking.emoji} label="Thinking-of-you button" value={quickActions.thinking.label} onEdit={() => openEditQuickAction('thinking')} />
+      </Section>
+
       {/* Account & Data */}
       <Section title="Account & Data">
         {editingUsername ? (
@@ -518,6 +545,45 @@ export default function Settings() {
             <style>{`.activity-log-row:last-child { border-bottom: none !important; }`}</style>
             <div style={{ overflowY: 'auto' }}>
               {activityLog.map(renderLogEntry)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingQuickAction && (
+        <div
+          onClick={() => setEditingQuickAction(null)}
+          className="kb-modal-overlay"
+          style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>{editingQuickAction === 'hug' ? 'Hug button' : 'Thinking-of-you button'}</p>
+              <button onClick={() => setEditingQuickAction(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <input className="input-field" placeholder="Button label" value={qaLabel} onChange={e => setQaLabel(e.target.value)} autoFocus maxLength={24} />
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {QUICK_ACTION_EMOJI_CHOICES.map(e => (
+                    <button key={e} onClick={() => setQaEmoji(e)} style={{ width: 36, height: 36, border: qaEmoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: qaEmoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={16} /></button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Color</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {QUICK_ACTION_COLOR_CHOICES.map(c => (
+                    <button key={c} onClick={() => setQaColor(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: qaColor === c ? '3px solid var(--ink)' : '3px solid transparent', cursor: 'pointer' }} />
+                  ))}
+                </div>
+              </div>
+              <div style={{ padding: '14px 12px', borderRadius: 14, background: `${qaColor}14`, border: `1.5px solid ${qaColor}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                <Icon emoji={qaEmoji} size={26} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: qaColor }}>{qaLabel || 'Preview'}</span>
+              </div>
+              <button onClick={saveQuickAction} disabled={!qaLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: qaLabel.trim() ? 'pointer' : 'default', background: qaLabel.trim() ? qaColor : 'var(--border)', color: qaLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save</button>
             </div>
           </div>
         </div>

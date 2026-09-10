@@ -5,6 +5,7 @@ import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
 import { getDaysTogether, getDuration } from '../data';
 import { nextOccurrence, toDateStr, oneMonthFrom } from '../calendarRecurrence';
+import { DEFAULT_QUICK_ACTIONS } from '../auth';
 import type { FavCategory, FavPlace, StoryQuote } from '../types';
 
 // Picks a quote that looks random day to day (not a fixed 0,1,2... queue
@@ -55,8 +56,10 @@ const MOOD_SCORE: Record<string, number> = {
 };
 
 export default function Home() {
-  const { state, screen, navigate, setMood, currentUser, partnerProfile, sendHug } = useApp();
+  const { state, screen, navigate, setMood, currentUser, myProfile, partnerProfile, sendHug } = useApp();
   const partnerName = partnerProfile?.displayName;
+  const hugConfig = myProfile?.quickActions.hug ?? DEFAULT_QUICK_ACTIONS.hug;
+  const thinkConfig = myProfile?.quickActions.thinking ?? DEFAULT_QUICK_ACTIONS.thinking;
   const relationshipStart = state.relationshipStart ? new Date(state.relationshipStart + 'T00:00:00') : null;
   const [days, setDays] = useState(relationshipStart ? getDaysTogether(relationshipStart) : 0);
   const [showMoodPicker, setShowMoodPicker] = useState(false);
@@ -209,6 +212,7 @@ export default function Home() {
   });
 
   const currentSong = playlistPool[vinylIdx % Math.max(playlistPool.length, 1)];
+  const todosLeft = state.todos.filter(t => !t.completed && (t.owner === currentUser || t.owner === 'Both')).length;
 
   return (
     <div style={{ paddingBottom: 32 }}>
@@ -319,6 +323,29 @@ export default function Home() {
         )}
       </div>
 
+      {/* To Do shortcut — prominent on purpose (per-user request), unlike the
+          small Couple Stats tiles below, since this is meant to nag a little
+          when something's still outstanding. */}
+      <div
+        onClick={() => navigate('todos')}
+        className="card"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', marginBottom: 16, cursor: 'pointer',
+          background: todosLeft > 0 ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : undefined,
+        }}
+      >
+        <div style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0, background: todosLeft > 0 ? 'rgba(255,255,255,0.2)' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon emoji="✅" size={22} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: todosLeft > 0 ? 'white' : 'var(--ink)' }}>
+            {todosLeft > 0 ? `${todosLeft} task${todosLeft === 1 ? '' : 's'} left today` : 'All caught up! 🎉'}
+          </p>
+          <p style={{ fontSize: 12, color: todosLeft > 0 ? 'rgba(255,255,255,0.85)' : 'var(--ink-2)' }}>Tap to open your To Do list</p>
+        </div>
+        <Icon emoji="→" size={18} style={{ color: todosLeft > 0 ? 'white' : 'var(--ink-2)', flexShrink: 0 }} />
+      </div>
+
       {/* Couple Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
         {[
@@ -340,15 +367,15 @@ export default function Home() {
         <button
           onClick={handleHug}
           style={{
-            background: hugAnim ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'linear-gradient(135deg, var(--pink-glow), var(--sakura-light))',
-            border: '1.5px solid var(--sakura)', borderRadius: 18, padding: '16px 12px',
+            background: hugAnim ? hugConfig.color : `${hugConfig.color}14`,
+            border: `1.5px solid ${hugConfig.color}`, borderRadius: 18, padding: '16px 12px',
             cursor: 'pointer', transition: 'all 0.3s',
             transform: hugAnim ? 'scale(0.96)' : 'scale(1)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           }}
         >
-          <Icon emoji="🫂" size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: hugAnim ? 'scale(1.3)' : 'scale(1)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : 'var(--sakura-deep)' }}>Send a hug</span>
+          <Icon emoji={hugConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: hugAnim ? 'scale(1.3)' : 'scale(1)' }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : hugConfig.color }}>{hugConfig.label}</span>
           <span style={{ fontSize: 11, color: hugAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
             to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
           </span>
@@ -357,15 +384,15 @@ export default function Home() {
         <button
           onClick={handleThinking}
           style={{
-            background: thinkAnim ? 'linear-gradient(135deg, #8B6FD4, #6B4FB4)' : 'linear-gradient(135deg, var(--lavender-glow), var(--lavender-light))',
-            border: '1.5px solid var(--lavender)', borderRadius: 18, padding: '16px 12px',
+            background: thinkAnim ? thinkConfig.color : `${thinkConfig.color}14`,
+            border: `1.5px solid ${thinkConfig.color}`, borderRadius: 18, padding: '16px 12px',
             cursor: 'pointer', transition: 'all 0.3s',
             transform: thinkAnim ? 'scale(0.96)' : 'scale(1)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           }}
         >
-          <Icon emoji="💭" size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: thinkAnim ? 'scale(1.3)' : 'scale(1)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : 'var(--lavender)' }}>Thinking of you</span>
+          <Icon emoji={thinkConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: thinkAnim ? 'scale(1.3)' : 'scale(1)' }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : thinkConfig.color }}>{thinkConfig.label}</span>
           <span style={{ fontSize: 11, color: thinkAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
             to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
           </span>

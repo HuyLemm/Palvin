@@ -10,6 +10,32 @@ export interface NotifyPrefs {
 
 const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true };
 
+export interface QuickActionConfig {
+  label: string;
+  emoji: string;
+  color: string;
+}
+
+export interface QuickActionPrefs {
+  hug: QuickActionConfig;
+  thinking: QuickActionConfig;
+}
+
+// Home.tsx's two dashboard buttons, personalized per account — falls back
+// to these whenever a profile hasn't customized one (or hasn't customized
+// it at all yet, pre-migration).
+export const DEFAULT_QUICK_ACTIONS: QuickActionPrefs = {
+  hug: { label: 'Send a hug', emoji: '🫂', color: '#C95F7C' },
+  thinking: { label: 'Thinking of you', emoji: '💭', color: '#8B6FD4' },
+};
+
+function mergeQuickActions(raw: Partial<QuickActionPrefs> | null | undefined): QuickActionPrefs {
+  return {
+    hug: { ...DEFAULT_QUICK_ACTIONS.hug, ...(raw?.hug ?? {}) },
+    thinking: { ...DEFAULT_QUICK_ACTIONS.thinking, ...(raw?.thinking ?? {}) },
+  };
+}
+
 export interface AuthProfile {
   id: string;
   displayName: string;
@@ -18,6 +44,7 @@ export interface AuthProfile {
   notifyPrefs: NotifyPrefs;
   lastActiveAt: string | null;
   darkMode: boolean;
+  quickActions: QuickActionPrefs;
 }
 
 export interface PendingInvite {
@@ -78,7 +105,7 @@ export async function logout(): Promise<void> {
   await supabase.auth.signOut();
 }
 
-function rowToProfile(row: { id: string; display_name: string; couple_id: string | null; avatar_url: string | null; notify_prefs?: Partial<NotifyPrefs> | null; last_active_at: string | null; dark_mode?: boolean | null }): AuthProfile {
+function rowToProfile(row: { id: string; display_name: string; couple_id: string | null; avatar_url: string | null; notify_prefs?: Partial<NotifyPrefs> | null; last_active_at: string | null; dark_mode?: boolean | null; quick_actions?: Partial<QuickActionPrefs> | null }): AuthProfile {
   return {
     id: row.id,
     displayName: row.display_name,
@@ -87,10 +114,11 @@ function rowToProfile(row: { id: string; display_name: string; couple_id: string
     notifyPrefs: { ...DEFAULT_NOTIFY_PREFS, ...(row.notify_prefs ?? {}) },
     lastActiveAt: row.last_active_at,
     darkMode: !!row.dark_mode,
+    quickActions: mergeQuickActions(row.quick_actions),
   };
 }
 
-const PROFILE_SELECT = 'id, display_name, couple_id, avatar_url, notify_prefs, last_active_at, dark_mode';
+const PROFILE_SELECT = 'id, display_name, couple_id, avatar_url, notify_prefs, last_active_at, dark_mode, quick_actions';
 
 export async function getCurrentProfile(): Promise<AuthProfile | null> {
   const { data: { user } } = await supabase.auth.getUser();
@@ -172,6 +200,14 @@ export async function updateNotifyPrefs(prefs: NotifyPrefs): Promise<Result> {
 // affects what the other sees on their own device.
 export async function updateDarkModePref(profileId: string, darkMode: boolean): Promise<Result> {
   const { error } = await supabase.from('profiles').update({ dark_mode: darkMode }).eq('id', profileId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// Same per-profile approach as dark_mode — each account's Home dashboard
+// buttons are its own, personal customization.
+export async function updateQuickActionsPref(profileId: string, quickActions: QuickActionPrefs): Promise<Result> {
+  const { error } = await supabase.from('profiles').update({ quick_actions: quickActions }).eq('id', profileId);
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
