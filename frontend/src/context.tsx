@@ -47,7 +47,8 @@ import {
   fetchSavingsGoals, createSavingsGoal, updateSavingsGoalCurrent, updateSavingsGoalRow, deleteSavingsGoalRow,
 } from './money';
 import {
-  fetchPrivateExpenses, createPrivateExpense, deletePrivateExpenseRow, fetchPrivateJar, setPrivateJarAmount,
+  fetchPrivateExpenses, createPrivateExpense, deletePrivateExpenseRow,
+  fetchPrivateJars, createPrivateJar, updatePrivateJarRow, deletePrivateJarRow, setPrivateJarCurrentRow,
 } from './privateMoney';
 import {
   fetchLoveNotes, createLoveNote, markLoveNoteRead,
@@ -170,8 +171,11 @@ interface AppContextType {
   deleteExpense: (id: string) => void;
   addPrivateExpense: (e: Omit<PrivateExpense, 'id'>) => void;
   deletePrivateExpense: (id: string) => void;
-  depositToJar: (amount: number) => void;
-  withdrawFromJar: (amount: number) => void;
+  addPrivateJar: (j: { title: string; emoji: string; target?: number }) => void;
+  updatePrivateJar: (id: string, j: { title: string; emoji: string; target?: number }) => void;
+  deletePrivateJar: (id: string) => void;
+  depositToPrivateJar: (id: string, amount: number) => void;
+  withdrawFromPrivateJar: (id: string, amount: number) => void;
 
   // Savings
   addSavingsGoal: (g: Omit<SavingsGoal, 'id'>) => void;
@@ -593,7 +597,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toast('Expense removed.', '🗑️');
   };
 
-  // "Quỹ đen" — private stash, Alvinne's account only (see refreshPrivateMoney).
+  // Private Stash — Alvinne's account only (see refreshPrivateMoney).
   const addPrivateExpense = async (e: Omit<PrivateExpense, 'id'>) => {
     const { error } = await createPrivateExpense(e);
     if (error) { toast('Something went wrong', '⚠️'); return; }
@@ -608,36 +612,62 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toast('Removed 🗑️');
   };
 
-  // Deposits move money out of the spendable side of the ledger — mirrored
-  // as an expense, same as the couple's SavingsGoal contribute/withdraw.
-  const depositToJar = async (amount: number) => {
-    if (!myProfile || amount <= 0) return;
-    const nextAmount = state.privateJar + amount;
-    setState(s => ({ ...s, privateJar: nextAmount }));
-    const { error } = await setPrivateJarAmount(myProfile.id, nextAmount);
-    if (error) { toast('Something went wrong', '⚠️'); refreshPrivateMoney(); return; }
-    await createPrivateExpense({
-      title: 'Deposit to jar', category: 'Jar', categoryEmoji: '🐷',
-      amount, date: new Date().toISOString().slice(0, 10), note: 'Deposited into the jar', type: 'expense',
-    });
+  const addPrivateJar = async (j: { title: string; emoji: string; target?: number }) => {
+    const { error } = await createPrivateJar(j);
+    if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshPrivateMoney();
-    toast('Deposited into the jar! 🐷');
+    toast('Jar created 🫙');
   };
 
-  const withdrawFromJar = async (amount: number) => {
-    if (!myProfile || amount <= 0) return;
-    const nextAmount = Math.max(state.privateJar - amount, 0);
-    const delta = state.privateJar - nextAmount;
+  const updatePrivateJar = async (id: string, j: { title: string; emoji: string; target?: number }) => {
+    const prev = state.privateJars;
+    setState(s => ({ ...s, privateJars: s.privateJars.map(x => x.id === id ? { ...x, ...j } : x) }));
+    const { error } = await updatePrivateJarRow(id, j);
+    if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, privateJars: prev })); return; }
+    toast('Jar updated ✏️');
+  };
+
+  const deletePrivateJar = async (id: string) => {
+    setState(s => ({ ...s, privateJars: s.privateJars.filter(j => j.id !== id) }));
+    const { error } = await deletePrivateJarRow(id);
+    if (error) { toast('Something went wrong', '⚠️'); refreshPrivateMoney(); return; }
+    toast('Jar deleted 🗑️');
+  };
+
+  // Deposits move money out of the spendable side of the ledger — mirrored
+  // as an expense, same as the couple's SavingsGoal contribute/withdraw.
+  const depositToPrivateJar = async (id: string, amount: number) => {
+    const jar = state.privateJars.find(j => j.id === id);
+    if (!jar || amount <= 0) return;
+    const nextCurrent = jar.target != null ? Math.min(jar.current + amount, jar.target) : jar.current + amount;
+    const delta = nextCurrent - jar.current;
     if (delta <= 0) return;
-    setState(s => ({ ...s, privateJar: nextAmount }));
-    const { error } = await setPrivateJarAmount(myProfile.id, nextAmount);
+    setState(s => ({ ...s, privateJars: s.privateJars.map(j => j.id === id ? { ...j, current: nextCurrent } : j) }));
+    const { error } = await setPrivateJarCurrentRow(id, nextCurrent);
     if (error) { toast('Something went wrong', '⚠️'); refreshPrivateMoney(); return; }
     await createPrivateExpense({
-      title: 'Withdraw from jar', category: 'Jar', categoryEmoji: '🐷',
-      amount: delta, date: new Date().toISOString().slice(0, 10), note: 'Withdrew from the jar', type: 'income',
+      title: `Deposit to ${jar.title}`, category: 'Jar', categoryEmoji: jar.emoji,
+      amount: delta, date: new Date().toISOString().slice(0, 10), note: `Deposited into "${jar.title}"`, type: 'expense',
     });
     await refreshPrivateMoney();
-    toast('Withdrawn from the jar! 💸');
+    toast(`Deposited into ${jar.title}! 🫙`);
+  };
+
+  const withdrawFromPrivateJar = async (id: string, amount: number) => {
+    const jar = state.privateJars.find(j => j.id === id);
+    if (!jar || amount <= 0) return;
+    const nextCurrent = Math.max(jar.current - amount, 0);
+    const delta = jar.current - nextCurrent;
+    if (delta <= 0) return;
+    setState(s => ({ ...s, privateJars: s.privateJars.map(j => j.id === id ? { ...j, current: nextCurrent } : j) }));
+    const { error } = await setPrivateJarCurrentRow(id, nextCurrent);
+    if (error) { toast('Something went wrong', '⚠️'); refreshPrivateMoney(); return; }
+    await createPrivateExpense({
+      title: `Withdraw from ${jar.title}`, category: 'Jar', categoryEmoji: jar.emoji,
+      amount: delta, date: new Date().toISOString().slice(0, 10), note: `Withdrew from "${jar.title}"`, type: 'income',
+    });
+    await refreshPrivateMoney();
+    toast(`Withdrawn from ${jar.title}! 💸`);
   };
 
   // Savings — backed by Supabase
@@ -1638,13 +1668,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isLinked && myProfile && partnerProfile) refreshMoney();
   }, [isLinked, myProfile, partnerProfile, refreshMoney]);
 
-  // "Quỹ đen" — only Alvinne's account ever surfaces this (Money.tsx gates
-  // the tab on isAdmin), so there's no point fetching it for the other
+  // Private Stash — only Alvinne's account ever surfaces this (Money.tsx
+  // gates the tab on isAdmin), so there's no point fetching it for the other
   // account at all; genuinely private at the RLS level too either way.
   const refreshPrivateMoney = useCallback(async () => {
     if (!isAdmin) return;
-    const [privateExpenses, privateJar] = await Promise.all([fetchPrivateExpenses(), fetchPrivateJar()]);
-    setState(s => ({ ...s, privateExpenses, privateJar }));
+    const [privateExpenses, privateJars] = await Promise.all([fetchPrivateExpenses(), fetchPrivateJars()]);
+    setState(s => ({ ...s, privateExpenses, privateJars }));
     markLoaded('privateMoney');
   }, [isAdmin, markLoaded]);
 
@@ -2300,7 +2330,8 @@ const refreshMoods = useCallback(async () => {
       toggleLike, toggleSave, addComment, addPost, editPost, deletePost,
       addMemory, toggleFavorite,
       addExpense, updateExpense, deleteExpense,
-      addPrivateExpense, deletePrivateExpense, depositToJar, withdrawFromJar,
+      addPrivateExpense, deletePrivateExpense,
+      addPrivateJar, updatePrivateJar, deletePrivateJar, depositToPrivateJar, withdrawFromPrivateJar,
       addSavingsGoal, updateSavingsGoal, deleteSavingsGoal, addToGoal, withdrawFromGoal,
       addLoveNote, markNoteRead, addSecretNote,
       addEvent, updateEvent, deleteEvent,

@@ -1,11 +1,11 @@
 import { supabase } from './lib/supabaseClient';
-import type { PrivateExpense } from './types';
+import type { PrivateExpense, PrivateJar } from './types';
 
-// "Quỹ đen" — a personal stash, private to whichever account is logged in
-// (RLS-scoped by profile_id = auth.uid(), not couple_id — see
-// 0085_private_quy_den.sql). The app only ever surfaces this to Alvinne's
-// account (gated by isAdmin in Money.tsx), but the privacy itself lives at
-// the database level, not just in the UI.
+// Private Stash — a personal stash, private to whichever account is logged
+// in (RLS-scoped by profile_id = auth.uid(), not couple_id — see
+// 0085_private_quy_den.sql/0086_private_jars_multi.sql). The app only ever
+// surfaces this to Alvinne's account (gated by isAdmin in Money.tsx), but
+// the privacy itself lives at the database level, not just in the UI.
 
 interface PrivateExpenseRow {
   id: string;
@@ -57,13 +57,45 @@ export async function deletePrivateExpenseRow(id: string) {
   return supabase.from('private_expenses').delete().eq('id', id);
 }
 
-export async function fetchPrivateJar(): Promise<number> {
-  const { data, error } = await supabase.from('private_jar').select('current').maybeSingle();
-  if (error || !data) return 0;
-  return Number(data.current);
+interface PrivateJarRow {
+  id: string;
+  title: string;
+  emoji: string;
+  target: number | null;
+  current: number;
 }
 
-// Upserts since the row doesn't exist until the first deposit/withdrawal.
-export async function setPrivateJarAmount(profileId: string, next: number) {
-  return supabase.from('private_jar').upsert({ profile_id: profileId, current: next }, { onConflict: 'profile_id' });
+function rowToPrivateJar(row: PrivateJarRow): PrivateJar {
+  return {
+    id: row.id,
+    title: row.title,
+    emoji: row.emoji,
+    target: row.target != null ? Number(row.target) : undefined,
+    current: Number(row.current),
+  };
+}
+
+export async function fetchPrivateJars(): Promise<PrivateJar[]> {
+  const { data, error } = await supabase
+    .from('private_jars')
+    .select('id, title, emoji, target, current')
+    .order('created_at', { ascending: true });
+  if (error || !data) return [];
+  return (data as PrivateJarRow[]).map(rowToPrivateJar);
+}
+
+export async function createPrivateJar(j: { title: string; emoji: string; target?: number }) {
+  return supabase.from('private_jars').insert({ title: j.title, emoji: j.emoji, target: j.target ?? null });
+}
+
+export async function updatePrivateJarRow(id: string, j: { title: string; emoji: string; target?: number }) {
+  return supabase.from('private_jars').update({ title: j.title, emoji: j.emoji, target: j.target ?? null }).eq('id', id);
+}
+
+export async function setPrivateJarCurrentRow(id: string, next: number) {
+  return supabase.from('private_jars').update({ current: next }).eq('id', id);
+}
+
+export async function deletePrivateJarRow(id: string) {
+  return supabase.from('private_jars').delete().eq('id', id);
 }

@@ -9,7 +9,7 @@ import EditBillForm from '../components/forms/EditBillForm';
 import AmountInput from '../components/AmountInput';
 import Icon from '../components/Icon';
 import FilterCountBadge from '../components/FilterCountBadge';
-import type { Bill, Debt, Expense, PrivateExpense, SavingsGoal } from '../types';
+import type { Bill, Debt, Expense, PrivateExpense, PrivateJar, SavingsGoal } from '../types';
 
 type Tab = 'expenses' | 'goals' | 'stats' | 'bills' | 'debts' | 'private';
 
@@ -22,7 +22,7 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 ];
 // Only ever added to the tab bar for Alvinne's account (see Money()) — a
 // personal stash, not a couple feature.
-const PRIVATE_TAB: { key: Tab; label: string; icon: string } = { key: 'private', label: 'Quỹ đen', icon: '🐷' };
+const PRIVATE_TAB: { key: Tab; label: string; icon: string } = { key: 'private', label: 'Private Stash', icon: '🔐' };
 
 const CAT_COLORS: Record<string, string> = {
   Food: 'var(--sakura-accent)', Coffee: '#C48A52', Entertainment: '#8B6FD4',
@@ -126,7 +126,7 @@ export default function Money() {
   );
 }
 
-/* ─── Quỹ đen — a personal stash, Alvinne's account only ────────────── */
+/* ─── Private Stash — a personal fund, Alvinne's account only ───────── */
 
 const PRIVATE_CATEGORIES: { key: string; emoji: string }[] = [
   { key: 'Food', emoji: '🍜' },
@@ -143,17 +143,17 @@ function privateTodayISO(): string {
 }
 
 function PrivateFundTab() {
-  const [subTab, setSubTab] = useState<'ledger' | 'jar'>('ledger');
+  const [subTab, setSubTab] = useState<'ledger' | 'jars'>('ledger');
   return (
     <div>
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: 'var(--bg)', borderRadius: 12, padding: 4 }}>
-        {([['ledger', 'Thu chi'], ['jar', 'Hũ']] as const).map(([key, label]) => (
+        {([['ledger', 'Ledger'], ['jars', 'Jars']] as const).map(([key, label]) => (
           <button key={key} onClick={() => setSubTab(key)} style={{ flex: 1, padding: '9px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, background: subTab === key ? 'var(--card)' : 'none', color: subTab === key ? 'var(--sakura-deep)' : 'var(--ink-2)', boxShadow: subTab === key ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
             {label}
           </button>
         ))}
       </div>
-      {subTab === 'ledger' ? <PrivateLedgerTab /> : <PrivateJarTab />}
+      {subTab === 'ledger' ? <PrivateLedgerTab /> : <PrivateJarsTab />}
     </div>
   );
 }
@@ -207,7 +207,7 @@ function PrivateLedgerTab() {
       </div>
 
       {dates.length === 0 ? (
-        <EmptyState icon="🐷" title="No transactions yet" sub="Add your first private income or expense." />
+        <EmptyState icon="🔐" title="No transactions yet" sub="Add your first private income or expense." />
       ) : dates.map(date => (
         <div key={date} style={{ marginBottom: 16 }}>
           <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>{formatDate(date)}</p>
@@ -271,45 +271,164 @@ function PrivateLedgerTab() {
   );
 }
 
-function PrivateJarTab() {
-  const { state, depositToJar, withdrawFromJar } = useApp();
-  const [mode, setMode] = useState<'deposit' | 'withdraw' | null>(null);
-  const [amount, setAmount] = useState('');
+const JAR_EMOJI_CHOICES = ['🫙', '🎯', '🏖️', '🎁', '📱', '🚗', '🏠', '✈️', '🎮', '👟'];
+
+function PrivateJarsTab() {
+  const { state, addPrivateJar, updatePrivateJar, deletePrivateJar, depositToPrivateJar, withdrawFromPrivateJar } = useApp();
+  const jars = state.privateJars;
+  const [activeAction, setActiveAction] = useState<{ id: string; mode: 'deposit' | 'withdraw' } | null>(null);
+  const [addAmt, setAddAmt] = useState('');
+  const [amtError, setAmtError] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState<PrivateJar | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const [title, setTitle] = useState('');
+  const [emoji, setEmoji] = useState(JAR_EMOJI_CHOICES[0]);
+  const [hasTarget, setHasTarget] = useState(false);
+  const [target, setTarget] = useState('');
   const [error, setError] = useState('');
 
-  const openMode = (m: 'deposit' | 'withdraw') => { setMode(m); setAmount(''); setError(''); };
-  const handleSubmit = () => {
-    const n = +amount;
-    if (!amount || isNaN(n) || n <= 0) { setError('Enter a valid amount.'); return; }
-    if (mode === 'deposit') depositToJar(n);
-    else if (mode === 'withdraw') withdrawFromJar(n);
-    setMode(null);
+  const totalSaved = jars.reduce((s, j) => s + j.current, 0);
+
+  const openAdd = () => {
+    setTitle(''); setEmoji(JAR_EMOJI_CHOICES[0]); setHasTarget(false); setTarget(''); setError('');
+    setShowForm(true);
   };
+  const openEdit = (j: PrivateJar) => {
+    setTitle(j.title); setEmoji(j.emoji); setHasTarget(j.target != null); setTarget(j.target != null ? String(Math.round(j.target)) : ''); setError('');
+    setEditing(j);
+  };
+  const closeForm = () => { setShowForm(false); setEditing(null); };
+
+  const handleSubmit = () => {
+    if (!title.trim()) { setError('Enter a name for this jar.'); return; }
+    if (hasTarget && (!target || isNaN(+target) || +target <= 0)) { setError('Enter a valid target amount.'); return; }
+    const data = { title: title.trim(), emoji, target: hasTarget ? +target : undefined };
+    if (editing) updatePrivateJar(editing.id, data);
+    else addPrivateJar(data);
+    closeForm();
+  };
+
+  const confirming = jars.find(j => j.id === confirmDeleteId);
 
   return (
     <div>
-      <div style={{ background: 'linear-gradient(135deg, #E8844A, #C4652C)', borderRadius: 20, padding: '24px 20px', marginBottom: 20, textAlign: 'center' }}>
-        <p style={{ marginBottom: 6, display: 'flex', justifyContent: 'center' }}><Icon emoji="🐷" size={40} /></p>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>In the jar</p>
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 34, color: 'white' }}>{VND(state.privateJar)}</p>
+      <div style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', borderRadius: 24, padding: '24px 20px', marginBottom: 16 }}>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Total saved</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 34, color: 'white', lineHeight: 1 }}>{VND(totalSaved)}</p>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 6 }}>{jars.length} jar{jars.length === 1 ? '' : 's'}</p>
       </div>
 
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button onClick={() => openMode('deposit')} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: 'white', fontWeight: 700, fontSize: 14 }}>+ Deposit</button>
-        <button onClick={() => openMode('withdraw')} disabled={state.privateJar <= 0} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: state.privateJar > 0 ? 'pointer' : 'default', background: state.privateJar > 0 ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: state.privateJar > 0 ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14 }}>Withdraw</button>
-      </div>
+      <button onClick={openAdd} style={{ width: '100%', padding: '11px', marginBottom: 16, borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 14 }}>+ New jar</button>
 
-      <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 12, textAlign: 'center' }}>Deposits are deducted from Thu chi; withdrawals are added back.</p>
+      {jars.length === 0 && <EmptyState icon="🫙" title="No jars yet" sub="Create a jar to start setting money aside." />}
 
-      {mode && (
-        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setMode(null)}>
-          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 320, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
-            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, color: 'var(--ink)', marginBottom: 16 }}>{mode === 'deposit' ? 'Deposit into the jar' : 'Withdraw from the jar'}</p>
-            <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
-            {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, marginTop: 8 }}>{error}</p>}
-            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button onClick={() => setMode(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSubmit} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: mode === 'deposit' ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, cursor: 'pointer' }}>{mode === 'deposit' ? 'Deposit' : 'Withdraw'}</button>
+      {jars.map(j => {
+        const pct = j.target ? Math.round((j.current / j.target) * 100) : null;
+        return (
+          <div key={j.id} className="card" style={{ padding: '16px 18px', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <div style={{ width: 44, height: 44, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={j.emoji} size={22} /></div>
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{j.title}</p>
+                  {j.target != null && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Target: {VND(j.target)}</p>}
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {pct != null && <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: pct >= 100 ? '#5AC26A' : 'var(--sakura-deep)' }}>{pct}%</p>}
+                <button onClick={() => openEdit(j)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
+                <button onClick={() => setConfirmDeleteId(j.id)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
+              </div>
+            </div>
+            {pct != null && (
+              <div className="progress-bar" style={{ marginBottom: 8 }}>
+                <div className="progress-fill" style={{ width: `${Math.min(pct, 100)}%`, background: pct >= 100 ? '#5AC26A' : undefined }} />
+              </div>
+            )}
+            <p style={{ fontSize: 20, fontWeight: 700, color: 'var(--sakura-deep)', marginBottom: 12 }}>{VND(j.current)}</p>
+            {activeAction?.id === j.id ? (
+              <div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <AmountInput
+                    placeholder="Amount (VND)" value={addAmt}
+                    onChange={v => { setAddAmt(v); setAmtError(''); }}
+                    style={{ flex: 1, padding: '8px 12px' }}
+                  />
+                  <button
+                    onClick={() => {
+                      const n = +addAmt;
+                      if (!addAmt || isNaN(n) || n <= 0) { setAmtError('Enter a valid amount.'); return; }
+                      if (activeAction.mode === 'withdraw' && n > j.current) { setAmtError('Not enough left in this jar.'); return; }
+                      if (activeAction.mode === 'deposit') depositToPrivateJar(j.id, n); else withdrawFromPrivateJar(j.id, n);
+                      setActiveAction(null); setAddAmt(''); setAmtError('');
+                    }}
+                    style={{ background: activeAction.mode === 'deposit' ? 'var(--sakura-accent)' : '#E8524A', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, cursor: 'pointer' }}
+                  >{activeAction.mode === 'deposit' ? 'Deposit' : 'Withdraw'}</button>
+                  <button
+                    onClick={() => { setActiveAction(null); setAddAmt(''); setAmtError(''); }}
+                    style={{ background: 'var(--bg)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '8px 10px', cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center' }}
+                  ><Icon emoji="✕" size={14} /></button>
+                </div>
+                {amtError && <p style={{ color: 'var(--sakura-deep)', fontSize: 12, marginTop: 6 }}>{amtError}</p>}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setActiveAction({ id: j.id, mode: 'deposit' })}
+                  style={{ flex: 1, padding: '9px', background: 'var(--sakura-light)', border: 'none', borderRadius: 10, color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                >+ Deposit</button>
+                <button
+                  onClick={() => j.current > 0 && setActiveAction({ id: j.id, mode: 'withdraw' })}
+                  disabled={j.current <= 0}
+                  style={{ flex: 1, padding: '9px', background: j.current > 0 ? 'rgba(232,82,74,0.1)' : 'var(--bg)', border: 'none', borderRadius: 10, color: j.current > 0 ? '#E8524A' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: j.current > 0 ? 'pointer' : 'not-allowed', opacity: j.current > 0 ? 1 : 0.5 }}
+                >− Withdraw</button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 4, textAlign: 'center' }}>Deposits are deducted from the Ledger; withdrawals are added back.</p>
+
+      {(showForm || editing) && (
+        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeForm}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>{editing ? 'Edit jar' : 'New jar'}</p>
+              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <input className="input-field" placeholder="Jar name" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Icon</p>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {JAR_EMOJI_CHOICES.map(e => (
+                    <button key={e} onClick={() => setEmoji(e)} style={{ width: 36, height: 36, border: emoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: emoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={16} /></button>
+                  ))}
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={hasTarget} onChange={e => setHasTarget(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--sakura-accent)' }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>Set a target amount</span>
+              </label>
+              {hasTarget && <AmountInput placeholder="Target (VND)" value={target} onChange={setTarget} />}
+              {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Create jar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirming && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteId(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Delete this jar?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>{confirming.title} — {VND(confirming.current)}</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { deletePrivateJar(confirming.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>

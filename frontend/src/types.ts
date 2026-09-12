@@ -48,8 +48,9 @@ export interface Expense {
   type?: 'expense' | 'income';
 }
 
-// "Quỹ đen" — private to whichever account is logged in (not couple-shared,
-// unlike Expense above), so no `paidBy` — there's only ever one owner.
+// Private Stash — private to whichever account is logged in (not
+// couple-shared, unlike Expense above), so no `paidBy` — there's only ever
+// one owner.
 export interface PrivateExpense {
   id: string;
   title: string;
@@ -59,6 +60,17 @@ export interface PrivateExpense {
   date: string;
   note: string;
   type: 'expense' | 'income';
+}
+
+// A named jar within the Private Stash, same shape as the couple's
+// SavingsGoal — `target` is optional (an open-ended jar just tracks a
+// running amount with no goal to hit).
+export interface PrivateJar {
+  id: string;
+  title: string;
+  emoji: string;
+  target?: number;
+  current: number;
 }
 
 export interface Bill {
@@ -407,10 +419,10 @@ export interface AppState {
   expenses: Expense[];
   savingsGoals: SavingsGoal[];
   bills: Bill[];
-  // "Quỹ đen" — private to whoever is logged in, only ever surfaced to
+  // Private Stash — private to whoever is logged in, only ever surfaced to
   // Alvinne's account (see Money.tsx's isAdmin gate).
   privateExpenses: PrivateExpense[];
-  privateJar: number;
+  privateJars: PrivateJar[];
   loveNotes: LoveNote[];
   secretNotes: SecretNote[];
   loveLetters: LoveLetter[];
