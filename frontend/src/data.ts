@@ -31,6 +31,9 @@ export const initialState: AppState = {
   expenses: [],
   savingsGoals: [],
   bills: [],
+  // Loaded from Supabase (see context.tsx's refreshPrivateMoney) — Alvinne's account only.
+  privateExpenses: [],
+  privateJar: 0,
 
   // Loaded from Supabase (see context.tsx's refreshLoveStuff) once the couple is linked.
   loveNotes: [],

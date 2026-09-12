@@ -48,6 +48,19 @@ export interface Expense {
   type?: 'expense' | 'income';
 }
 
+// "Quỹ đen" — private to whichever account is logged in (not couple-shared,
+// unlike Expense above), so no `paidBy` — there's only ever one owner.
+export interface PrivateExpense {
+  id: string;
+  title: string;
+  category: string;
+  categoryEmoji: string;
+  amount: number;
+  date: string;
+  note: string;
+  type: 'expense' | 'income';
+}
+
 export interface Bill {
   id: string;
   title: string;
@@ -394,6 +407,10 @@ export interface AppState {
   expenses: Expense[];
   savingsGoals: SavingsGoal[];
   bills: Bill[];
+  // "Quỹ đen" — private to whoever is logged in, only ever surfaced to
+  // Alvinne's account (see Money.tsx's isAdmin gate).
+  privateExpenses: PrivateExpense[];
+  privateJar: number;
   loveNotes: LoveNote[];
   secretNotes: SecretNote[];
   loveLetters: LoveLetter[];

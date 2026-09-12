@@ -9,9 +9,9 @@ import EditBillForm from '../components/forms/EditBillForm';
 import AmountInput from '../components/AmountInput';
 import Icon from '../components/Icon';
 import FilterCountBadge from '../components/FilterCountBadge';
-import type { Bill, Debt, Expense, SavingsGoal } from '../types';
+import type { Bill, Debt, Expense, PrivateExpense, SavingsGoal } from '../types';
 
-type Tab = 'expenses' | 'goals' | 'stats' | 'bills' | 'debts';
+type Tab = 'expenses' | 'goals' | 'stats' | 'bills' | 'debts' | 'private';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'expenses', label: 'Expenses', icon: '💸' },
@@ -20,6 +20,9 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'debts', label: 'Debts', icon: '📒' },
   { key: 'stats', label: 'Stats', icon: '📊' },
 ];
+// Only ever added to the tab bar for Alvinne's account (see Money()) — a
+// personal stash, not a couple feature.
+const PRIVATE_TAB: { key: Tab; label: string; icon: string } = { key: 'private', label: 'Quỹ đen', icon: '🐷' };
 
 const CAT_COLORS: Record<string, string> = {
   Food: 'var(--sakura-accent)', Coffee: '#C48A52', Entertainment: '#8B6FD4',
@@ -66,10 +69,11 @@ function frequencyLabel(n: number): string {
 }
 
 export default function Money() {
-  const { state, screen, addToGoal, withdrawFromGoal, addBill, toggleBillPaid } = useApp();
+  const { state, screen, isAdmin, addToGoal, withdrawFromGoal, addBill, toggleBillPaid } = useApp();
   const [tab, setTab] = useState<Tab>('expenses');
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showAddIncome, setShowAddIncome] = useState(false);
+  const tabs = isAdmin ? [...TABS, PRIVATE_TAB] : TABS;
 
   // A Bill/Savings-goal notification and the Money tab itself all land on
   // this same kept-alive screen (see App.tsx's ScreenRouter) — this is the
@@ -88,11 +92,11 @@ export default function Money() {
     <div style={{ paddingBottom: 32 }}>
       {/* Tab bar */}
       <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 3,
+        display: 'grid', gridTemplateColumns: `repeat(${tabs.length}, 1fr)`, gap: 3,
         background: 'var(--bg)', borderRadius: 16, padding: 4, marginBottom: 20,
         border: '1px solid var(--border)',
       }}>
-        {TABS.map(t => (
+        {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding: '8px 4px', borderRadius: 12, border: 'none', cursor: 'pointer',
             background: tab === t.key ? 'var(--white)' : 'transparent',
@@ -113,10 +117,203 @@ export default function Money() {
         {tab === 'stats' && <StatsTab expenses={state.expenses} />}
         {tab === 'bills' && <BillsTab bills={state.bills} onAdd={addBill} onTogglePaid={toggleBillPaid} />}
         {tab === 'debts' && <DebtsTab />}
+        {tab === 'private' && isAdmin && <PrivateFundTab />}
       </div>
 
       {showAddExpense && <AddExpenseForm onClose={() => setShowAddExpense(false)} />}
       {showAddIncome && <AddIncomeForm onClose={() => setShowAddIncome(false)} />}
+    </div>
+  );
+}
+
+/* ─── Quỹ đen — a personal stash, Alvinne's account only ────────────── */
+
+const PRIVATE_CATEGORIES: { key: string; emoji: string }[] = [
+  { key: 'Food', emoji: '🍜' },
+  { key: 'Coffee', emoji: '☕' },
+  { key: 'Shopping', emoji: '🛍️' },
+  { key: 'Entertainment', emoji: '🎮' },
+  { key: 'Transport', emoji: '🚗' },
+  { key: 'Other', emoji: '💰' },
+];
+
+function privateTodayISO(): string {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+}
+
+function PrivateFundTab() {
+  const [subTab, setSubTab] = useState<'ledger' | 'jar'>('ledger');
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: 'var(--bg)', borderRadius: 12, padding: 4 }}>
+        {([['ledger', 'Thu chi'], ['jar', 'Hũ']] as const).map(([key, label]) => (
+          <button key={key} onClick={() => setSubTab(key)} style={{ flex: 1, padding: '9px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, background: subTab === key ? 'var(--card)' : 'none', color: subTab === key ? 'var(--sakura-deep)' : 'var(--ink-2)', boxShadow: subTab === key ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {subTab === 'ledger' ? <PrivateLedgerTab /> : <PrivateJarTab />}
+    </div>
+  );
+}
+
+function PrivateLedgerTab() {
+  const { state, addPrivateExpense, deletePrivateExpense } = useApp();
+  const [showForm, setShowForm] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const [type, setType] = useState<'expense' | 'income'>('expense');
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState(PRIVATE_CATEGORIES[0]);
+  const [amount, setAmount] = useState('');
+  const [date, setDate] = useState(privateTodayISO());
+  const [note, setNote] = useState('');
+  const [error, setError] = useState('');
+
+  const openAdd = (t: 'expense' | 'income') => {
+    setType(t); setTitle(''); setCategory(PRIVATE_CATEGORIES[0]); setAmount(''); setDate(privateTodayISO()); setNote(''); setError('');
+    setShowForm(true);
+  };
+  const closeForm = () => setShowForm(false);
+
+  const handleSubmit = () => {
+    if (!title.trim()) { setError('Enter a title.'); return; }
+    if (!amount || isNaN(+amount) || +amount <= 0) { setError('Enter a valid amount.'); return; }
+    addPrivateExpense({ title: title.trim(), category: category.key, categoryEmoji: category.emoji, amount: +amount, date, note: note.trim(), type });
+    closeForm();
+  };
+
+  const totalIncome = state.privateExpenses.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+  const totalExpense = state.privateExpenses.filter(e => e.type !== 'income').reduce((s, e) => s + e.amount, 0);
+  const net = totalIncome - totalExpense;
+  const confirming = state.privateExpenses.find(e => e.id === confirmDeleteId);
+
+  const byDate: Record<string, PrivateExpense[]> = {};
+  for (const e of state.privateExpenses) { (byDate[e.date] ??= []).push(e); }
+  const dates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
+
+  return (
+    <div>
+      <div style={{ background: net >= 0 ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', borderRadius: 20, padding: '18px 20px', marginBottom: 16 }}>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Balance</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 31, color: 'white', lineHeight: 1.1 }}>{VND(net)}</p>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 6 }}>Income {VND(totalIncome)} · Spent {VND(totalExpense)}</p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <button onClick={() => openAdd('income')} style={{ flex: 1, padding: '11px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: 'white', fontWeight: 700, fontSize: 14 }}>+ Income</button>
+        <button onClick={() => openAdd('expense')} style={{ flex: 1, padding: '11px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 14 }}>+ Expense</button>
+      </div>
+
+      {dates.length === 0 ? (
+        <EmptyState icon="🐷" title="No transactions yet" sub="Add your first private income or expense." />
+      ) : dates.map(date => (
+        <div key={date} style={{ marginBottom: 16 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>{formatDate(date)}</p>
+          <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
+            {byDate[date].map((e, i) => (
+              <div key={e.id} onClick={() => setConfirmDeleteId(e.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', cursor: 'pointer', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+                <div style={{ width: 40, height: 40, background: e.type === 'income' ? 'rgba(90,194,106,0.12)' : 'var(--sakura-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, flexShrink: 0 }}>{e.categoryEmoji}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</p>
+                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{e.category}</p>
+                </div>
+                <p style={{ fontSize: 15, fontWeight: 700, flexShrink: 0, color: e.type === 'income' ? '#5AC26A' : 'var(--sakura-deep)' }}>{e.type === 'income' ? '+' : '-'}{VND(e.amount)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {showForm && (
+        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeForm}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>{type === 'income' ? 'Add income' : 'Add expense'}</p>
+              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <input className="input-field" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Category</p>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {PRIVATE_CATEGORIES.map(c => (
+                    <button key={c.key} onClick={() => setCategory(c)} style={{ padding: '7px 11px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: category.key === c.key ? 'var(--sakura-light)' : 'var(--bg)', border: category.key === c.key ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: category.key === c.key ? 'var(--sakura-deep)' : 'var(--ink-2)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <Icon emoji={c.emoji} size={12} /> {c.key}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
+              <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+              <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
+              {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirming && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteId(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Delete this entry?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>{confirming.title} — {VND(confirming.amount)}</p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { deletePrivateExpense(confirming.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PrivateJarTab() {
+  const { state, depositToJar, withdrawFromJar } = useApp();
+  const [mode, setMode] = useState<'deposit' | 'withdraw' | null>(null);
+  const [amount, setAmount] = useState('');
+  const [error, setError] = useState('');
+
+  const openMode = (m: 'deposit' | 'withdraw') => { setMode(m); setAmount(''); setError(''); };
+  const handleSubmit = () => {
+    const n = +amount;
+    if (!amount || isNaN(n) || n <= 0) { setError('Enter a valid amount.'); return; }
+    if (mode === 'deposit') depositToJar(n);
+    else if (mode === 'withdraw') withdrawFromJar(n);
+    setMode(null);
+  };
+
+  return (
+    <div>
+      <div style={{ background: 'linear-gradient(135deg, #E8844A, #C4652C)', borderRadius: 20, padding: '24px 20px', marginBottom: 20, textAlign: 'center' }}>
+        <p style={{ marginBottom: 6, display: 'flex', justifyContent: 'center' }}><Icon emoji="🐷" size={40} /></p>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>In the jar</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 34, color: 'white' }}>{VND(state.privateJar)}</p>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={() => openMode('deposit')} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: 'white', fontWeight: 700, fontSize: 14 }}>+ Deposit</button>
+        <button onClick={() => openMode('withdraw')} disabled={state.privateJar <= 0} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: state.privateJar > 0 ? 'pointer' : 'default', background: state.privateJar > 0 ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: state.privateJar > 0 ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14 }}>Withdraw</button>
+      </div>
+
+      <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 12, textAlign: 'center' }}>Deposits are deducted from Thu chi; withdrawals are added back.</p>
+
+      {mode && (
+        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setMode(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, width: '100%', maxWidth: 320, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, color: 'var(--ink)', marginBottom: 16 }}>{mode === 'deposit' ? 'Deposit into the jar' : 'Withdraw from the jar'}</p>
+            <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
+            {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, marginTop: 8 }}>{error}</p>}
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={() => setMode(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSubmit} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: mode === 'deposit' ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, cursor: 'pointer' }}>{mode === 'deposit' ? 'Deposit' : 'Withdraw'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

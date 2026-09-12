@@ -5,7 +5,7 @@ if (import.meta.hot) {
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { initialState } from './data';
-import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Todo, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage, CustomSticker } from './types';
+import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Todo, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage, CustomSticker, PrivateExpense } from './types';
 import { fetchChatMessages, sendChatMessageRow, markChatReadFrom, fetchUnreadChatCount, uploadChatFile } from './chat';
 import { fetchCustomStickers, createCustomSticker, deleteCustomStickerRow, uploadCustomStickerImage } from './customStickers';
 import type { NewChatMessage } from './chat';
@@ -46,6 +46,9 @@ import {
   fetchBills, createBill, updateBillRow, setBillPaid, deleteBillRow, rollBillsForward,
   fetchSavingsGoals, createSavingsGoal, updateSavingsGoalCurrent, updateSavingsGoalRow, deleteSavingsGoalRow,
 } from './money';
+import {
+  fetchPrivateExpenses, createPrivateExpense, deletePrivateExpenseRow, fetchPrivateJar, setPrivateJarAmount,
+} from './privateMoney';
 import {
   fetchLoveNotes, createLoveNote, markLoveNoteRead,
   fetchLoveLetters, createLoveLetter, deleteLoveLetterRow,
@@ -165,6 +168,10 @@ interface AppContextType {
   addExpense: (e: Omit<Expense, 'id'>) => void;
   updateExpense: (id: string, e: Omit<Expense, 'id'>) => void;
   deleteExpense: (id: string) => void;
+  addPrivateExpense: (e: Omit<PrivateExpense, 'id'>) => void;
+  deletePrivateExpense: (id: string) => void;
+  depositToJar: (amount: number) => void;
+  withdrawFromJar: (amount: number) => void;
 
   // Savings
   addSavingsGoal: (g: Omit<SavingsGoal, 'id'>) => void;
@@ -584,6 +591,53 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await deleteExpenseRow(id);
     if (error) { toast('Something went wrong', '⚠️'); refreshMoney(); return; }
     toast('Expense removed.', '🗑️');
+  };
+
+  // "Quỹ đen" — private stash, Alvinne's account only (see refreshPrivateMoney).
+  const addPrivateExpense = async (e: Omit<PrivateExpense, 'id'>) => {
+    const { error } = await createPrivateExpense(e);
+    if (error) { toast('Something went wrong', '⚠️'); return; }
+    await refreshPrivateMoney();
+    toast('Saved 💰');
+  };
+
+  const deletePrivateExpense = async (id: string) => {
+    setState(s => ({ ...s, privateExpenses: s.privateExpenses.filter(x => x.id !== id) }));
+    const { error } = await deletePrivateExpenseRow(id);
+    if (error) { toast('Something went wrong', '⚠️'); refreshPrivateMoney(); return; }
+    toast('Removed 🗑️');
+  };
+
+  // Deposits move money out of the spendable side of the ledger — mirrored
+  // as an expense, same as the couple's SavingsGoal contribute/withdraw.
+  const depositToJar = async (amount: number) => {
+    if (!myProfile || amount <= 0) return;
+    const nextAmount = state.privateJar + amount;
+    setState(s => ({ ...s, privateJar: nextAmount }));
+    const { error } = await setPrivateJarAmount(myProfile.id, nextAmount);
+    if (error) { toast('Something went wrong', '⚠️'); refreshPrivateMoney(); return; }
+    await createPrivateExpense({
+      title: 'Deposit to jar', category: 'Jar', categoryEmoji: '🐷',
+      amount, date: new Date().toISOString().slice(0, 10), note: 'Deposited into the jar', type: 'expense',
+    });
+    await refreshPrivateMoney();
+    toast('Deposited into the jar! 🐷');
+  };
+
+  const withdrawFromJar = async (amount: number) => {
+    if (!myProfile || amount <= 0) return;
+    const nextAmount = Math.max(state.privateJar - amount, 0);
+    const delta = state.privateJar - nextAmount;
+    if (delta <= 0) return;
+    setState(s => ({ ...s, privateJar: nextAmount }));
+    const { error } = await setPrivateJarAmount(myProfile.id, nextAmount);
+    if (error) { toast('Something went wrong', '⚠️'); refreshPrivateMoney(); return; }
+    await createPrivateExpense({
+      title: 'Withdraw from jar', category: 'Jar', categoryEmoji: '🐷',
+      amount: delta, date: new Date().toISOString().slice(0, 10), note: 'Withdrew from the jar', type: 'income',
+    });
+    await refreshPrivateMoney();
+    toast('Withdrawn from the jar! 💸');
   };
 
   // Savings — backed by Supabase
@@ -1584,6 +1638,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (isLinked && myProfile && partnerProfile) refreshMoney();
   }, [isLinked, myProfile, partnerProfile, refreshMoney]);
 
+  // "Quỹ đen" — only Alvinne's account ever surfaces this (Money.tsx gates
+  // the tab on isAdmin), so there's no point fetching it for the other
+  // account at all; genuinely private at the RLS level too either way.
+  const refreshPrivateMoney = useCallback(async () => {
+    if (!isAdmin) return;
+    const [privateExpenses, privateJar] = await Promise.all([fetchPrivateExpenses(), fetchPrivateJar()]);
+    setState(s => ({ ...s, privateExpenses, privateJar }));
+    markLoaded('privateMoney');
+  }, [isAdmin, markLoaded]);
+
+  useEffect(() => {
+    if (isLinked && isAdmin) refreshPrivateMoney();
+  }, [isLinked, isAdmin, refreshPrivateMoney]);
+
   const refreshLoveStuff = useCallback(async () => {
     if (!myProfile) return;
     const names: Record<string, User> = {};
@@ -2232,6 +2300,7 @@ const refreshMoods = useCallback(async () => {
       toggleLike, toggleSave, addComment, addPost, editPost, deletePost,
       addMemory, toggleFavorite,
       addExpense, updateExpense, deleteExpense,
+      addPrivateExpense, deletePrivateExpense, depositToJar, withdrawFromJar,
       addSavingsGoal, updateSavingsGoal, deleteSavingsGoal, addToGoal, withdrawFromGoal,
       addLoveNote, markNoteRead, addSecretNote,
       addEvent, updateEvent, deleteEvent,
