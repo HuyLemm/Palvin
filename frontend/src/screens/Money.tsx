@@ -28,6 +28,8 @@ const CAT_COLORS: Record<string, string> = {
   Food: 'var(--sakura-accent)', Coffee: '#C48A52', Entertainment: '#8B6FD4',
   Home: '#4AAEAA', Transportation: '#4A8AE8', Gifts: '#E8844A',
   Shopping: '#D4A028', Health: '#5AC26A', Other: '#A0A0A0',
+  // Private Stash-only categories (PRIVATE_CATEGORIES below).
+  Transport: '#4A8AE8', Jar: '#E67F9A',
 };
 
 // Was a hardcoded 6-entry array anchored to August 2026 — correct only for
@@ -143,17 +145,17 @@ function privateTodayISO(): string {
 }
 
 function PrivateFundTab() {
-  const [subTab, setSubTab] = useState<'ledger' | 'jars'>('ledger');
+  const [subTab, setSubTab] = useState<'ledger' | 'jars' | 'stats'>('ledger');
   return (
     <div>
       <div style={{ display: 'flex', gap: 6, marginBottom: 16, background: 'var(--bg)', borderRadius: 12, padding: 4 }}>
-        {([['ledger', 'Ledger'], ['jars', 'Jars']] as const).map(([key, label]) => (
+        {([['ledger', 'Ledger'], ['jars', 'Jars'], ['stats', 'Stats']] as const).map(([key, label]) => (
           <button key={key} onClick={() => setSubTab(key)} style={{ flex: 1, padding: '9px', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 700, background: subTab === key ? 'var(--card)' : 'none', color: subTab === key ? 'var(--sakura-deep)' : 'var(--ink-2)', boxShadow: subTab === key ? '0 1px 4px rgba(0,0,0,0.08)' : 'none' }}>
             {label}
           </button>
         ))}
       </div>
-      {subTab === 'ledger' ? <PrivateLedgerTab /> : <PrivateJarsTab />}
+      {subTab === 'ledger' ? <PrivateLedgerTab /> : subTab === 'jars' ? <PrivateJarsTab /> : <PrivateStatsTab />}
     </div>
   );
 }
@@ -430,6 +432,195 @@ function PrivateJarsTab() {
               <button onClick={() => setConfirmDeleteId(null)} style={{ flex: 1, padding: '10px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
               <button onClick={() => { deletePrivateJar(confirming.id); setConfirmDeleteId(null); }} style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: '#E8524A', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// A slimmed-down StatsTab (below) for the single-owner private ledger — no
+// "Who paid?" split (there's only ever one owner) and no auto-generated
+// insight sentences, but the same period picker, category breakdown, jar
+// savings, trend chart, and top-expenses list, reusing the same MONTHS/
+// YEARS/MonthlyBar/etc. helpers.
+function PrivateStatsTab() {
+  const { state } = useApp();
+  const expenses = state.privateExpenses;
+  const [mode, setMode] = useState<'month' | 'year'>('month');
+  const [month, setMonth] = useState(MONTHS[0]);
+  const [year, setYear] = useState(YEARS[0]);
+  const period = mode === 'month' ? month : year;
+  const periodLabel = mode === 'month' ? monthLabel(month) : year;
+  const periodExp = expenses.filter(e => e.date.startsWith(period) && e.type !== 'income');
+  const periodInc = expenses.filter(e => e.date.startsWith(period) && e.type === 'income');
+  const total = periodExp.reduce((s, e) => s + e.amount, 0);
+  const totalInc = periodInc.reduce((s, e) => s + e.amount, 0);
+
+  const prevPeriod = mode === 'month' ? shiftMonth(month, -1) : String(+year - 1);
+  const prevPeriodLabel = mode === 'month' ? 'last month' : 'last year';
+  const prevPeriodExp = expenses.filter(e => e.date.startsWith(prevPeriod) && e.type !== 'income');
+  const prevTotal = prevPeriodExp.reduce((s, e) => s + e.amount, 0);
+  const change = prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : null;
+
+  const catMap: Record<string, { emoji: string; amount: number; count: number }> = {};
+  for (const e of periodExp) {
+    if (!catMap[e.category]) catMap[e.category] = { emoji: e.categoryEmoji, amount: 0, count: 0 };
+    catMap[e.category].amount += e.amount;
+    catMap[e.category].count += 1;
+  }
+  const categories = Object.entries(catMap).map(([cat, v]) => ({ cat, ...v })).sort((a, b) => b.amount - a.amount);
+  const maxCat = categories[0]?.amount || 1;
+
+  const trendKeys = mode === 'month' ? lastNMonths(month, 6) : lastNYears(year, 5);
+  const monthlyData = trendKeys.map(key => ({
+    key,
+    label: mode === 'month' ? monthShortLabel(key) : key,
+    exp: expenses.filter(e => e.date.startsWith(key) && e.type !== 'income').reduce((s, e) => s + e.amount, 0),
+  }));
+  const periodAvg = monthlyData.reduce((s, d) => s + d.exp, 0) / monthlyData.length;
+
+  const topExpenses = [...periodExp].sort((a, b) => b.amount - a.amount).slice(0, 5);
+
+  // Net moved to/from jars this period — mirrors StatsTab's "Savings this
+  // month", matched on category 'Jar' (Private Stash's own convention,
+  // see context.tsx's depositToPrivateJar/withdrawFromPrivateJar).
+  const jarMap: Record<string, { emoji: string; net: number }> = {};
+  for (const e of periodExp) {
+    if (e.category !== 'Jar') continue;
+    const name = e.title.replace(/^Deposit to /, '');
+    if (!jarMap[name]) jarMap[name] = { emoji: e.categoryEmoji, net: 0 };
+    jarMap[name].net += e.amount;
+  }
+  for (const e of periodInc) {
+    if (e.category !== 'Jar') continue;
+    const name = e.title.replace(/^Withdraw from /, '');
+    if (!jarMap[name]) jarMap[name] = { emoji: e.categoryEmoji, net: 0 };
+    jarMap[name].net -= e.amount;
+  }
+  const jarEntries = Object.entries(jarMap).map(([name, v]) => ({ name, ...v })).sort((a, b) => Math.abs(b.net) - Math.abs(a.net));
+  const savedThisPeriod = jarEntries.reduce((s, j) => s + j.net, 0);
+
+  return (
+    <div>
+      <div style={{ display: 'flex', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 10, width: 'fit-content' }}>
+        {(['month', 'year'] as const).map(m => (
+          <button key={m} onClick={() => setMode(m)} style={{
+            padding: '6px 16px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+            background: mode === m ? 'var(--sakura-accent)' : 'transparent',
+            color: mode === m ? 'white' : 'var(--ink-2)',
+            transition: 'all 0.2s ease',
+          }}>{m === 'month' ? 'By month' : 'By year'}</button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 16 }}>
+        {(mode === 'month' ? MONTHS : YEARS).map(m => (
+          <button key={m} onClick={() => mode === 'month' ? setMonth(m) : setYear(m)} style={{
+            flexShrink: 0, padding: '6px 14px', borderRadius: 99, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+            background: m === period ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--white)',
+            color: m === period ? 'white' : 'var(--ink-2)',
+            border: m === period ? 'none' : '1px solid var(--border)',
+            boxShadow: m === period ? '0 2px 8px rgba(201,95,124,0.3)' : 'none',
+          }}>{mode === 'month' ? monthLabel(m) : m}</button>
+        ))}
+      </div>
+
+      <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{periodLabel} · Spending</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, color: 'white', lineHeight: 1.1, marginBottom: 6 }}>{VND(total)}</p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {change !== null && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: change > 0 ? 'rgba(255,100,100,0.25)' : 'rgba(100,220,140,0.25)', borderRadius: 99, padding: '3px 10px' }}>
+              <span style={{ color: 'white', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji={change > 0 ? '↑' : '↓'} size={11} /> {Math.abs(change).toFixed(0)}% vs {prevPeriodLabel}</span>
+            </div>
+          )}
+          {totalInc > 0 && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(90,194,106,0.25)', borderRadius: 99, padding: '3px 10px' }}>
+              <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>Income: {VND(totalInc)}</span>
+            </div>
+          )}
+        </div>
+        {periodExp.length === 0 && <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 6 }}>No transactions yet</p>}
+      </div>
+
+      {categories.length > 0 && (
+        <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 14 }}>Spending by category</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {categories.map(c => {
+              const pctOfTotal = total > 0 ? Math.round((c.amount / total) * 100) : 0;
+              return (
+                <div key={c.cat}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{ width: 28, height: 28, background: 'var(--bg)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={c.emoji} size={14} /></div>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{c.cat}</span>
+                      <span style={{ fontSize: 10, color: 'var(--ink-2)', background: 'var(--bg)', padding: '1px 6px', borderRadius: 99 }}>{c.count}x</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{VND(c.amount)}</span>
+                      <span style={{ fontSize: 10, color: 'var(--ink-2)', marginLeft: 6 }}>{pctOfTotal}%</span>
+                    </div>
+                  </div>
+                  <div style={{ height: 5, background: 'var(--bg)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ width: `${(c.amount / maxCat) * 100}%`, height: '100%', background: CAT_COLORS[c.cat] || '#A0A0A0', borderRadius: 99, transition: 'width 0.5s' }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {jarEntries.length > 0 && (
+        <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>Jars this period</p>
+            <span style={{ fontSize: 13, fontWeight: 700, color: savedThisPeriod >= 0 ? '#5AC26A' : '#E8524A' }}>
+              {savedThisPeriod >= 0 ? '+' : '−'}{VND(Math.abs(savedThisPeriod))}
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {jarEntries.map(j => (
+              <div key={j.name} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon emoji={j.emoji} size={15} />
+                  <span style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 600 }}>{j.name}</span>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 700, color: j.net >= 0 ? '#5AC26A' : '#E8524A' }}>
+                  {j.net >= 0 ? '+' : '−'}{VND(Math.abs(j.net))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{mode === 'month' ? 'Last 6 months' : 'Last 5 years'}</p>
+          <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Avg: <strong style={{ color: 'var(--ink)' }}>{VND(periodAvg)}</strong></p>
+        </div>
+        <MonthlyBar data={monthlyData} avg={periodAvg} />
+      </div>
+
+      {topExpenses.length > 0 && (
+        <div className="card" style={{ padding: '14px 16px' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 12 }}>Top 5 biggest expenses</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {topExpenses.map((e, i) => (
+              <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', width: 14, flexShrink: 0 }}>{i + 1}</span>
+                <div style={{ width: 32, height: 32, background: 'var(--sakura-light)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{e.categoryEmoji}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</p>
+                  <p style={{ fontSize: 10, color: 'var(--ink-2)' }}>{formatDate(e.date)}</p>
+                </div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', flexShrink: 0 }}>{VND(e.amount)}</p>
+              </div>
+            ))}
           </div>
         </div>
       )}

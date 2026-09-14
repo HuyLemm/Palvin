@@ -2,6 +2,7 @@ import { defineConfig, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
+import fs from 'node:fs'
 
 import siteConfiguration from './.figma/make/site.json'
 
@@ -23,6 +24,7 @@ export default defineConfig(({ mode }) => {
       figmaErrorOverlayReplay(),
       figmaReactRefreshBoundaryFallback(),
       figmaMakeKitPlugin({ storiesGlob: '/src/**/*.stories.{ts,tsx,js,jsx}' }),
+      swVersionStamp(),
     ],
     resolve: {
       alias: {
@@ -294,6 +296,32 @@ function figmaReactRefreshBoundaryFallback(): Plugin {
       }
 
       return null
+    },
+  }
+}
+
+/**
+ * Rewrites public/sw.js's CACHE_NAME placeholder to a fresh, unique value
+ * in the built dist/sw.js on every production build. The browser's service
+ * worker update check works by comparing the fetched sw.js byte-for-byte
+ * against what it already has installed — since nothing else in this
+ * project's sw.js changes from one deploy to the next, without this the
+ * browser would never notice a new deploy has a "different" service worker,
+ * and the app's update-available banner (main.tsx/UpdateBanner.tsx) would
+ * never fire. Runs after Vite's static public-dir copy, so dist/sw.js
+ * already exists by the time this reads/rewrites it.
+ */
+function swVersionStamp(): Plugin {
+  return {
+    name: 'sw-version-stamp',
+    apply: 'build',
+    closeBundle() {
+      const swPath = path.resolve(__dirname, 'dist/sw.js')
+      if (!fs.existsSync(swPath)) return
+      const version = Date.now().toString(36)
+      const content = fs.readFileSync(swPath, 'utf-8')
+      const stamped = content.replace(/const CACHE_NAME = '[^']*';/, `const CACHE_NAME = 'palvin-shell-${version}';`)
+      fs.writeFileSync(swPath, stamped)
     },
   }
 }

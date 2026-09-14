@@ -2,11 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
+import EmojiColorPicker from '../components/EmojiColorPicker';
 import type { User } from '../types';
 import type { NotifyPrefs } from '../auth';
 import { fetchActivityStatuses, DEFAULT_QUICK_ACTIONS } from '../auth';
 import { fetchActivityLog, type ActivityLogEntry } from '../activityLog';
-import { fetchDailyCompliance, type DailyComplianceReport } from '../dailyCompliance';
+import { fetchDailyCompliance, acknowledgeComplianceMiss, type DailyComplianceReport } from '../dailyCompliance';
 import { isPushSupported, isPushSubscribed, subscribeToPush, unsubscribeFromPush } from '../push';
 
 const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true };
@@ -70,15 +71,16 @@ export default function Settings() {
   const [qaLabel, setQaLabel] = useState('');
   const [qaEmoji, setQaEmoji] = useState('');
   const [qaColor, setQaColor] = useState('');
+  const [qaMessage, setQaMessage] = useState('');
 
   const openEditQuickAction = (slot: 'hug' | 'thinking') => {
     const cfg = quickActions[slot];
-    setQaLabel(cfg.label); setQaEmoji(cfg.emoji); setQaColor(cfg.color);
+    setQaLabel(cfg.label); setQaEmoji(cfg.emoji); setQaColor(cfg.color); setQaMessage(cfg.message);
     setEditingQuickAction(slot);
   };
   const saveQuickAction = () => {
     if (!editingQuickAction || !qaLabel.trim()) return;
-    updateQuickAction(editingQuickAction, { label: qaLabel.trim(), emoji: qaEmoji, color: qaColor });
+    updateQuickAction(editingQuickAction, { label: qaLabel.trim(), emoji: qaEmoji, color: qaColor, message: qaMessage.trim() });
     setEditingQuickAction(null);
   };
   const [showLogout, setShowLogout] = useState(false);
@@ -133,6 +135,15 @@ export default function Settings() {
     return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
+  function dismissMiss(kind: 'streak' | 'todo', m: { profileName: string; date: string }) {
+    // Optimistic: drop it from local state immediately, then persist the
+    // dismissal — a failed write just means it reappears on the next poll.
+    setCompliance(c => kind === 'streak'
+      ? { ...c, streakMisses: c.streakMisses.filter(x => !(x.profileName === m.profileName && x.date === m.date)) }
+      : { ...c, todoMisses: c.todoMisses.filter(x => !(x.profileName === m.profileName && x.date === m.date)) });
+    acknowledgeComplianceMiss(m.profileName, m.date, kind);
+  }
+
   function renderMissRow(kind: 'streak' | 'todo', m: { profileName: string; date: string }, key: string) {
     return (
       <div key={key} className="activity-log-row" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--border)' }}>
@@ -145,6 +156,13 @@ export default function Settings() {
           </p>
           <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{formatMissDate(m.date)}</p>
         </div>
+        <button
+          onClick={() => dismissMiss(kind, m)}
+          title="Dismiss"
+          style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+        >
+          <Icon emoji="✕" size={10} />
+        </button>
       </div>
     );
   }
@@ -563,25 +581,20 @@ export default function Settings() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <input className="input-field" placeholder="Button label" value={qaLabel} onChange={e => setQaLabel(e.target.value)} autoFocus maxLength={24} />
-              <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {QUICK_ACTION_EMOJI_CHOICES.map(e => (
-                    <button key={e} onClick={() => setQaEmoji(e)} style={{ width: 36, height: 36, border: qaEmoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: qaEmoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={16} /></button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Color</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {QUICK_ACTION_COLOR_CHOICES.map(c => (
-                    <button key={c} onClick={() => setQaColor(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: qaColor === c ? '3px solid var(--ink)' : '3px solid transparent', cursor: 'pointer' }} />
-                  ))}
-                </div>
-              </div>
+              <EmojiColorPicker
+                emojiChoices={QUICK_ACTION_EMOJI_CHOICES} emoji={qaEmoji} onEmojiChange={setQaEmoji}
+                colorChoices={QUICK_ACTION_COLOR_CHOICES} color={qaColor} onColorChange={setQaColor}
+              />
               <div style={{ padding: '14px 12px', borderRadius: 14, background: `${qaColor}14`, border: `1.5px solid ${qaColor}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                 <Icon emoji={qaEmoji} size={26} />
                 <span style={{ fontSize: 12, fontWeight: 700, color: qaColor }}>{qaLabel || 'Preview'}</span>
+              </div>
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Message sent (optional)</p>
+                <input className="input-field" placeholder="e.g. I love you so much" value={qaMessage} onChange={e => setQaMessage(e.target.value)} maxLength={80} />
+                <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 6 }}>
+                  This is what your partner actually sees — separate from the button label above. Leave blank to keep the rotating surprise messages.
+                </p>
               </div>
               <button onClick={saveQuickAction} disabled={!qaLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: qaLabel.trim() ? 'pointer' : 'default', background: qaLabel.trim() ? qaColor : 'var(--border)', color: qaLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save</button>
             </div>

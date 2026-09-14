@@ -8,6 +8,7 @@ import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
 import AmountInput from '../components/AmountInput';
 import FilterCountBadge from '../components/FilterCountBadge';
+import EmojiColorPicker from '../components/EmojiColorPicker';
 import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
 import { uploadPlaceImage } from '../places';
@@ -582,22 +583,10 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <input className="input-field" placeholder="Category name (e.g. Books, Travel...)" value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} autoFocus />
-              <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {CATEGORY_EMOJI_CHOICES.map(e => (
-                    <button key={e} onClick={() => setNewCatEmoji(e)} style={{ width: 36, height: 36, border: newCatEmoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: newCatEmoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={16} /></button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Color</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {CATEGORY_COLOR_CHOICES.map(c => (
-                    <button key={c} onClick={() => setNewCatColor(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: newCatColor === c ? '3px solid var(--ink)' : '3px solid transparent', cursor: 'pointer' }} />
-                  ))}
-                </div>
-              </div>
+              <EmojiColorPicker
+                emojiChoices={CATEGORY_EMOJI_CHOICES} emoji={newCatEmoji} onEmojiChange={setNewCatEmoji}
+                colorChoices={CATEGORY_COLOR_CHOICES} color={newCatColor} onColorChange={setNewCatColor}
+              />
               <button onClick={handleAddCategory} disabled={!newCatLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: newCatLabel.trim() ? 'pointer' : 'default', background: newCatLabel.trim() ? newCatColor : 'var(--border)', color: newCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Create category</button>
             </div>
           </div>
@@ -614,22 +603,10 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <input className="input-field" value={editCatLabel} onChange={e => setEditCatLabel(e.target.value)} autoFocus />
-              <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {CATEGORY_EMOJI_CHOICES.map(e => (
-                    <button key={e} onClick={() => setEditCatEmoji(e)} style={{ width: 36, height: 36, border: editCatEmoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: editCatEmoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={16} /></button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Color</p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {CATEGORY_COLOR_CHOICES.map(c => (
-                    <button key={c} onClick={() => setEditCatColor(c)} style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: editCatColor === c ? '3px solid var(--ink)' : '3px solid transparent', cursor: 'pointer' }} />
-                  ))}
-                </div>
-              </div>
+              <EmojiColorPicker
+                emojiChoices={CATEGORY_EMOJI_CHOICES} emoji={editCatEmoji} onEmojiChange={setEditCatEmoji}
+                colorChoices={CATEGORY_COLOR_CHOICES} color={editCatColor} onColorChange={setEditCatColor}
+              />
               <button onClick={handleSaveCategory} disabled={!editCatLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editCatLabel.trim() ? 'pointer' : 'default', background: editCatLabel.trim() ? editCatColor : 'var(--border)', color: editCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save changes</button>
             </div>
           </div>

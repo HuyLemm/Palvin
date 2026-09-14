@@ -175,13 +175,10 @@ export default function Home() {
 
   const handleHug = () => {
     setHugAnim(true);
-    // Once this button's been personalized away from the default, sending
-    // a random "Holding you so tight!"-style line would fight with whatever
-    // the sender actually renamed it to — so a customized label IS the
-    // message. Untouched accounts keep the original rotating flavor text.
-    const msg = hugConfig.label !== DEFAULT_QUICK_ACTIONS.hug.label
-      ? hugConfig.label
-      : HUG_MESSAGES[Math.floor(Math.random() * HUG_MESSAGES.length)];
+    // A custom message (separate from the button's own label, set in
+    // Settings) always wins — falls back to the original rotating flavor
+    // text only when that field's been left blank.
+    const msg = hugConfig.message.trim() || HUG_MESSAGES[Math.floor(Math.random() * HUG_MESSAGES.length)];
     sendHug(currentUser, msg);
     setTimeout(() => setHugAnim(false), 800);
   };
@@ -190,10 +187,9 @@ export default function Home() {
     setThinkAnim(true);
     // kind:'thinking' gets its own short headline server-side ("X đang nghĩ
     // đến bạn 💭") instead of the generic hug one — the random flavor text
-    // goes into the notification's preview_text, not the toast/headline.
-    const msg = thinkConfig.label !== DEFAULT_QUICK_ACTIONS.thinking.label
-      ? thinkConfig.label
-      : THINKING_MESSAGES[Math.floor(Math.random() * THINKING_MESSAGES.length)];
+    // (or the custom message, once set) goes into the notification's
+    // preview_text, not the toast/headline.
+    const msg = thinkConfig.message.trim() || THINKING_MESSAGES[Math.floor(Math.random() * THINKING_MESSAGES.length)];
     sendHug(currentUser, msg, 'thinking');
     setTimeout(() => setThinkAnim(false), 800);
   };

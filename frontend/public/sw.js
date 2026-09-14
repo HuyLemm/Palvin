@@ -5,7 +5,15 @@
 // fetch fresh in the background and update the cache for next time. Never
 // touches cross-origin requests (Supabase REST/Realtime/Storage), so actual
 // app data always comes straight from the network as before.
-const CACHE_NAME = 'palvin-shell-v1.1';
+//
+// CACHE_NAME below is a build-time placeholder — vite.config.ts's
+// sw-version-stamp plugin rewrites it to a fresh, unique value in dist/sw.js
+// on every production build. That's what makes the browser see this file's
+// bytes as different on every deploy, which is the actual signal it uses to
+// notice "a new service worker is available" — without that, the update
+// banner (main.tsx/UpdateBanner.tsx) would never fire, since nothing else
+// about this file changes from one deploy to the next.
+const CACHE_NAME = 'palvin-shell-dev';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();

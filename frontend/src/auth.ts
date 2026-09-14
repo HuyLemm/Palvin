@@ -14,6 +14,12 @@ export interface QuickActionConfig {
   label: string;
   emoji: string;
   color: string;
+  // What's actually sent (the notification's detail text/preview) — kept
+  // separate from `label` (the button's own short caption) since a good
+  // button label ("Love you") often isn't a full sentence you'd want
+  // arriving as the message itself. Blank means "keep the rotating
+  // surprise messages" (see Home.tsx's HUG_MESSAGES/THINKING_MESSAGES).
+  message: string;
 }
 
 export interface QuickActionPrefs {
@@ -25,8 +31,8 @@ export interface QuickActionPrefs {
 // to these whenever a profile hasn't customized one (or hasn't customized
 // it at all yet, pre-migration).
 export const DEFAULT_QUICK_ACTIONS: QuickActionPrefs = {
-  hug: { label: 'Send a hug', emoji: '🫂', color: '#C95F7C' },
-  thinking: { label: 'Thinking of you', emoji: '💭', color: '#8B6FD4' },
+  hug: { label: 'Send a hug', emoji: '🫂', color: '#C95F7C', message: '' },
+  thinking: { label: 'Thinking of you', emoji: '💭', color: '#8B6FD4', message: '' },
 };
 
 function mergeQuickActions(raw: Partial<QuickActionPrefs> | null | undefined): QuickActionPrefs {

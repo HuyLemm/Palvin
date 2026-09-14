@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type JSX } from 'react';
 import { useApp } from './context';
 import Toast from './components/Toast';
+import UpdateBanner from './components/UpdateBanner';
 import CreateModal from './components/CreateModal';
 import AuthScreen, { ResetPasswordScreen } from './screens/AuthScreen';
 import CoupleLocked from './components/CoupleLocked';
@@ -764,6 +765,7 @@ export default function App() {
       {/* Modals */}
       {createModal && <CreateModal />}
       <Toast />
+      <UpdateBanner />
     </div>
   );
 }

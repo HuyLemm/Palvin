@@ -22,18 +22,23 @@ function todayISO(): string {
 // Derived entirely from existing data (streak_activity, todos,
 // todo_daily_completions) — same "no dedicated audit table" approach as
 // activityLog.ts's edit/delete log — rather than a separate persisted miss
-// log that would need its own daily cron to stay in sync.
+// log that would need its own daily cron to stay in sync. The one exception
+// is compliance_acknowledgments (0089), which doesn't record misses — it
+// records dismissals, so a re-derived miss can still be filtered back out.
 export async function fetchDailyCompliance(coupleId: string, profiles: { id: string; displayName: string }[]): Promise<DailyComplianceReport> {
-  const [streakRes, todosRes, completionsRes] = await Promise.all([
+  const [streakRes, todosRes, completionsRes, ackRes] = await Promise.all([
     supabase.from('streak_activity').select('profile_id, active_date').eq('couple_id', coupleId),
     supabase.from('todos').select('id, owner, created_at').eq('kind', 'daily'),
     supabase.from('todo_daily_completions').select('todo_id, completion_date'),
+    supabase.from('compliance_acknowledgments').select('profile_name, miss_date, kind').eq('couple_id', coupleId),
   ]);
   if (streakRes.error || todosRes.error || completionsRes.error) return EMPTY_REPORT;
 
   const streakRows = (streakRes.data ?? []) as { profile_id: string; active_date: string }[];
   const todos = (todosRes.data ?? []) as { id: string; owner: string; created_at: string }[];
   const completions = (completionsRes.data ?? []) as { todo_id: string; completion_date: string }[];
+  const ackRows = (ackRes.data ?? []) as { profile_name: string; miss_date: string; kind: 'streak' | 'todo' }[];
+  const ackSet = new Set(ackRows.map(a => `${a.kind}:${a.profile_name}:${a.miss_date}`));
 
   const allDates = [
     ...streakRows.map(r => r.active_date),
@@ -58,12 +63,12 @@ export async function fetchDailyCompliance(coupleId: string, profiles: { id: str
   for (let d = new Date(startDate + 'T00:00:00'), end = new Date(today + 'T00:00:00'); d < end; d.setDate(d.getDate() + 1)) {
     const dateStr = d.toISOString().slice(0, 10);
     for (const p of profiles) {
-      if (!streakSet.has(`${p.id}:${dateStr}`)) {
+      if (!streakSet.has(`${p.id}:${dateStr}`) && !ackSet.has(`streak:${p.displayName}:${dateStr}`)) {
         streakMisses.push({ profileName: p.displayName, date: dateStr });
       }
       const dailyForPerson = todos.filter(t => (t.owner === p.displayName || t.owner === 'Both') && t.created_at.slice(0, 10) <= dateStr);
       const incomplete = dailyForPerson.some(t => !completionsByTodo.get(t.id)?.has(dateStr));
-      if (dailyForPerson.length > 0 && incomplete) {
+      if (dailyForPerson.length > 0 && incomplete && !ackSet.has(`todo:${p.displayName}:${dateStr}`)) {
         todoMisses.push({ profileName: p.displayName, date: dateStr });
       }
     }
@@ -73,4 +78,14 @@ export async function fetchDailyCompliance(coupleId: string, profiles: { id: str
   streakMisses.reverse();
   todoMisses.reverse();
   return { streakMisses, todoMisses };
+}
+
+// Dismiss one miss entry so it stops showing up in future fetches. Upserts
+// so re-dismissing an already-dismissed entry (e.g. a stale click) is a
+// harmless no-op rather than a duplicate-key error.
+export async function acknowledgeComplianceMiss(profileName: string, date: string, kind: 'streak' | 'todo'): Promise<void> {
+  await supabase.from('compliance_acknowledgments').upsert(
+    { profile_name: profileName, miss_date: date, kind },
+    { onConflict: 'couple_id,profile_name,miss_date,kind' }
+  );
 }
