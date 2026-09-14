@@ -88,8 +88,11 @@ export async function createPost(authorId: string, data: { images: string[]; cap
   });
 }
 
-export async function updatePostRow(id: string, data: { caption: string; location?: string }) {
-  return supabase.from('posts').update({ caption: data.caption, location: data.location ?? null }).eq('id', id);
+export async function updatePostRow(id: string, data: { caption: string; location?: string; postDate?: string }) {
+  return supabase.from('posts').update({
+    caption: data.caption, location: data.location ?? null,
+    ...(data.postDate ? { post_date: data.postDate } : {}),
+  }).eq('id', id);
 }
 
 export async function deletePostRow(id: string) {

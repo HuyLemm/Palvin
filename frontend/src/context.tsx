@@ -158,7 +158,7 @@ interface AppContextType {
   toggleSave: (id: string) => void;
   addComment: (postId: string, text: string) => void;
   addPost: (p: Omit<Post, 'id' | 'liked' | 'saved' | 'comments' | 'postDate'> & { postDate?: string }) => void;
-  editPost: (id: string, data: { caption: string; location?: string }) => void;
+  editPost: (id: string, data: { caption: string; location?: string; postDate?: string }) => void;
   deletePost: (id: string) => void;
 
   // Memories
@@ -528,10 +528,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // above pops one for both accounts (including the poster) a moment later.
   };
 
-  const editPost = async (id: string, data: { caption: string; location?: string }) => {
+  const editPost = async (id: string, data: { caption: string; location?: string; postDate?: string }) => {
     setState(s => ({ ...s, posts: s.posts.map(p => p.id === id ? { ...p, caption: data.caption, location: data.location } : p) }));
     const { error } = await updatePostRow(id, data);
     if (error) { toast('Something went wrong', '⚠️'); refreshPosts(); return; }
+    // A changed postDate affects both the pretty `date` string and the
+    // feed's sort order — simplest to just re-fetch rather than replicate
+    // feed.ts's formatting/sorting logic here.
+    if (data.postDate) await refreshPosts();
     toast('Post updated ✏️');
   };
 

@@ -5,16 +5,26 @@ import Icon from '../Icon';
 import FadeImage from '../FadeImage';
 
 export default function EditPostForm({ post, onClose }: { post: Post; onClose: () => void }) {
-  const { editPost } = useApp();
+  const { editPost, isAdmin, currentUser } = useApp();
   const [caption, setCaption] = useState(post.caption);
   const [location, setLocation] = useState(post.location ?? '');
+  const [postDate, setPostDate] = useState(post.postDate);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Anyone can fix their own post's date, but only the admin account can
+  // backdate/redate a post that isn't theirs — same reasoning as isMine in
+  // PostCard.tsx, just spelled out here since this form has no isMine of
+  // its own.
+  const canEditDate = isAdmin || post.author === currentUser;
 
   const handleSubmit = async () => {
     if (!caption.trim()) { setError('Please write a caption.'); return; }
     setSaving(true);
-    await editPost(post.id, { caption, location: location || undefined });
+    await editPost(post.id, {
+      caption, location: location || undefined,
+      postDate: canEditDate && postDate !== post.postDate ? postDate : undefined,
+    });
     onClose();
   };
 
@@ -50,6 +60,18 @@ export default function EditPostForm({ post, onClose }: { post: Post; onClose: (
             value={location}
             onChange={e => setLocation(e.target.value)}
           />
+
+          {canEditDate && (
+            <div>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Posted on</p>
+              <input
+                type="date"
+                className="input-field"
+                value={postDate}
+                onChange={e => setPostDate(e.target.value)}
+              />
+            </div>
+          )}
 
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
 
