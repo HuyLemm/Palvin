@@ -5,7 +5,7 @@ if (import.meta.hot) {
 
 import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { initialState } from './data';
-import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Todo, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage, CustomSticker, PrivateExpense } from './types';
+import type { AppState, User, Post, Memory, Expense, SavingsGoal, LoveNote, SecretNote, CalendarEvent, Goal, CycleLog, StoryQuote, Debt, Todo, Mood, Bill, Trip, Capsule, PlaylistItem, WishItem, LoveLetter, GratitudeEntry, DateRequest, FavPlace, FavCategory, FavCategoryItem, Place, DateIdea, ChatMessage, CustomSticker, PrivateExpense, MoneyCategoryKind } from './types';
 import { fetchChatMessages, sendChatMessageRow, markChatReadFrom, fetchUnreadChatCount, uploadChatFile } from './chat';
 import { fetchCustomStickers, createCustomSticker, deleteCustomStickerRow, uploadCustomStickerImage } from './customStickers';
 import type { NewChatMessage } from './chat';
@@ -66,6 +66,9 @@ import {
 import {
   fetchPlaces, createPlace, updatePlaceRow, deletePlaceRow,
 } from './places';
+import {
+  fetchMoneyCategories, createMoneyCategory, updateMoneyCategoryRow, deleteMoneyCategoryRow,
+} from './moneyCategories';
 import {
   fetchPlaylist, createPlaylistItem, updatePlaylistItemRow, deletePlaylistItemRow,
 } from './playlist';
@@ -299,6 +302,9 @@ interface AppContextType {
   addFavCategory: (cat: { label: string; emoji: string; color: string }) => void;
   updateFavCategory: (id: string, cat: { label: string; emoji: string; color: string }) => void;
   removeFavCategory: (id: string) => void;
+  addMoneyCategory: (kind: MoneyCategoryKind, cat: { label: string; emoji: string }) => void;
+  updateMoneyCategory: (kind: MoneyCategoryKind, id: string, cat: { label: string; emoji: string }) => void;
+  removeMoneyCategory: (kind: MoneyCategoryKind, id: string) => void;
 
   // Places
   addPlace: (p: { name: string; flag?: string; images: string[]; visitedDate?: string }) => void;
@@ -1370,6 +1376,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) refreshFavorites();
   };
 
+  const refreshMoneyCategories = async () => {
+    const moneyCategories = await fetchMoneyCategories();
+    setState(s => ({ ...s, moneyCategories }));
+  };
+  const addMoneyCategory = async (kind: MoneyCategoryKind, cat: { label: string; emoji: string }) => {
+    const { data, error } = await createMoneyCategory(kind, cat);
+    if (error || !data) { toast('Something went wrong', '⚠️'); return; }
+    setState(s => ({ ...s, moneyCategories: { ...s.moneyCategories, [kind]: [...s.moneyCategories[kind], data] } }));
+  };
+  const updateMoneyCategory = async (kind: MoneyCategoryKind, id: string, cat: { label: string; emoji: string }) => {
+    setState(s => ({ ...s, moneyCategories: { ...s.moneyCategories, [kind]: s.moneyCategories[kind].map(c => c.id === id ? { ...c, ...cat } : c) } }));
+    const { error } = await updateMoneyCategoryRow(id, cat);
+    if (error) refreshMoneyCategories();
+  };
+  const removeMoneyCategory = async (kind: MoneyCategoryKind, id: string) => {
+    setState(s => ({ ...s, moneyCategories: { ...s.moneyCategories, [kind]: s.moneyCategories[kind].filter(c => c.id !== id) } }));
+    const { error } = await deleteMoneyCategoryRow(id);
+    if (error) refreshMoneyCategories();
+  };
+
   // Places
   const addPlace = async (p: { name: string; flag?: string; images: string[]; visitedDate?: string }) => {
     const { error } = await createPlace(p);
@@ -1749,6 +1775,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLinked && myProfile) refreshFavorites();
   }, [isLinked, myProfile, refreshFavorites]);
+
+  useEffect(() => {
+    if (isLinked && myProfile) refreshMoneyCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLinked, myProfile]);
 
   const refreshPlaces = useCallback(async () => {
     const places = await fetchPlaces();
@@ -2363,6 +2394,7 @@ const refreshMoods = useCallback(async () => {
       deleteGratitude,
       addReaction,
       addFavPlace, updateFavPlace, removeFavPlace, addFavCategory, updateFavCategory, removeFavCategory,
+      addMoneyCategory, updateMoneyCategory, removeMoneyCategory,
       addPlace, updatePlace, deletePlace,
       toggleDarkMode, updateQuickAction,
       setRelationshipStart,

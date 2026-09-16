@@ -7,9 +7,13 @@ import Icon from './Icon';
 // action needed for that part (see main.tsx's registration code, which
 // fires the 'palvin:update-available' event this listens for). But a page
 // that's already open keeps running the JS it already parsed; only a
-// reload actually swaps it for the new bundle, hence this banner.
+// reload actually swaps it for the new bundle. This is a blocking modal
+// rather than a dismissible banner on purpose — the new bundle only loads
+// once the user taps the button, and there's no backdrop-click/✕ to skip
+// past it, so a stale tab can't keep running silently out of date.
 export default function UpdateBanner() {
   const [visible, setVisible] = useState(false);
+  const [reloading, setReloading] = useState(false);
 
   useEffect(() => {
     const handler = () => setVisible(true);
@@ -19,19 +23,25 @@ export default function UpdateBanner() {
 
   if (!visible) return null;
 
+  const handleUpdate = () => {
+    setReloading(true);
+    window.location.reload();
+  };
+
   return (
-    <div style={{
-      position: 'fixed', left: 16, right: 16, bottom: 'calc(84px + env(safe-area-inset-bottom))',
-      zIndex: 95, background: 'var(--ink)', color: 'white', borderRadius: 16, padding: '12px 14px',
-      display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-      animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)',
-    }}>
-      <Icon emoji="✨" size={18} style={{ flexShrink: 0 }} />
-      <p style={{ flex: 1, fontSize: 13, fontWeight: 600, lineHeight: 1.3, margin: 0 }}>A new version of Palvin is ready.</p>
-      <button
-        onClick={() => window.location.reload()}
-        style={{ background: 'var(--sakura-accent)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}
-      >Refresh</button>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }}>
+      <div style={{ background: 'var(--white)', borderRadius: 20, padding: '28px 24px 24px', width: '100%', maxWidth: 320, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
+        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+          <Icon emoji="✨" size={26} />
+        </div>
+        <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>A new version is ready</p>
+        <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20, lineHeight: 1.4 }}>Palvin has been updated. Tap below to load the latest version.</p>
+        <button
+          onClick={handleUpdate}
+          disabled={reloading}
+          style={{ width: '100%', padding: '13px', borderRadius: 12, border: 'none', background: 'var(--sakura-accent)', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', opacity: reloading ? 0.7 : 1 }}
+        >{reloading ? 'Updating…' : 'Update now'}</button>
+      </div>
     </div>
   );
 }

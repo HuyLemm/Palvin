@@ -130,15 +130,6 @@ export default function Money() {
 
 /* ─── Private Stash — a personal fund, Alvinne's account only ───────── */
 
-const PRIVATE_CATEGORIES: { key: string; emoji: string }[] = [
-  { key: 'Food', emoji: '🍜' },
-  { key: 'Coffee', emoji: '☕' },
-  { key: 'Shopping', emoji: '🛍️' },
-  { key: 'Entertainment', emoji: '🎮' },
-  { key: 'Transport', emoji: '🚗' },
-  { key: 'Other', emoji: '💰' },
-];
-
 function privateTodayISO(): string {
   const d = new Date();
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -162,6 +153,7 @@ function PrivateFundTab() {
 
 function PrivateLedgerTab() {
   const { state, addPrivateExpense, deletePrivateExpense } = useApp();
+  const PRIVATE_CATEGORIES = state.moneyCategories.private;
   const [showForm, setShowForm] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
@@ -182,7 +174,7 @@ function PrivateLedgerTab() {
   const handleSubmit = () => {
     if (!title.trim()) { setError('Enter a title.'); return; }
     if (!amount || isNaN(+amount) || +amount <= 0) { setError('Enter a valid amount.'); return; }
-    addPrivateExpense({ title: title.trim(), category: category.key, categoryEmoji: category.emoji, amount: +amount, date, note: note.trim(), type });
+    addPrivateExpense({ title: title.trim(), category: category.label, categoryEmoji: category.emoji, amount: +amount, date, note: note.trim(), type });
     closeForm();
   };
 
@@ -241,8 +233,8 @@ function PrivateLedgerTab() {
                 <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Category</p>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {PRIVATE_CATEGORIES.map(c => (
-                    <button key={c.key} onClick={() => setCategory(c)} style={{ padding: '7px 11px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: category.key === c.key ? 'var(--sakura-light)' : 'var(--bg)', border: category.key === c.key ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: category.key === c.key ? 'var(--sakura-deep)' : 'var(--ink-2)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <Icon emoji={c.emoji} size={12} /> {c.key}
+                    <button key={c.id} onClick={() => setCategory(c)} style={{ padding: '7px 11px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: category.label === c.label ? 'var(--sakura-light)' : 'var(--bg)', border: category.label === c.label ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: category.label === c.label ? 'var(--sakura-deep)' : 'var(--ink-2)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <Icon emoji={c.emoji} size={12} /> {c.label}
                     </button>
                   ))}
                 </div>

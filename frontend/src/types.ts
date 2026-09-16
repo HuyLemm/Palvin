@@ -364,6 +364,17 @@ export interface FavCategoryItem {
   color: string;
 }
 
+// The three independent category pickers across Money.tsx (couple expenses,
+// couple income, Private Stash) — each user-defined and editable from
+// Settings (money_categories, admin-only), not a fixed enum.
+export type MoneyCategoryKind = 'expense' | 'income' | 'private';
+
+export interface MoneyCategoryItem {
+  id: string;
+  label: string;
+  emoji: string;
+}
+
 export interface Reaction {
   emoji: string;
   count: number;
@@ -456,6 +467,7 @@ export interface AppState {
   darkMode: boolean;
   favPlaces: Record<string, FavPlace[]>;
   favCategories: FavCategoryItem[];
+  moneyCategories: Record<MoneyCategoryKind, MoneyCategoryItem[]>;
   relationshipStart: string | null;
   streak: number;
   // True once both partners have already qualified today — see streak.ts.

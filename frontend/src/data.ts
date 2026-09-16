@@ -1,4 +1,14 @@
 import type { AppState } from './types';
+import { DEFAULT_MONEY_CATEGORIES } from './moneyCategories';
+
+// Placeholder ids only used before the real fetch resolves — never written
+// back, just enough for the category pickers to render something instead of
+// sitting empty for a moment on first load.
+const initialMoneyCategories: AppState['moneyCategories'] = {
+  expense: DEFAULT_MONEY_CATEGORIES.expense.map((c, i) => ({ id: `default-expense-${i}`, ...c })),
+  income: DEFAULT_MONEY_CATEGORIES.income.map((c, i) => ({ id: `default-income-${i}`, ...c })),
+  private: DEFAULT_MONEY_CATEGORIES.private.map((c, i) => ({ id: `default-private-${i}`, ...c })),
+};
 
 export function getDaysTogether(start: Date): number {
   const now = new Date();
@@ -104,6 +114,7 @@ export const initialState: AppState = {
   darkMode: false,
   favPlaces: {},
   favCategories: [],
+  moneyCategories: initialMoneyCategories,
 
   // Loaded from Supabase (see context.tsx's refreshFavorites) once the couple is linked.
   relationshipStart: null,

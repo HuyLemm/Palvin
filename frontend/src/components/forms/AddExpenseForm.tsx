@@ -3,15 +3,9 @@ import { useApp } from '../../context';
 import AmountInput from '../AmountInput';
 import Icon from '../Icon';
 
-const CATEGORIES = [
-  { label: 'Food', emoji: '🍜' }, { label: 'Transportation', emoji: '🚗' },
-  { label: 'Entertainment', emoji: '🎬' }, { label: 'Gifts', emoji: '🎁' },
-  { label: 'Coffee', emoji: '☕' }, { label: 'Home', emoji: '🏠' },
-  { label: 'Travel', emoji: '✈️' }, { label: 'Other', emoji: '📦' }
-];
-
 export default function AddExpenseForm({ onClose }: { onClose: () => void }) {
-  const { addExpense, currentUser, partnerProfile } = useApp();
+  const { state, addExpense, currentUser, partnerProfile } = useApp();
+  const CATEGORIES = state.moneyCategories.expense;
   const partnerName = partnerProfile?.displayName;
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');

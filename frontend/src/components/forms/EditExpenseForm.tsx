@@ -4,24 +4,11 @@ import AmountInput from '../AmountInput';
 import Icon from '../Icon';
 import type { Expense } from '../../types';
 
-const EXPENSE_CATEGORIES = [
-  { label: 'Food', emoji: '🍜' }, { label: 'Transportation', emoji: '🚗' },
-  { label: 'Entertainment', emoji: '🎬' }, { label: 'Gifts', emoji: '🎁' },
-  { label: 'Coffee', emoji: '☕' }, { label: 'Home', emoji: '🏠' },
-  { label: 'Travel', emoji: '✈️' }, { label: 'Other', emoji: '📦' },
-];
-
-const INCOME_CATEGORIES = [
-  { label: 'Salary', emoji: '💵' }, { label: 'Bonus', emoji: '🎉' },
-  { label: 'Gift', emoji: '🎁' }, { label: 'Investment', emoji: '📈' },
-  { label: 'Selling Stuff', emoji: '🛍️' }, { label: 'Other', emoji: '📦' },
-];
-
 export default function EditExpenseForm({ expense, onClose }: { expense: Expense; onClose: () => void }) {
-  const { updateExpense, deleteExpense, currentUser, partnerProfile } = useApp();
+  const { state, updateExpense, deleteExpense, currentUser, partnerProfile } = useApp();
   const partnerName = partnerProfile?.displayName;
   const isIncome = expense.type === 'income';
-  const CATEGORIES = isIncome ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+  const CATEGORIES = isIncome ? state.moneyCategories.income : state.moneyCategories.expense;
   const accent = isIncome ? '#5AC26A' : 'var(--sakura-accent)';
   const accentDeep = isIncome ? '#3D8A4E' : 'var(--sakura-deep)';
   const accentBg = isIncome ? 'rgba(90,194,106,0.12)' : 'var(--sakura-light)';

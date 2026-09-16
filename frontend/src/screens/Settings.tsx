@@ -3,7 +3,7 @@ import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import EmojiColorPicker from '../components/EmojiColorPicker';
-import type { User } from '../types';
+import type { User, MoneyCategoryItem, MoneyCategoryKind } from '../types';
 import type { NotifyPrefs } from '../auth';
 import { fetchActivityStatuses, DEFAULT_QUICK_ACTIONS } from '../auth';
 import { fetchActivityLog, type ActivityLogEntry } from '../activityLog';
@@ -14,6 +14,13 @@ const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses
 
 const QUICK_ACTION_EMOJI_CHOICES = ['🫂', '💭', '💗', '💕', '🥰', '😘', '🤗', '💌', '✨', '🌸', '💖', '🫶'];
 const QUICK_ACTION_COLOR_CHOICES = ['#C95F7C', '#8B6FD4', '#4A8AE8', '#5AC26A', '#E8844A', '#DC2626', '#E85C97', '#C48A52'];
+
+const MONEY_CATEGORY_EMOJI_CHOICES = ['🍜', '☕', '🎬', '🎁', '🏠', '✈️', '🚗', '🛍️', '🎮', '💰', '💵', '📈', '🎉', '📦'];
+const MONEY_CATEGORY_KINDS: { key: MoneyCategoryKind; label: string }[] = [
+  { key: 'expense', label: 'Expenses' },
+  { key: 'income', label: 'Income' },
+  { key: 'private', label: 'Private Stash' },
+];
 
 const ONLINE_WINDOW_MS = 2 * 60000;
 
@@ -60,6 +67,7 @@ export default function Settings() {
     currentUser, toast, updateProfilePhoto, state, screen, toggleDarkMode, updateQuickAction, logout,
     isLinked, isAdmin, myProfile, partnerProfile, sentInvite, invitePartner, cancelSentInvite, pendingInvite, acceptInvite, rejectInvite,
     updateNotifyPrefs, setRelationshipStart, updateDisplayName, changePassword,
+    addMoneyCategory, updateMoneyCategory, removeMoneyCategory,
   } = useApp();
   const [responding, setResponding] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -116,6 +124,35 @@ export default function Settings() {
   const [compliance, setCompliance] = useState<DailyComplianceReport>({ streakMisses: [], todoMisses: [] });
   const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [, setTick] = useState(0);
+
+  // Manage Categories (admin-only) — Food/Entertainment/Other/... used to be
+  // hardcoded arrays in the expense/income/Private Stash forms; now editable
+  // per-couple rows (money_categories), same pattern as Our Favourites'
+  // category editor in Us.tsx.
+  const [catKind, setCatKind] = useState<MoneyCategoryKind>('expense');
+  const [showAddCategory, setShowAddCategory] = useState(false);
+  const [newCatLabel, setNewCatLabel] = useState('');
+  const [newCatEmoji, setNewCatEmoji] = useState(MONEY_CATEGORY_EMOJI_CHOICES[0]);
+  const [editingMoneyCategory, setEditingMoneyCategory] = useState<MoneyCategoryItem | null>(null);
+  const [editCatLabel, setEditCatLabel] = useState('');
+  const [editCatEmoji, setEditCatEmoji] = useState('');
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<MoneyCategoryItem | null>(null);
+
+  const closeAddCategory = () => { setShowAddCategory(false); setNewCatLabel(''); setNewCatEmoji(MONEY_CATEGORY_EMOJI_CHOICES[0]); };
+  const handleAddMoneyCategory = () => {
+    if (!newCatLabel.trim()) return;
+    addMoneyCategory(catKind, { label: newCatLabel.trim(), emoji: newCatEmoji });
+    closeAddCategory();
+  };
+  const openEditMoneyCategory = (cat: MoneyCategoryItem) => {
+    setEditingMoneyCategory(cat); setEditCatLabel(cat.label); setEditCatEmoji(cat.emoji);
+  };
+  const closeEditMoneyCategory = () => setEditingMoneyCategory(null);
+  const handleSaveMoneyCategory = () => {
+    if (!editingMoneyCategory || !editCatLabel.trim()) return;
+    updateMoneyCategory(catKind, editingMoneyCategory.id, { label: editCatLabel.trim(), emoji: editCatEmoji });
+    closeEditMoneyCategory();
+  };
 
   function renderLogEntry(entry: ActivityLogEntry) {
     return (
@@ -535,6 +572,27 @@ export default function Settings() {
               )}
             </div>
           </div>
+
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8, padding: '0 4px' }}>Manage Categories</p>
+            <div className="card" style={{ padding: '14px 16px' }}>
+              <div style={{ display: 'flex', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 12 }}>
+                {MONEY_CATEGORY_KINDS.map(k => (
+                  <button key={k.key} onClick={() => setCatKind(k.key)} style={{ flex: 1, padding: '7px 4px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: catKind === k.key ? 'var(--sakura-accent)' : 'transparent', color: catKind === k.key ? 'white' : 'var(--ink-2)', transition: 'all 0.2s ease' }}>{k.label}</button>
+                ))}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {state.moneyCategories[catKind].map(cat => (
+                  <button key={cat.id} onClick={() => openEditMoneyCategory(cat)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 99, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'var(--bg)', border: '1.5px solid var(--border)', color: 'var(--ink)' }}>
+                    <Icon emoji={cat.emoji} size={14} /> {cat.label}
+                  </button>
+                ))}
+                <button onClick={() => setShowAddCategory(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 99, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'var(--sakura-light)', border: '1.5px solid var(--sakura-accent)', color: 'var(--sakura-deep)' }}>
+                  <Icon emoji="➕" size={12} /> Add
+                </button>
+              </div>
+            </div>
+          </div>
         </>
       )}
 
@@ -563,6 +621,71 @@ export default function Settings() {
             <style>{`.activity-log-row:last-child { border-bottom: none !important; }`}</style>
             <div style={{ overflowY: 'auto' }}>
               {activityLog.map(renderLogEntry)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add money category */}
+      {showAddCategory && (
+        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeAddCategory}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>New category</p>
+              <button onClick={closeAddCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input className="input-field" placeholder="Category name" value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} autoFocus />
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {MONEY_CATEGORY_EMOJI_CHOICES.map(e => (
+                    <button key={e} onClick={() => setNewCatEmoji(e)} style={{ width: 36, height: 36, border: newCatEmoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: newCatEmoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={16} /></button>
+                  ))}
+                </div>
+              </div>
+              <button onClick={handleAddMoneyCategory} disabled={!newCatLabel.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: newCatLabel.trim() ? 'pointer' : 'default', background: newCatLabel.trim() ? 'var(--sakura-accent)' : 'var(--border)', color: newCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Create category</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit money category */}
+      {editingMoneyCategory && (
+        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEditMoneyCategory}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Edit category</p>
+              <button onClick={closeEditMoneyCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <input className="input-field" value={editCatLabel} onChange={e => setEditCatLabel(e.target.value)} autoFocus />
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Icon</p>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {MONEY_CATEGORY_EMOJI_CHOICES.map(e => (
+                    <button key={e} onClick={() => setEditCatEmoji(e)} style={{ width: 36, height: 36, border: editCatEmoji === e ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: editCatEmoji === e ? 'var(--sakura-light)' : 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={e} size={16} /></button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => { setConfirmDeleteCategory(editingMoneyCategory); closeEditMoneyCategory(); }} style={{ padding: '13px 16px', borderRadius: 14, border: '1.5px solid #E8524A', background: 'var(--white)', color: '#E8524A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Delete</button>
+                <button onClick={handleSaveMoneyCategory} disabled={!editCatLabel.trim()} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: editCatLabel.trim() ? 'pointer' : 'default', background: editCatLabel.trim() ? 'var(--sakura-accent)' : 'var(--border)', color: editCatLabel.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save changes</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm delete money category */}
+      {confirmDeleteCategory && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setConfirmDeleteCategory(null)}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 24, maxWidth: 300, textAlign: 'center', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <p style={{ fontSize: 16, fontWeight: 700, marginBottom: 8, color: 'var(--ink)' }}>Delete category "{confirmDeleteCategory.label}"?</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Past transactions keep this category — it just won't be offered for new ones anymore.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setConfirmDeleteCategory(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={() => { removeMoneyCategory(catKind, confirmDeleteCategory.id); setConfirmDeleteCategory(null); }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>
