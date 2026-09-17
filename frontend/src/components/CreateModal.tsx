@@ -8,11 +8,13 @@ import AddLoveNoteForm from './forms/AddLoveNoteForm';
 import AddExpenseForm from './forms/AddExpenseForm';
 import AddEventForm from './forms/AddEventForm';
 import AddGoalForm from './forms/AddGoalForm';
+import AddGratitudeForm from './forms/AddGratitudeForm';
 
 const OPTIONS = [
   { icon: '📸', label: 'Post', key: 'post' },
   { icon: '🌸', label: 'Memory', key: 'memory' },
   { icon: '💌', label: 'Love Note', key: 'note' },
+  { icon: '🌷', label: 'Gratitude', key: 'gratitude' },
   { icon: '💰', label: 'Expense', key: 'expense' },
   { icon: '📅', label: 'Event', key: 'event' },
   { icon: '✨', label: 'Goal', key: 'goal' },
@@ -24,12 +26,13 @@ export default function CreateModal() {
 
   const handleClose = () => { setStep(null); closeCreate(); };
 
-  if (step === 'post')    return <AddPostForm onClose={handleClose} />;
-  if (step === 'memory')  return <AddMemoryForm onClose={handleClose} />;
-  if (step === 'note')    return <AddLoveNoteForm onClose={handleClose} />;
-  if (step === 'expense') return <AddExpenseForm onClose={handleClose} />;
-  if (step === 'event')   return <AddEventForm onClose={handleClose} />;
-  if (step === 'goal')    return <AddGoalForm onClose={handleClose} />;
+  if (step === 'post')      return <AddPostForm onClose={handleClose} />;
+  if (step === 'memory')    return <AddMemoryForm onClose={handleClose} />;
+  if (step === 'note')      return <AddLoveNoteForm onClose={handleClose} />;
+  if (step === 'gratitude') return <AddGratitudeForm onClose={handleClose} />;
+  if (step === 'expense')   return <AddExpenseForm onClose={handleClose} />;
+  if (step === 'event')     return <AddEventForm onClose={handleClose} />;
+  if (step === 'goal')      return <AddGoalForm onClose={handleClose} />;
 
   return (
     <BottomSheet onClose={handleClose} title="What do you want to add?">

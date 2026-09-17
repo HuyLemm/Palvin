@@ -343,6 +343,7 @@ export interface GratitudeEntry {
   from: User;
   text: string;
   date: string;
+  image?: string;
 }
 
 export interface FavPlace {

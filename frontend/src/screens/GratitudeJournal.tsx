@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useApp } from '../context';
+import { uploadGratitudeImage } from '../gratitude';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import FilterCountBadge from '../components/FilterCountBadge';
@@ -15,15 +16,31 @@ const PROMPTS = [
 interface Props { onBack: () => void; }
 
 export default function GratitudeJournal({ onBack }: Props) {
-  const { state, addGratitude, updateGratitude, deleteGratitude, currentUser, isAdmin, partnerProfile } = useApp();
+  const { state, myProfile, addGratitude, updateGratitude, deleteGratitude, currentUser, isAdmin, partnerProfile } = useApp();
   const partnerName = partnerProfile?.displayName;
   const [text, setText] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [remoteUrl, setRemoteUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<string>('all');
   const [promptIdx] = useState(() => Math.floor(Math.random() * PROMPTS.length));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const handleFile = (fileList: FileList | null) => {
+    const file = fileList?.[0];
+    if (!file || !myProfile?.coupleId) return;
+    setPreviewUrl(URL.createObjectURL(file));
+    setRemoteUrl('');
+    setUploading(true);
+    uploadGratitudeImage(myProfile.coupleId, file).then(url => {
+      setUploading(false);
+      if (url) setRemoteUrl(url);
+    });
+  };
 
   function startEdit(id: string, currentText: string) {
     setEditingId(id);
@@ -42,8 +59,8 @@ export default function GratitudeJournal({ onBack }: Props) {
   async function handleSubmit() {
     if (!text.trim()) return;
     setSaving(true);
-    await addGratitude({ from: currentUser, text: text.trim(), date: today });
-    setText('');
+    await addGratitude({ from: currentUser, text: text.trim(), date: today, image: remoteUrl || undefined });
+    setText(''); setPreviewUrl(''); setRemoteUrl('');
     setSaving(false);
   }
 
@@ -79,6 +96,7 @@ export default function GratitudeJournal({ onBack }: Props) {
             <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}><Icon emoji="✅" size={28} /></div>
             <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--sakura-deep)' }}>You've written today!</p>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 4, fontStyle: 'italic', lineHeight: 1.5 }}>"{alreadyToday.text}"</p>
+            {alreadyToday.image && <img src={alreadyToday.image} alt="" style={{ width: 88, height: 88, objectFit: 'cover', borderRadius: 12, marginTop: 10 }} />}
           </div>
         ) : (
           <>
@@ -92,10 +110,28 @@ export default function GratitudeJournal({ onBack }: Props) {
               onFocus={e => (e.target.style.borderColor = 'var(--sakura-accent)')}
               onBlur={e => (e.target.style.borderColor = 'var(--border)')}
             />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+              {previewUrl && (
+                <div style={{ position: 'relative', width: 44, height: 44, flexShrink: 0, borderRadius: 10, overflow: 'hidden', border: '2px solid var(--sakura-deep)' }}>
+                  <img src={previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: uploading ? 0.5 : 1 }} />
+                  {uploading && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-gratitude-spin 0.7s linear infinite' }} />
+                    </div>
+                  )}
+                </div>
+              )}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, border: '1.5px dashed var(--sakura-accent)', background: 'var(--white)', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
+              ><Icon emoji="📷" size={13} /> {previewUrl ? 'Change photo' : 'Add photo'}</button>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={e => { handleFile(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
+              <style>{`@keyframes palvin-gratitude-spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
               <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{text.length} characters</p>
-              <button onClick={handleSubmit} disabled={!text.trim() || saving} style={{ padding: '10px 20px', background: (text.trim() && !saving) ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 12, color: (text.trim() && !saving) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: (text.trim() && !saving) ? 'pointer' : 'default', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                {saving ? 'Saving...' : 'Save'} <Icon emoji="🌸" size={14} />
+              <button onClick={handleSubmit} disabled={!text.trim() || saving || uploading} style={{ padding: '10px 20px', background: (text.trim() && !saving && !uploading) ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 12, color: (text.trim() && !saving && !uploading) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: (text.trim() && !saving && !uploading) ? 'pointer' : 'default', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {uploading ? 'Uploading...' : saving ? 'Saving...' : 'Save'} <Icon emoji="🌸" size={14} />
               </button>
             </div>
           </>
@@ -158,6 +194,7 @@ export default function GratitudeJournal({ onBack }: Props) {
                 )}
               </div>
               <p style={{ fontSize: 14, color: 'var(--ink)', lineHeight: 1.6, fontStyle: 'italic', borderLeft: '3px solid var(--sakura)', paddingLeft: 12 }}>"{g.text}"</p>
+              {g.image && <img src={g.image} alt="" style={{ width: '100%', maxHeight: 220, objectFit: 'cover', borderRadius: 12, marginTop: 10 }} />}
             </div>
           ))}
         </div>

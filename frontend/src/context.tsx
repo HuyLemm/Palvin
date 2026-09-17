@@ -1299,7 +1299,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addGratitude = async (entry: Omit<GratitudeEntry, 'id'>) => {
     const fromId = resolveProfileId(entry.from);
     if (!fromId) return;
-    const { error } = await createGratitude(fromId, entry.text, entry.date);
+    const { error } = await createGratitude(fromId, entry.text, entry.date, entry.image);
     if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshGratitude();
     toast('Gratitude saved 🌸', '💕');
