@@ -3,36 +3,27 @@ import { useApp } from '../context';
 import BottomSheet from './BottomSheet';
 import Icon from './Icon';
 import AddPostForm from './forms/AddPostForm';
-import AddMemoryForm from './forms/AddMemoryForm';
-import AddLoveNoteForm from './forms/AddLoveNoteForm';
-import AddExpenseForm from './forms/AddExpenseForm';
-import AddEventForm from './forms/AddEventForm';
-import AddGoalForm from './forms/AddGoalForm';
 import AddGratitudeForm from './forms/AddGratitudeForm';
 import AddTodoForm from './forms/AddTodoForm';
 import AddWishForm from './forms/AddWishForm';
 import AddTripForm from './forms/AddTripForm';
 import AddCapsuleForm from './forms/AddCapsuleForm';
-import AddPlaylistForm from './forms/AddPlaylistForm';
+import AddEventForm from './forms/AddEventForm';
 
-// One option per Us-tab section that has a natural single "add" action —
-// each opens the exact same mutation the section's own screen uses
-// (addTodo, addWish, addTrip, addCapsule, addToPlaylist), just reachable
-// from anywhere via the bottom navbar instead of having to first navigate
-// into that section.
+// Kept to the 6 most commonly used Us-tab sections only — each opens the
+// exact same mutation that section's own screen uses (addTodo, addWish,
+// addTrip, addCapsule, addEvent), just reachable from anywhere via the
+// bottom navbar instead of having to first navigate into Us. Post, Memory,
+// Love Note, Expense, and Goal aren't Us-tab features (Feed/Money/their own
+// top-level screens) and each already has its own dedicated add button on
+// its own screen, so they're deliberately left out of this menu.
 const OPTIONS = [
-  { icon: '📸', label: 'Post', key: 'post' },
-  { icon: '🌸', label: 'Memory', key: 'memory' },
-  { icon: '💌', label: 'Love Note', key: 'note' },
+  { icon: '📅', label: 'Event', key: 'event' },
   { icon: '🌷', label: 'Gratitude', key: 'gratitude' },
   { icon: '✅', label: 'To Do', key: 'todo' },
   { icon: '🎁', label: 'Wish', key: 'wish' },
   { icon: '✈️', label: 'Trip', key: 'trip' },
   { icon: '⏳', label: 'Time Capsule', key: 'capsule' },
-  { icon: '🎵', label: 'Playlist', key: 'playlist' },
-  { icon: '💰', label: 'Expense', key: 'expense' },
-  { icon: '📅', label: 'Event', key: 'event' },
-  { icon: '✨', label: 'Goal', key: 'goal' },
 ];
 
 export default function CreateModal() {
@@ -41,18 +32,16 @@ export default function CreateModal() {
 
   const handleClose = () => { setStep(null); closeCreate(); };
 
+  // 'post' isn't in the grid above (Feed has its own dedicated "+" for it)
+  // but still needs handling here — Feed's post button calls
+  // openCreate('post'), which routes through this same shared modal.
   if (step === 'post')      return <AddPostForm onClose={handleClose} />;
-  if (step === 'memory')    return <AddMemoryForm onClose={handleClose} />;
-  if (step === 'note')      return <AddLoveNoteForm onClose={handleClose} />;
   if (step === 'gratitude') return <AddGratitudeForm onClose={handleClose} />;
   if (step === 'todo')      return <AddTodoForm onClose={handleClose} />;
   if (step === 'wish')      return <AddWishForm onClose={handleClose} />;
   if (step === 'trip')      return <AddTripForm onClose={handleClose} onAdd={addTrip} />;
   if (step === 'capsule')   return <AddCapsuleForm onClose={handleClose} />;
-  if (step === 'playlist')  return <AddPlaylistForm onClose={handleClose} />;
-  if (step === 'expense')   return <AddExpenseForm onClose={handleClose} />;
   if (step === 'event')     return <AddEventForm onClose={handleClose} />;
-  if (step === 'goal')      return <AddGoalForm onClose={handleClose} />;
 
   return (
     <BottomSheet onClose={handleClose} title="What do you want to add?">
