@@ -1,7 +1,6 @@
 import { useRef, useState } from 'react';
 import { useApp } from '../../context';
 import { uploadPostImage } from '../../feed';
-import BottomSheet from '../BottomSheet';
 import Avatar from '../Avatar';
 import Icon from '../Icon';
 
@@ -62,79 +61,85 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <BottomSheet onClose={onClose} title="New Post">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Avatar user={currentUser} size={36} />
-          <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{currentUser}</span>
+    <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={onClose}>
+      <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>New Post</p>
+          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
         </div>
-
-        <div>
-          <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photos</p>
-          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
-            {images.map(im => (
-              <div key={im.id} style={{ position: 'relative', width: 80, height: 80, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2.5px solid var(--sakura-deep)' }}>
-                <img src={im.previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: im.uploading ? 0.5 : 1 }} />
-                {im.uploading && (
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-spin 0.7s linear infinite' }} />
-                  </div>
-                )}
-                {im.failed && (
-                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'white', textAlign: 'center', padding: 4 }}>Upload failed</div>
-                )}
-                <button onClick={() => removeImage(im.id)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
-              </div>
-            ))}
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              style={{ width: 80, height: 80, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 27, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >+</button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={e => { handleFiles(e.target.files); e.target.value = ''; }}
-              style={{ display: 'none' }}
-            />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Avatar user={currentUser} size={36} />
+            <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{currentUser}</span>
           </div>
-          <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
-        </div>
 
-        <textarea
-          className="input-field"
-          placeholder="Write a caption..."
-          value={caption}
-          onChange={e => setCaption(e.target.value)}
-          rows={3}
-        />
+          <div>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photos</p>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+              {images.map(im => (
+                <div key={im.id} style={{ position: 'relative', width: 80, height: 80, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2.5px solid var(--sakura-deep)' }}>
+                  <img src={im.previewUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: im.uploading ? 0.5 : 1 }} />
+                  {im.uploading && (
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: 22, height: 22, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-spin 0.7s linear infinite' }} />
+                    </div>
+                  )}
+                  {im.failed && (
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'white', textAlign: 'center', padding: 4 }}>Upload failed</div>
+                  )}
+                  <button onClick={() => removeImage(im.id)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
+                </div>
+              ))}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                style={{ width: 80, height: 80, flexShrink: 0, borderRadius: 12, border: '2px dashed var(--sakura-accent)', background: 'var(--sakura-light)', color: 'var(--sakura-deep)', fontSize: 27, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >+</button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={e => { handleFiles(e.target.files); e.target.value = ''; }}
+                style={{ display: 'none' }}
+              />
+            </div>
+            <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
 
-        <input
-          className="input-field"
-          placeholder="Add location (optional)"
-          value={location}
-          onChange={e => setLocation(e.target.value)}
-        />
+          <textarea
+            className="input-field"
+            placeholder="Write a caption..."
+            value={caption}
+            onChange={e => setCaption(e.target.value)}
+            rows={3}
+          />
 
-        <div>
-          <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Date (optional — defaults to today)</p>
           <input
             className="input-field"
-            type="date"
-            value={postDate}
-            onChange={e => setPostDate(e.target.value)}
-            style={{ width: 'auto', maxWidth: 170 }}
+            placeholder="Add location (optional)"
+            value={location}
+            onChange={e => setLocation(e.target.value)}
           />
-        </div>
 
-        {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
+          <div>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Date (optional — defaults to today)</p>
+            <input
+              className="input-field"
+              type="date"
+              value={postDate}
+              onChange={e => setPostDate(e.target.value)}
+              style={{ width: 'auto', maxWidth: 170 }}
+            />
+          </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-ghost" onClick={onClose} disabled={posting} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn-primary" onClick={handleSubmit} disabled={isUploading || posting} style={{ flex: 2, opacity: (isUploading || posting) ? 0.6 : 1 }}>{isUploading ? 'Uploading...' : posting ? 'Posting...' : 'Post'}</button>
+          {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
+
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn-ghost" onClick={onClose} disabled={posting} style={{ flex: 1 }}>Cancel</button>
+            <button className="btn-primary" onClick={handleSubmit} disabled={isUploading || posting} style={{ flex: 2, opacity: (isUploading || posting) ? 0.6 : 1 }}>{isUploading ? 'Uploading...' : posting ? 'Posting...' : 'Post'}</button>
+          </div>
         </div>
       </div>
-    </BottomSheet>
+    </div>
   );
 }

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useApp } from '../../context';
-import BottomSheet from '../BottomSheet';
 import Icon from '../Icon';
 
 const MOODS = ['💕', '🥰', '😍', '🌸', '✨', '🥺', '💌', '🎀'];
@@ -27,26 +26,32 @@ export default function AddLoveNoteForm({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <BottomSheet onClose={onClose} title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Write a Love Note <Icon emoji="💌" size={18} /></span>}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 16 }}>
-        <div style={{ background: 'var(--sakura-light)', borderRadius: 12, padding: '10px 14px', fontSize: 14, color: 'var(--sakura-deep)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          From <strong>{currentUser}</strong> <Icon emoji="→" size={14} /> <strong>{to}</strong>
+    <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={onClose}>
+      <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Write a Love Note <Icon emoji="💌" size={18} /></p>
+          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
         </div>
-        <textarea className="input-field" placeholder={`Write something for ${to}...`} value={message} onChange={e => setMessage(e.target.value)} rows={5} />
-        <div>
-          <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Mood</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {MOODS.map(m => (
-              <button key={m} onClick={() => setMood(m)} style={{ background: mood === m ? 'var(--sakura-light)' : 'transparent', border: mood === m ? '2px solid var(--sakura)' : '2px solid transparent', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={m} size={22} /></button>
-            ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ background: 'var(--sakura-light)', borderRadius: 12, padding: '10px 14px', fontSize: 14, color: 'var(--sakura-deep)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+            From <strong>{currentUser}</strong> <Icon emoji="→" size={14} /> <strong>{to}</strong>
+          </div>
+          <textarea className="input-field" placeholder={`Write something for ${to}...`} value={message} onChange={e => setMessage(e.target.value)} rows={5} />
+          <div>
+            <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Mood</p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {MOODS.map(m => (
+                <button key={m} onClick={() => setMood(m)} style={{ background: mood === m ? 'var(--sakura-light)' : 'transparent', border: mood === m ? '2px solid var(--sakura)' : '2px solid transparent', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={m} size={22} /></button>
+              ))}
+            </div>
+          </div>
+          {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>{error} <Icon emoji="✨" size={14} /></p>}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
+            <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>{saving ? 'Sending...' : <>Send Note <Icon emoji="💌" size={16} /></>}</button>
           </div>
         </div>
-        {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>{error} <Icon emoji="✨" size={14} /></p>}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
-          <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>{saving ? 'Sending...' : <>Send Note <Icon emoji="💌" size={16} /></>}</button>
-        </div>
       </div>
-    </BottomSheet>
+    </div>
   );
 }
