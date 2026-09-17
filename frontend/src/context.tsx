@@ -442,6 +442,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Set by the streak realtime effect further down; markActive uses it to
   // broadcast "I just marked active today" to the partner's own session.
   const streakChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  // markActive() is now called from nearly every user action (likes,
+  // reactions, chat messages, ...), not just occasional toasts — this
+  // caches "already marked today" so a chatty day doesn't fire the RPC (and
+  // a realtime broadcast to the partner) on every single tap once today is
+  // already logged for this profile.
+  const markedActiveDateRef = useRef<string | null>(null);
 
   const navigate = useCallback((s: string, id?: string) => {
     setStack(prev => [...prev, { screen: s, id }]);
@@ -461,6 +467,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // than trusting the RPC's returned count alone) so streakLitToday — which
   // controls the flame's color — stays accurate too.
   const markActive = useCallback(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    if (markedActiveDateRef.current === today) return;
+    markedActiveDateRef.current = today;
     markActiveToday().then(() => {
       fetchStreak().then(({ count, litToday }) => {
         setState(s => ({ ...s, streak: count, streakLitToday: litToday }));
@@ -504,6 +513,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...s,
       posts: s.posts.map(p => p.id === id ? { ...p, liked: nextLiked, likes: nextLiked ? p.likes + 1 : p.likes - 1 } : p),
     }));
+    markActive();
     const { error } = await setLiked(id, myProfile.id, nextLiked);
     if (error) { toast('Something went wrong', '⚠️'); refreshPosts(); }
   };
@@ -514,6 +524,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!post) return;
     const nextSaved = !post.saved;
     setState(s => ({ ...s, posts: s.posts.map(p => p.id === id ? { ...p, saved: nextSaved } : p) }));
+    markActive();
     const { error } = await setSaved(id, myProfile.id, nextSaved);
     if (error) { toast('Something went wrong', '⚠️'); refreshPosts(); }
   };
@@ -522,6 +533,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!myProfile) return;
     const { error } = await addPostComment(postId, myProfile.id, text);
     if (error) { toast('Something went wrong', '⚠️'); return; }
+    markActive();
     refreshPosts();
   };
 
@@ -530,8 +542,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await createPost(myProfile.id, { images: p.images, caption: p.caption, location: p.location, postDate: p.postDate });
     if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshPosts();
-    // No manual success toast here — the realtime `notifications` subscription
-    // above pops one for both accounts (including the poster) a moment later.
+    // Called directly rather than relying on toast() — the realtime
+    // `notifications` subscription does pop a toast for this a moment
+    // later, but always with { passive: true } (see its handler below),
+    // which by design never counts toward the streak.
+    markActive();
   };
 
   const editPost = async (id: string, data: { caption: string; location?: string; postDate?: string }) => {
@@ -561,7 +576,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshMemories();
-    // No manual toast — the realtime `notifications` subscription pops one for both accounts.
+    // See addPost's comment — the realtime toast for this is always passive.
+    markActive();
   };
 
   const toggleFavorite = async (id: string) => {
@@ -569,6 +585,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!mem) return;
     const nextFav = !mem.favorite;
     setState(s => ({ ...s, memories: s.memories.map(x => x.id === id ? { ...x, favorite: nextFav } : x) }));
+    markActive();
     const { error } = await setMemoryFavorite(id, nextFav);
     if (error) { toast('Something went wrong', '⚠️'); refreshMemories(); }
   };
@@ -747,7 +764,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await createLoveNote(fromId, toId, n.message, n.mood);
     if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshLoveStuff();
-    // No manual toast — the realtime `notifications` subscription pops one for both accounts.
+    // See addPost's comment — the realtime toast for this is always passive.
+    markActive();
   };
 
   const markNoteRead = async (id: string) => {
@@ -782,6 +800,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteEvent = async (id: string) => {
     setState(s => ({ ...s, events: s.events.filter(e => e.id !== id) }));
+    markActive();
     const { error } = await deleteEventRow(id);
     if (error) { toast('Something went wrong', '⚠️'); refreshEvents(); }
   };
@@ -796,12 +815,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateCycleLog = async (id: string, l: Omit<CycleLog, 'id'>) => {
     setState(s => ({ ...s, cycleLogs: s.cycleLogs.map(x => x.id === id ? { ...x, ...l } : x) }));
+    markActive();
     const { error } = await updateCycleLogRow(id, l);
     if (error) { toast('Something went wrong', '⚠️'); refreshCycleLogs(); }
   };
 
   const deleteCycleLog = async (id: string) => {
     setState(s => ({ ...s, cycleLogs: s.cycleLogs.filter(l => l.id !== id) }));
+    markActive();
     const { error } = await deleteCycleLogRow(id);
     if (error) { toast('Something went wrong', '⚠️'); refreshCycleLogs(); }
   };
@@ -816,12 +837,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateStoryQuote = async (id: string, text: string) => {
     setState(s => ({ ...s, storyQuotes: s.storyQuotes.map(q => q.id === id ? { ...q, text } : q) }));
+    markActive();
     const { error } = await updateStoryQuoteRow(id, text);
     if (error) { toast('Something went wrong', '⚠️'); refreshStoryQuotes(); }
   };
 
   const deleteStoryQuote = async (id: string) => {
     setState(s => ({ ...s, storyQuotes: s.storyQuotes.filter(q => q.id !== id) }));
+    markActive();
     const { error } = await deleteStoryQuoteRow(id);
     if (error) { toast('Something went wrong', '⚠️'); refreshStoryQuotes(); }
   };
@@ -901,6 +924,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteDebt = async (id: string) => {
     setState(s => ({ ...s, debts: s.debts.filter(x => x.id !== id) }));
+    markActive();
     const { error } = await deleteDebtRow(id);
     if (error) { toast('Something went wrong', '⚠️'); refreshDebts(); return; }
     // A deleted debt's linked Expenses transactions are removed by the DB's
@@ -911,9 +935,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // To Do — deliberately quiet: no toast, no notification, no realtime of
   // its own. Just a shared checklist, refreshed like everything else that
   // doesn't have its own subscription (mount, pull-to-refresh, and whatever
-  // else's notification happens to sweep it up).
+  // else's notification happens to sweep it up). Still calls markActive()
+  // directly though — "no notification" was a design choice about not
+  // pinging your partner, not about this not counting as real activity.
   const addTodo = async (t: Omit<Todo, 'id' | 'completed' | 'createdBy'>) => {
     setState(s => ({ ...s, todos: [...s.todos, { ...t, id: `temp-${uid()}`, completed: false, createdBy: currentUser }] }));
+    markActive();
     const { error } = await createTodo(t);
     if (error) { toast('Something went wrong', '⚠️'); }
     await refreshTodos();
@@ -921,6 +948,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateTodo = async (id: string, t: Omit<Todo, 'id' | 'completed' | 'createdBy'>) => {
     setState(s => ({ ...s, todos: s.todos.map(x => x.id === id ? { ...x, ...t } : x) }));
+    markActive();
     const { error } = await updateTodoRow(id, t);
     if (error) { toast('Something went wrong', '⚠️'); refreshTodos(); }
   };
@@ -930,16 +958,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!todo) return;
     const next = !todo.completed;
     setState(s => ({ ...s, todos: s.todos.map(x => x.id === id ? { ...x, completed: next } : x) }));
+    markActive();
     // A quiet, local toast (not a cross-partner notification — the feature
     // stays notification-free) just for a little satisfaction on your own
     // checkmark tap.
-    if (next) toast('Task done! 🎉');
+    if (next) toast('Task done! 🎉', '🎉', { passive: true });
     const { error } = await setTodoCompletedRow(todo, next);
     if (error) { toast('Something went wrong', '⚠️'); refreshTodos(); }
   };
 
   const deleteTodo = async (id: string) => {
     setState(s => ({ ...s, todos: s.todos.filter(x => x.id !== id) }));
+    markActive();
     const { error } = await deleteTodoRow(id);
     if (error) refreshTodos();
   };
@@ -993,10 +1023,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const nextCompleted = !goal.completed;
     const completedDate = nextCompleted ? new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : null;
     setState(s => ({ ...s, goals: s.goals.map(g => g.id === id ? { ...g, completed: nextCompleted, completedDate: completedDate ?? undefined } : g) }));
+    markActive();
     if (nextCompleted) {
       setCelebration(true);
       setTimeout(() => setCelebration(false), 2000);
-      toast('Goal completed! ❤️', '🎉');
+      toast('Goal completed! ❤️', '🎉', { passive: true });
     }
     const { error } = await setGoalCompleted(id, nextCompleted, completedDate);
     if (error) { toast('Something went wrong', '⚠️'); refreshGoals(); }
@@ -1004,6 +1035,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteGoal = async (id: string) => {
     setState(s => ({ ...s, goals: s.goals.filter(g => g.id !== id) }));
+    markActive();
     const { error } = await deleteGoalRow(id);
     if (error) refreshGoals();
   };
@@ -1059,6 +1091,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const nextPaid = !bill.paid;
     const paidDate = nextPaid ? new Date().toISOString().slice(0, 10) : null;
     setState(s => ({ ...s, bills: s.bills.map(x => x.id === id ? { ...x, paid: nextPaid, paidDate: paidDate ?? undefined } : x) }));
+    markActive();
     const { error } = await setBillPaid(id, nextPaid, paidDate);
     if (error) { toast('Something went wrong', '⚠️'); refreshMoney(); return; }
     // Mirror the payment (or its reversal) into Thu chi, same as goal deposit/withdraw.
@@ -1093,6 +1126,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const updateTrip = async (t: Trip) => {
     setState(s => ({ ...s, trips: s.trips.map(x => x.id === t.id ? t : x) }));
+    markActive();
     const { error } = await updateTripRow(t.id, t);
     if (error) { toast('Something went wrong', '⚠️'); refreshTrips(); }
   };
@@ -1120,17 +1154,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const openCapsule = async (id: string) => {
     setState(s => ({ ...s, capsules: s.capsules.map(c => c.id === id ? { ...c, opened: true } : c) }));
+    markActive();
     const { error } = await openCapsuleRow(id);
     if (error) refreshCapsules();
   };
   const updateCapsule = async (c: Capsule) => {
     setState(s => ({ ...s, capsules: s.capsules.map(x => x.id === c.id ? c : x) }));
+    markActive();
     const toId = c.to === 'both' ? null : resolveProfileId(c.to);
     const { error } = await updateCapsuleRow(c.id, toId, c.title, c.occasion, c.message, c.unlockDate);
     if (error) { toast('Something went wrong', '⚠️'); refreshCapsules(); }
   };
   const deleteCapsule = async (id: string) => {
     setState(s => ({ ...s, capsules: s.capsules.filter(c => c.id !== id) }));
+    markActive();
     const { error } = await deleteCapsuleRow(id);
     if (error) refreshCapsules();
   };
@@ -1147,11 +1184,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const updatePlaylist = async (id: string, p: { title: string; artist: string; emoji: string; image?: string; durationSeconds?: number; releaseDate?: string; previewUrl?: string; note?: string; addedBy?: User }) => {
     const addedById = p.addedBy ? resolveProfileId(p.addedBy) : null;
     setState(s => ({ ...s, playlist: s.playlist.map(x => x.id === id ? { ...x, ...p, addedBy: p.addedBy ?? x.addedBy } : x) }));
+    markActive();
     const { error } = await updatePlaylistItemRow(id, addedById, p);
     if (error) refreshPlaylist();
   };
   const removeFromPlaylist = async (id: string) => {
     setState(s => ({ ...s, playlist: s.playlist.filter(p => p.id !== id) }));
+    markActive();
     const { error } = await deletePlaylistItemRow(id);
     if (error) refreshPlaylist();
   };
@@ -1171,16 +1210,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const updateWish = async (id: string, w: { wish: string; price?: string; link?: string; linkImage?: string; linkTitle?: string; linkDescription?: string }) => {
     setState(s => ({ ...s, wishes: s.wishes.map(x => x.id === id ? { ...x, ...w } : x) }));
+    markActive();
     const { error } = await updateWishRow(id, w);
     if (error) { toast('Something went wrong', '⚠️'); refreshWishes(); }
   };
   const drawWish = async (id: string, drawn: boolean = true) => {
     setState(s => ({ ...s, wishes: s.wishes.map(w => w.id === id ? { ...w, drawn } : w) }));
+    markActive();
     const { error } = await setWishDrawnRow(id, drawn);
     if (error) refreshWishes();
   };
   const removeWish = async (id: string) => {
     setState(s => ({ ...s, wishes: s.wishes.filter(w => w.id !== id) }));
+    markActive();
     const { error } = await deleteWishRow(id);
     if (error) refreshWishes();
   };
@@ -1195,6 +1237,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const removeDateIdea = async (id: string) => {
     setState(s => ({ ...s, dateIdeas: s.dateIdeas.filter(i => i.id !== id) }));
+    markActive();
     const { error } = await deleteDateIdeaRow(id);
     if (error) refreshDateIdeas();
   };
@@ -1215,11 +1258,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const removeDateIdeaPreset = async (id: string) => {
     setState(s => ({ ...s, dateIdeaPresets: s.dateIdeaPresets.filter(i => i.id !== id) }));
+    markActive();
     const { error } = await deleteDateIdeaPresetRow(id);
     if (error) refreshDateIdeaPresets();
   };
   const drawDateIdea = async (idea: { emoji: string; text: string }) => {
     if (!myProfile) return;
+    markActive();
     const { error } = await recordDateIdeaDraw(myProfile.id, idea);
     if (!error) refreshDateIdeaHistory();
   };
@@ -1232,10 +1277,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const { error } = await createLoveLetter(fromId, toId, { title: l.title, body: l.body, stationery: l.stationery, font: l.font });
     if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshLoveStuff();
-    // No manual toast — the realtime `notifications` subscription pops one for both accounts.
+    // See addPost's comment — the realtime toast for this is always passive.
+    markActive();
   };
   const deleteLoveLetter = async (id: string) => {
     setState(s => ({ ...s, loveLetters: s.loveLetters.filter(l => l.id !== id) }));
+    markActive();
     const { error } = await deleteLoveLetterRow(id);
     if (error) refreshLoveStuff();
   };
@@ -1335,6 +1382,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         },
       },
     }));
+    markActive();
     const { error } = await toggleReaction(postId, myProfile.id, emoji, reacted);
     if (error) { toast('Something went wrong', '⚠️'); refreshPosts(); }
   };
@@ -1348,11 +1396,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const updateFavPlace = async (cat: FavCategory, id: string, place: { name: string; note?: string; image?: string }) => {
     setState(s => ({ ...s, favPlaces: { ...s.favPlaces, [cat]: (s.favPlaces[cat] ?? []).map(p => p.id === id ? { ...p, ...place } : p) } }));
+    markActive();
     const { error } = await updateFavPlaceRow(id, place);
     if (error) refreshFavorites();
   };
   const removeFavPlace = async (cat: FavCategory, id: string) => {
     setState(s => ({ ...s, favPlaces: { ...s.favPlaces, [cat]: (s.favPlaces[cat] ?? []).filter(p => p.id !== id) } }));
+    markActive();
     const { error } = await deleteFavPlace(id);
     if (error) refreshFavorites();
   };
@@ -1411,6 +1461,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
   const deletePlace = async (id: string) => {
     setState(s => ({ ...s, places: s.places.filter(p => p.id !== id) }));
+    markActive();
     const { error } = await deletePlaceRow(id);
     if (error) refreshPlaces();
   };
@@ -2108,11 +2159,13 @@ const refreshMoods = useCallback(async () => {
     if (!url) { toast('Something went wrong', '⚠️'); return; }
     const { error } = await createCustomSticker(myProfile.id, url);
     if (error) { toast('Something went wrong', '⚠️'); return; }
+    markActive();
     await refreshCustomStickers();
   };
 
   const removeCustomSticker = async (id: string) => {
     setState(s => ({ ...s, customStickers: s.customStickers.filter(c => c.id !== id) }));
+    markActive();
     const { error } = await deleteCustomStickerRow(id);
     if (error) refreshCustomStickers();
   };
@@ -2226,6 +2279,7 @@ const refreshMoods = useCallback(async () => {
       clientKey: tempId,
     };
     setState(s => ({ ...s, chatMessages: [...s.chatMessages, optimistic] }));
+    markActive();
     const { data, error } = await sendChatMessageRow(myProfile.id, { ...msg, text });
     if (error || !data) {
       toast('Something went wrong', '⚠️');
