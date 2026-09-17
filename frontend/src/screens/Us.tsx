@@ -13,6 +13,7 @@ import { getDaysTogether, getDuration } from '../data';
 import { uploadFavPlaceImage } from '../favourites';
 import { uploadPlaceImage } from '../places';
 import { uploadWishImage } from '../wishes';
+import { TODO_CATEGORIES, categoryMeta } from '../todoCategories';
 import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem, StoryQuote, Place, Todo } from '../types';
 
 // These sub-screens are only ever visited from within Us's own internal
@@ -1736,18 +1737,6 @@ function formatShortDate(d: string): string {
 }
 
 /* ─── To Do List ── */
-
-const TODO_CATEGORIES = [
-  { key: 'work', emoji: '💼', label: 'Work' },
-  { key: 'gym', emoji: '🏋️', label: 'Gym' },
-  { key: 'home', emoji: '🏠', label: 'Home' },
-  { key: 'errands', emoji: '🛒', label: 'Errands' },
-  { key: 'health', emoji: '💊', label: 'Health' },
-  { key: 'other', emoji: '📌', label: 'Other' },
-];
-function categoryMeta(key: string) {
-  return TODO_CATEGORIES.find(c => c.key === key) ?? TODO_CATEGORIES[TODO_CATEGORIES.length - 1];
-}
 
 function TodoScreen({ onBack }: { onBack: () => void }) {
   const { state, currentUser, partnerProfile, addTodo, updateTodo, toggleTodoDone, deleteTodo } = useApp();

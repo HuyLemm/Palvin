@@ -289,7 +289,7 @@ interface AppContextType {
 
   // Gratitude
   addGratitude: (entry: Omit<GratitudeEntry, 'id'>) => void;
-  updateGratitude: (id: string, text: string) => void;
+  updateGratitude: (id: string, data: { text: string; image: string | null }) => void;
   deleteGratitude: (id: string) => void;
 
   // Reactions
@@ -1305,10 +1305,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toast('Gratitude saved 🌸', '💕');
   };
 
-  const updateGratitude = async (id: string, text: string) => {
+  const updateGratitude = async (id: string, data: { text: string; image: string | null }) => {
     const prev = state.gratitude;
-    setState(s => ({ ...s, gratitude: s.gratitude.map(g => g.id === id ? { ...g, text } : g) }));
-    const { error } = await updateGratitudeRow(id, text);
+    setState(s => ({ ...s, gratitude: s.gratitude.map(g => g.id === id ? { ...g, text: data.text, image: data.image ?? undefined } : g) }));
+    const { error } = await updateGratitudeRow(id, data);
     if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, gratitude: prev })); return; }
     toast('Updated.', '✏️');
   };

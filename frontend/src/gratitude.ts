@@ -35,8 +35,8 @@ export async function createGratitude(fromId: string, text: string, date: string
   return supabase.from('gratitude_entries').insert({ from_profile_id: fromId, text, entry_date: date, image_url: image || null });
 }
 
-export async function updateGratitudeRow(id: string, text: string) {
-  return supabase.from('gratitude_entries').update({ text }).eq('id', id);
+export async function updateGratitudeRow(id: string, data: { text: string; image: string | null }) {
+  return supabase.from('gratitude_entries').update({ text: data.text, image_url: data.image }).eq('id', id);
 }
 
 export async function deleteGratitudeRow(id: string) {

@@ -27,6 +27,10 @@ export default function GratitudeJournal({ onBack }: Props) {
   const [promptIdx] = useState(() => Math.floor(Math.random() * PROMPTS.length));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [editImagePreview, setEditImagePreview] = useState('');
+  const [editRemoteUrl, setEditRemoteUrl] = useState('');
+  const [editUploading, setEditUploading] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -42,14 +46,28 @@ export default function GratitudeJournal({ onBack }: Props) {
     });
   };
 
-  function startEdit(id: string, currentText: string) {
-    setEditingId(id);
-    setEditText(currentText);
+  function startEdit(g: { id: string; text: string; image?: string }) {
+    setEditingId(g.id);
+    setEditText(g.text);
+    setEditImagePreview(g.image ?? '');
+    setEditRemoteUrl(g.image ?? '');
+  }
+
+  function handleEditFile(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file || !myProfile?.coupleId) return;
+    setEditImagePreview(URL.createObjectURL(file));
+    setEditRemoteUrl('');
+    setEditUploading(true);
+    uploadGratitudeImage(myProfile.coupleId, file).then(url => {
+      setEditUploading(false);
+      if (url) setEditRemoteUrl(url);
+    });
   }
 
   function saveEdit(id: string) {
     if (!editText.trim()) return;
-    updateGratitude(id, editText.trim());
+    updateGratitude(id, { text: editText.trim(), image: editRemoteUrl || null });
     setEditingId(null);
   }
 
@@ -181,7 +199,7 @@ export default function GratitudeJournal({ onBack }: Props) {
                 {(g.from === currentUser || isAdmin) ? (
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                     <button
-                      onClick={() => startEdit(g.id, g.text)}
+                      onClick={() => startEdit(g)}
                       style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     ><Icon emoji="✏️" size={12} /></button>
                     <button
@@ -215,9 +233,35 @@ export default function GratitudeJournal({ onBack }: Props) {
               autoFocus
               style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 14, background: 'var(--bg)', fontFamily: "'Nunito', sans-serif", fontSize: 14, color: 'var(--ink)', resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, marginBottom: 14 }}
             />
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photo</p>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {editImagePreview && (
+                  <div style={{ position: 'relative', width: 60, height: 60, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2px solid var(--sakura-deep)' }}>
+                    <img src={editImagePreview} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: editUploading ? 0.5 : 1 }} />
+                    {editUploading && (
+                      <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.5)', borderTopColor: 'white', animation: 'palvin-gratitude-spin 0.7s linear infinite' }} />
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => editFileInputRef.current?.click()}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, border: '1.5px dashed var(--sakura-accent)', background: 'var(--white)', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
+                ><Icon emoji="📷" size={13} /> {editImagePreview ? 'Change' : 'Add photo'}</button>
+                {editImagePreview && (
+                  <button
+                    onClick={() => { setEditImagePreview(''); setEditRemoteUrl(''); }}
+                    style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  ><Icon emoji="✕" size={12} /></button>
+                )}
+              </div>
+              <input ref={editFileInputRef} type="file" accept="image/*" onChange={e => { handleEditFile(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
+            </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setEditingId(null)} className="btn-ghost" style={{ flex: 1 }}>Cancel</button>
-              <button onClick={() => saveEdit(editingId)} disabled={!editText.trim()} style={{ flex: 2, padding: '13px', background: editText.trim() ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 14, color: editText.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, cursor: editText.trim() ? 'pointer' : 'default' }}>Save changes</button>
+              <button onClick={() => saveEdit(editingId)} disabled={!editText.trim() || editUploading} style={{ flex: 2, padding: '13px', background: (editText.trim() && !editUploading) ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 14, color: (editText.trim() && !editUploading) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, cursor: (editText.trim() && !editUploading) ? 'pointer' : 'default' }}>{editUploading ? 'Uploading...' : 'Save changes'}</button>
             </div>
           </div>
         </div>

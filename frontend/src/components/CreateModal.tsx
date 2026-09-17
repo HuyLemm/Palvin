@@ -9,19 +9,34 @@ import AddExpenseForm from './forms/AddExpenseForm';
 import AddEventForm from './forms/AddEventForm';
 import AddGoalForm from './forms/AddGoalForm';
 import AddGratitudeForm from './forms/AddGratitudeForm';
+import AddTodoForm from './forms/AddTodoForm';
+import AddWishForm from './forms/AddWishForm';
+import AddTripForm from './forms/AddTripForm';
+import AddCapsuleForm from './forms/AddCapsuleForm';
+import AddPlaylistForm from './forms/AddPlaylistForm';
 
+// One option per Us-tab section that has a natural single "add" action —
+// each opens the exact same mutation the section's own screen uses
+// (addTodo, addWish, addTrip, addCapsule, addToPlaylist), just reachable
+// from anywhere via the bottom navbar instead of having to first navigate
+// into that section.
 const OPTIONS = [
   { icon: '📸', label: 'Post', key: 'post' },
   { icon: '🌸', label: 'Memory', key: 'memory' },
   { icon: '💌', label: 'Love Note', key: 'note' },
   { icon: '🌷', label: 'Gratitude', key: 'gratitude' },
+  { icon: '✅', label: 'To Do', key: 'todo' },
+  { icon: '🎁', label: 'Wish', key: 'wish' },
+  { icon: '✈️', label: 'Trip', key: 'trip' },
+  { icon: '⏳', label: 'Time Capsule', key: 'capsule' },
+  { icon: '🎵', label: 'Playlist', key: 'playlist' },
   { icon: '💰', label: 'Expense', key: 'expense' },
   { icon: '📅', label: 'Event', key: 'event' },
   { icon: '✨', label: 'Goal', key: 'goal' },
 ];
 
 export default function CreateModal() {
-  const { closeCreate, createStep } = useApp();
+  const { closeCreate, createStep, addTrip } = useApp();
   const [step, setStep] = useState<string | null>(createStep);
 
   const handleClose = () => { setStep(null); closeCreate(); };
@@ -30,6 +45,11 @@ export default function CreateModal() {
   if (step === 'memory')    return <AddMemoryForm onClose={handleClose} />;
   if (step === 'note')      return <AddLoveNoteForm onClose={handleClose} />;
   if (step === 'gratitude') return <AddGratitudeForm onClose={handleClose} />;
+  if (step === 'todo')      return <AddTodoForm onClose={handleClose} />;
+  if (step === 'wish')      return <AddWishForm onClose={handleClose} />;
+  if (step === 'trip')      return <AddTripForm onClose={handleClose} onAdd={addTrip} />;
+  if (step === 'capsule')   return <AddCapsuleForm onClose={handleClose} />;
+  if (step === 'playlist')  return <AddPlaylistForm onClose={handleClose} />;
   if (step === 'expense')   return <AddExpenseForm onClose={handleClose} />;
   if (step === 'event')     return <AddEventForm onClose={handleClose} />;
   if (step === 'goal')      return <AddGoalForm onClose={handleClose} />;
