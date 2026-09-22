@@ -53,6 +53,18 @@ export async function createPrivateExpense(e: { title: string; category: string;
   });
 }
 
+export async function updatePrivateExpenseRow(id: string, e: { title: string; category: string; categoryEmoji: string; amount: number; date: string; note?: string; type: 'expense' | 'income' }) {
+  return supabase.from('private_expenses').update({
+    title: e.title,
+    category: e.category,
+    category_emoji: e.categoryEmoji,
+    amount: e.amount,
+    occurred_on: e.date,
+    note: e.note || null,
+    type: e.type,
+  }).eq('id', id);
+}
+
 export async function deletePrivateExpenseRow(id: string) {
   return supabase.from('private_expenses').delete().eq('id', id);
 }

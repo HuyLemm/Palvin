@@ -152,10 +152,38 @@ function PrivateFundTab() {
 }
 
 function PrivateLedgerTab() {
-  const { state, addPrivateExpense, deletePrivateExpense } = useApp();
+  const { state, addPrivateExpense, updatePrivateExpense, deletePrivateExpense } = useApp();
   const PRIVATE_CATEGORIES = state.moneyCategories.private;
   const [showForm, setShowForm] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editType, setEditType] = useState<'expense' | 'income'>('expense');
+  const [editTitle, setEditTitle] = useState('');
+  const [editCategory, setEditCategory] = useState(PRIVATE_CATEGORIES[0]);
+  const [editAmount, setEditAmount] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editNote, setEditNote] = useState('');
+  const [editError, setEditError] = useState('');
+
+  const openEdit = (e: PrivateExpense) => {
+    setEditingId(e.id);
+    setEditType(e.type);
+    setEditTitle(e.title);
+    setEditCategory(PRIVATE_CATEGORIES.find(c => c.label === e.category) ?? PRIVATE_CATEGORIES[0]);
+    setEditAmount(String(Math.round(e.amount)));
+    setEditDate(e.date);
+    setEditNote(e.note);
+    setEditError('');
+  };
+  const closeEdit = () => setEditingId(null);
+  const handleSaveEdit = () => {
+    if (!editingId) return;
+    if (!editTitle.trim()) { setEditError('Enter a title.'); return; }
+    if (!editAmount || isNaN(+editAmount) || +editAmount <= 0) { setEditError('Enter a valid amount.'); return; }
+    updatePrivateExpense(editingId, { title: editTitle.trim(), category: editCategory.label, categoryEmoji: editCategory.emoji, amount: +editAmount, date: editDate, note: editNote.trim(), type: editType });
+    closeEdit();
+  };
 
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [title, setTitle] = useState('');
@@ -207,7 +235,7 @@ function PrivateLedgerTab() {
           <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>{formatDate(date)}</p>
           <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
             {byDate[date].map((e, i) => (
-              <div key={e.id} onClick={() => setConfirmDeleteId(e.id)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', cursor: 'pointer', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
+              <div key={e.id} onClick={() => openEdit(e)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', cursor: 'pointer', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
                 <div style={{ width: 40, height: 40, background: e.type === 'income' ? 'rgba(90,194,106,0.12)' : 'var(--sakura-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, flexShrink: 0 }}>{e.categoryEmoji}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</p>
@@ -244,6 +272,38 @@ function PrivateLedgerTab() {
               <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
               {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
               <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingId && (
+        <div className="kb-modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(51,42,45,0.5)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, animation: 'fadeIn 0.2s ease-out' }} onClick={closeEdit}>
+          <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>{editType === 'income' ? 'Edit income' : 'Edit expense'}</p>
+              <button onClick={closeEdit} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <input className="input-field" placeholder="Title" value={editTitle} onChange={e => setEditTitle(e.target.value)} autoFocus />
+              <div>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 6, fontWeight: 500 }}>Category</p>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {PRIVATE_CATEGORIES.map(c => (
+                    <button key={c.id} onClick={() => setEditCategory(c)} style={{ padding: '7px 11px', borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: editCategory.label === c.label ? 'var(--sakura-light)' : 'var(--bg)', border: editCategory.label === c.label ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: editCategory.label === c.label ? 'var(--sakura-deep)' : 'var(--ink-2)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                      <Icon emoji={c.emoji} size={12} /> {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <AmountInput placeholder="Amount (VND)" value={editAmount} onChange={setEditAmount} />
+              <input className="input-field" type="date" value={editDate} onChange={e => setEditDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
+              <input className="input-field" placeholder="Note (optional)" value={editNote} onChange={e => setEditNote(e.target.value)} />
+              {editError && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{editError}</p>}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button onClick={() => { setConfirmDeleteId(editingId); closeEdit(); }} style={{ padding: '13px 16px', borderRadius: 14, border: '1.5px solid #E8524A', background: 'var(--white)', color: '#E8524A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Delete</button>
+                <button onClick={handleSaveEdit} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Save changes</button>
+              </div>
             </div>
           </div>
         </div>

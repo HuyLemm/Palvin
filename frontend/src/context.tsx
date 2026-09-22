@@ -47,7 +47,7 @@ import {
   fetchSavingsGoals, createSavingsGoal, updateSavingsGoalCurrent, updateSavingsGoalRow, deleteSavingsGoalRow,
 } from './money';
 import {
-  fetchPrivateExpenses, createPrivateExpense, deletePrivateExpenseRow,
+  fetchPrivateExpenses, createPrivateExpense, updatePrivateExpenseRow, deletePrivateExpenseRow,
   fetchPrivateJars, createPrivateJar, updatePrivateJarRow, deletePrivateJarRow, setPrivateJarCurrentRow,
 } from './privateMoney';
 import {
@@ -173,6 +173,7 @@ interface AppContextType {
   updateExpense: (id: string, e: Omit<Expense, 'id'>) => void;
   deleteExpense: (id: string) => void;
   addPrivateExpense: (e: Omit<PrivateExpense, 'id'>) => void;
+  updatePrivateExpense: (id: string, e: Omit<PrivateExpense, 'id'>) => void;
   deletePrivateExpense: (id: string) => void;
   addPrivateJar: (j: { title: string; emoji: string; target?: number }) => void;
   updatePrivateJar: (id: string, j: { title: string; emoji: string; target?: number }) => void;
@@ -630,6 +631,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshPrivateMoney();
     toast('Saved 💰');
+  };
+
+  const updatePrivateExpense = async (id: string, e: Omit<PrivateExpense, 'id'>) => {
+    const prev = state.privateExpenses;
+    setState(s => ({ ...s, privateExpenses: s.privateExpenses.map(x => x.id === id ? { ...x, ...e } : x) }));
+    const { error } = await updatePrivateExpenseRow(id, e);
+    if (error) { toast('Something went wrong', '⚠️'); setState(s => ({ ...s, privateExpenses: prev })); return; }
+    toast('Updated ✏️');
   };
 
   const deletePrivateExpense = async (id: string) => {
@@ -2419,7 +2428,7 @@ const refreshMoods = useCallback(async () => {
       toggleLike, toggleSave, addComment, addPost, editPost, deletePost,
       addMemory, toggleFavorite,
       addExpense, updateExpense, deleteExpense,
-      addPrivateExpense, deletePrivateExpense,
+      addPrivateExpense, updatePrivateExpense, deletePrivateExpense,
       addPrivateJar, updatePrivateJar, deletePrivateJar, depositToPrivateJar, withdrawFromPrivateJar,
       addSavingsGoal, updateSavingsGoal, deleteSavingsGoal, addToGoal, withdrawFromGoal,
       addLoveNote, markNoteRead, addSecretNote,

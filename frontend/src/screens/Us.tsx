@@ -246,15 +246,30 @@ export default function Us() {
         ))}
       </div>
 
-      {/* Menu items — grouped from most forward-facing/frequent (planning
-          together, daily rituals) down to reflective/archival (memories,
-          keepsakes), instead of the old accretion order (newest feature
-          tacked onto the bottom regardless of how it relates to the rest). */}
+      {/* Menu items — grouped with the most frequently-touched, day-to-day
+          screens first (To Do leads, since it's the one worth checking back
+          on most often), then longer-horizon planning, then occasional
+          extras, down to reflective/archival (memories, keepsakes) —
+          instead of the old accretion order (newest feature tacked onto the
+          bottom regardless of how it relates to the rest). */}
       {([
+        {
+          title: 'Everyday',
+          items: [
+            { label: 'To Do List', emoji: '✅', key: 'todos' as SubScreen,
+              sub: (() => {
+                const left = state.todos.filter(t => !t.completed).length;
+                return left > 0 ? `${left} task(s) left` : 'All caught up';
+              })() },
+            { label: 'Gratitude Journal', emoji: '🌸', key: 'gratitude' as SubScreen, sub: `${state.gratitude.length} things you're grateful for` },
+            { label: 'Our Calendar', emoji: '📅', key: 'calendar' as SubScreen, sub: `${state.events.length} events` },
+            { label: 'Our Playlist', emoji: '🎵', key: 'playlist' as SubScreen, sub: `${state.playlist.length} songs` },
+            { label: 'Quote of the Day', emoji: '💬', key: 'quotes' as SubScreen, sub: `${state.storyQuotes.length} quotes — changes daily on the Dashboard` },
+          ],
+        },
         {
           title: 'Plan together',
           items: [
-            { label: 'Our Calendar', emoji: '📅', key: 'calendar' as SubScreen, sub: `${state.events.length} events` },
             { label: 'Future Us', emoji: '✨', key: 'future' as SubScreen, sub: `${state.goals.filter(g => !g.completed).length} dreams to achieve` },
             { label: 'Date Permit', emoji: '📋', key: 'permit' as SubScreen,
               sub: (state.dateRequests.filter(r => r.to === currentUser && r.status === 'pending').length > 0
@@ -265,25 +280,12 @@ export default function Us() {
           ],
         },
         {
-          title: 'Daily rituals',
-          items: [
-            { label: 'Gratitude Journal', emoji: '🌸', key: 'gratitude' as SubScreen, sub: `${state.gratitude.length} things you're grateful for` },
-            { label: 'Quote of the Day', emoji: '💬', key: 'quotes' as SubScreen, sub: `${state.storyQuotes.length} quotes — changes daily on the Dashboard` },
-            { label: 'Our Playlist', emoji: '🎵', key: 'playlist' as SubScreen, sub: `${state.playlist.length} songs` },
-          ],
-        },
-        {
           title: 'Gifts & extras',
           items: [
             { label: 'Gift Wishlist', labelIcon: '🎁', emoji: '🎁', key: 'wishjar' as SubScreen,
               sub: `${state.wishes.filter(w => !w.drawn).length} item(s) waiting to be bought` },
             { label: 'Our Favourites', emoji: '💕', key: 'favorites' as SubScreen,
               sub: `${Object.values(state.favPlaces).flat().length} favourite spots` },
-            { label: 'To Do List', emoji: '✅', key: 'todos' as SubScreen,
-              sub: (() => {
-                const left = state.todos.filter(t => !t.completed).length;
-                return left > 0 ? `${left} task(s) left` : 'All caught up';
-              })() },
           ],
         },
         {
