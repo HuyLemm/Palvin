@@ -4,7 +4,7 @@ import BottomSheet from './BottomSheet';
 import Icon from './Icon';
 import AddPostForm from './forms/AddPostForm';
 import AddMemoryForm from './forms/AddMemoryForm';
-import AddGratitudeForm from './forms/AddGratitudeForm';
+import AddCoupleTransactionForm from './forms/AddCoupleTransactionForm';
 import AddTodoForm from './forms/AddTodoForm';
 import AddWishForm from './forms/AddWishForm';
 import AddTripForm from './forms/AddTripForm';
@@ -13,15 +13,15 @@ import AddEventForm from './forms/AddEventForm';
 // Kept to the 6 most commonly used options — most are Us-tab sections, each
 // opening the exact same mutation that section's own screen uses (addTodo,
 // addWish, addTrip, addEvent), just reachable from anywhere via the bottom
-// navbar instead of having to first navigate into Us. Memory is the one
-// exception (it's its own top-level screen, not part of Us), kept here by
-// request. Time Capsule was dropped to make room for it and stay at 6 —
-// still fully available from its own "+" inside Us > Time Capsule. Love
-// Note, Expense, and Goal each already have their own dedicated add button
-// on their own screen, so they stay out of this menu.
+// navbar instead of having to first navigate into Us. Memory and Expense
+// are the two exceptions (Feed/Money, not Us), kept here by request.
+// Gratitude and Time Capsule were dropped to make room and stay at 6 —
+// both still fully available from their own "+" inside Us. Love Note and
+// Goal each already have their own dedicated add button on their own
+// screen, so they stay out of this menu.
 const OPTIONS = [
   { icon: '📅', label: 'Event', key: 'event' },
-  { icon: '🌷', label: 'Gratitude', key: 'gratitude' },
+  { icon: '💰', label: 'Expense', key: 'expense' },
   { icon: '✅', label: 'To Do', key: 'todo' },
   { icon: '🎁', label: 'Wish', key: 'wish' },
   { icon: '✈️', label: 'Trip', key: 'trip' },
@@ -39,7 +39,7 @@ export default function CreateModal() {
   // openCreate('post'), which routes through this same shared modal.
   if (step === 'post')      return <AddPostForm onClose={handleClose} />;
   if (step === 'memory')    return <AddMemoryForm onClose={handleClose} />;
-  if (step === 'gratitude') return <AddGratitudeForm onClose={handleClose} />;
+  if (step === 'expense')   return <AddCoupleTransactionForm onClose={handleClose} />;
   if (step === 'todo')      return <AddTodoForm onClose={handleClose} />;
   if (step === 'wish')      return <AddWishForm onClose={handleClose} />;
   if (step === 'trip')      return <AddTripForm onClose={handleClose} onAdd={addTrip} />;
