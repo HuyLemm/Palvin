@@ -274,13 +274,13 @@ export default function Home() {
           {dur.years} Years · {dur.months} Months · {dur.days} Days
         </p>
         {days > 0 && (
-          <p style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 99, padding: '5px 12px', marginBottom: 12 }}>
-            <Icon emoji={isMilestone ? '🎉' : '✨'} size={14} />
-            {isMilestone
+          <p style={{ display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%', fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 99, padding: '5px 12px', marginBottom: 12 }}>
+            <Icon emoji={isMilestone ? '🎉' : '✨'} size={14} style={{ flexShrink: 0 }} />
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isMilestone
               ? `Day ${days.toLocaleString()} — a milestone!`
               : nextEv && nextEvDays !== null && nextEvDays <= 30
                 ? (nextEvDays === 0 ? `${nextEv.event.title} is today!` : `${nextEvDays} day${nextEvDays === 1 ? '' : 's'} until ${nextEv.event.title}`)
-                : `${nextMilestone - days} ${plural(nextMilestone - days, 'day')} until day ${nextMilestone.toLocaleString()}`}
+                : `${nextMilestone - days} ${plural(nextMilestone - days, 'day')} until day ${nextMilestone.toLocaleString()}`}</span>
           </p>
         )}
         <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
@@ -302,6 +302,74 @@ export default function Home() {
           </div>
         </div>
         {quote && <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: 'var(--ink)', marginBottom: 14, fontSize: 15 }}>"{quote}"</p>}
+
+        {/* Spinning Vinyl Disk */}
+        {state.playlist.length > 0 && (
+          <div>
+            {/* Mine / partner's / Tất cả — which pool of songs the widget draws from */}
+            <div style={{ display: 'flex', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
+              {[
+                { k: 'all', label: 'All' },
+                { k: currentUser, label: currentUser },
+                ...(partnerName ? [{ k: partnerName, label: partnerName }] : []),
+              ].map(f => (
+                <button key={f.k} onClick={() => setPlaylistFilter(f.k)} style={{ padding: '3px 10px', borderRadius: 99, border: 'none', background: playlistFilter === f.k ? 'var(--sakura-accent)' : 'var(--glass)', color: playlistFilter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>{f.label}</button>
+              ))}
+            </div>
+
+            {currentSong ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--glass)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '10px 20px', border: isPlaying ? '1px solid rgba(201,95,124,0.5)' : '1px solid rgba(243,166,185,0.3)', boxShadow: isPlaying ? '0 0 0 4px rgba(243,166,185,0.18)' : 'none', transition: 'box-shadow 0.3s, border-color 0.3s' }}>
+                <style>{`
+                  @keyframes spin-vinyl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                  @keyframes vinyl-glow { 0%, 100% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 0 rgba(243,166,185,0.5); } 50% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 8px rgba(243,166,185,0); } }
+                  @keyframes eq-bar-1 { 0%, 100% { height: 4px; } 30% { height: 13px; } 60% { height: 7px; } }
+                  @keyframes eq-bar-2 { 0%, 100% { height: 8px; } 35% { height: 15px; } 70% { height: 5px; } }
+                  @keyframes eq-bar-3 { 0%, 100% { height: 5px; } 40% { height: 12px; } 80% { height: 8px; } }
+                `}</style>
+                <audio ref={audioRef} onEnded={() => setIsPlaying(false)} style={{ display: 'none' }} />
+                {/* Decorative — only the dedicated Play button below is interactive */}
+                <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, position: 'relative', animation: isPlaying ? 'spin-vinyl 3s linear infinite, vinyl-glow 1.6s ease-in-out infinite' : 'none', boxShadow: '0 3px 14px rgba(0,0,0,0.3)' }}>
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'conic-gradient(#1a1a1a 0deg, #2d2d2d 2deg, #1a1a1a 4deg, #2a2a2a 6deg, #111 10deg, #222 14deg, #1a1a1a 18deg, #2d2d2d 22deg, #111 30deg, #1a1a1a 40deg, #222 50deg, #111 60deg, #1a1a1a 80deg, #2a2a2a 100deg, #111 130deg, #222 160deg, #1a1a1a 180deg, #2d2d2d 200deg, #111 220deg, #222 240deg, #1a1a1a 260deg, #2a2a2a 280deg, #111 300deg, #222 320deg, #1a1a1a 340deg, #2d2d2d 360deg)' }} />
+                  <div style={{ position: 'absolute', inset: '28%', borderRadius: '50%', background: 'var(--btn-grad)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.6)' }} />
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                  <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <Icon emoji="♪" size={11} /> Our Playlist
+                    {isPlaying && (
+                      <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2, height: 15, marginLeft: 2 }}>
+                        <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-1 0.9s ease-in-out infinite' }} />
+                        <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-2 0.9s ease-in-out infinite' }} />
+                        <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-3 0.9s ease-in-out infinite' }} />
+                      </span>
+                    )}
+                  </p>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.title}</p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.artist}</p>
+                </div>
+                <button
+                  onClick={nextSong}
+                  disabled={playlistPool.length < 2}
+                  title="Next song"
+                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'var(--white)', color: 'var(--sakura-deep)', cursor: playlistPool.length < 2 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: playlistPool.length < 2 ? 0.4 : 1 }}
+                >
+                  <Icon emoji="⏭️" size={15} />
+                </button>
+                <button
+                  onClick={() => togglePlay(currentSong.previewUrl)}
+                  disabled={!currentSong.previewUrl}
+                  title={currentSong.previewUrl ? '30s preview' : 'No preview available'}
+                  style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: currentSong.previewUrl ? 'var(--btn-grad)' : 'var(--border)', cursor: currentSong.previewUrl ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                >
+                  <Icon emoji={isPlaying ? '⏸️' : '▶️'} size={16} style={{ color: currentSong.previewUrl ? 'white' : 'var(--ink-2)' }} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '10px', color: 'var(--ink-2)', fontSize: 12 }}>No songs in this list yet.</div>
+            )}
+          </div>
+        )}
       </div>
 
 
@@ -426,75 +494,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Our Playlist — its own card so the hero stays calm */}
-      {/* Spinning Vinyl Disk */}
-        {state.playlist.length > 0 && (
-          <div className="card" style={{ padding: '14px 16px', marginBottom: 16 }}>
-            {/* Mine / partner's / Tất cả — which pool of songs the widget draws from */}
-            <div style={{ display: 'flex', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
-              {[
-                { k: 'all', label: 'All' },
-                { k: currentUser, label: currentUser },
-                ...(partnerName ? [{ k: partnerName, label: partnerName }] : []),
-              ].map(f => (
-                <button key={f.k} onClick={() => setPlaylistFilter(f.k)} style={{ padding: '3px 10px', borderRadius: 99, border: 'none', background: playlistFilter === f.k ? 'var(--sakura-accent)' : 'var(--glass)', color: playlistFilter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>{f.label}</button>
-              ))}
-            </div>
-
-            {currentSong ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--glass)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '10px 20px', border: isPlaying ? '1px solid rgba(201,95,124,0.5)' : '1px solid rgba(243,166,185,0.3)', boxShadow: isPlaying ? '0 0 0 4px rgba(243,166,185,0.18)' : 'none', transition: 'box-shadow 0.3s, border-color 0.3s' }}>
-                <style>{`
-                  @keyframes spin-vinyl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                  @keyframes vinyl-glow { 0%, 100% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 0 rgba(243,166,185,0.5); } 50% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 8px rgba(243,166,185,0); } }
-                  @keyframes eq-bar-1 { 0%, 100% { height: 4px; } 30% { height: 13px; } 60% { height: 7px; } }
-                  @keyframes eq-bar-2 { 0%, 100% { height: 8px; } 35% { height: 15px; } 70% { height: 5px; } }
-                  @keyframes eq-bar-3 { 0%, 100% { height: 5px; } 40% { height: 12px; } 80% { height: 8px; } }
-                `}</style>
-                <audio ref={audioRef} onEnded={() => setIsPlaying(false)} style={{ display: 'none' }} />
-                {/* Decorative — only the dedicated Play button below is interactive */}
-                <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, position: 'relative', animation: isPlaying ? 'spin-vinyl 3s linear infinite, vinyl-glow 1.6s ease-in-out infinite' : 'none', boxShadow: '0 3px 14px rgba(0,0,0,0.3)' }}>
-                  <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'conic-gradient(#1a1a1a 0deg, #2d2d2d 2deg, #1a1a1a 4deg, #2a2a2a 6deg, #111 10deg, #222 14deg, #1a1a1a 18deg, #2d2d2d 22deg, #111 30deg, #1a1a1a 40deg, #222 50deg, #111 60deg, #1a1a1a 80deg, #2a2a2a 100deg, #111 130deg, #222 160deg, #1a1a1a 180deg, #2d2d2d 200deg, #111 220deg, #222 240deg, #1a1a1a 260deg, #2a2a2a 280deg, #111 300deg, #222 320deg, #1a1a1a 340deg, #2d2d2d 360deg)' }} />
-                  <div style={{ position: 'absolute', inset: '28%', borderRadius: '50%', background: 'var(--btn-grad)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.6)' }} />
-                  </div>
-                </div>
-                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                  <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <Icon emoji="♪" size={11} /> Our Playlist
-                    {isPlaying && (
-                      <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2, height: 15, marginLeft: 2 }}>
-                        <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-1 0.9s ease-in-out infinite' }} />
-                        <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-2 0.9s ease-in-out infinite' }} />
-                        <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-3 0.9s ease-in-out infinite' }} />
-                      </span>
-                    )}
-                  </p>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.title}</p>
-                  <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{currentSong.artist}</p>
-                </div>
-                <button
-                  onClick={nextSong}
-                  disabled={playlistPool.length < 2}
-                  title="Next song"
-                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'var(--white)', color: 'var(--sakura-deep)', cursor: playlistPool.length < 2 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: playlistPool.length < 2 ? 0.4 : 1 }}
-                >
-                  <Icon emoji="⏭️" size={15} />
-                </button>
-                <button
-                  onClick={() => togglePlay(currentSong.previewUrl)}
-                  disabled={!currentSong.previewUrl}
-                  title={currentSong.previewUrl ? '30s preview' : 'No preview available'}
-                  style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: currentSong.previewUrl ? 'var(--btn-grad)' : 'var(--border)', cursor: currentSong.previewUrl ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                >
-                  <Icon emoji={isPlaying ? '⏸️' : '▶️'} size={16} style={{ color: currentSong.previewUrl ? 'white' : 'var(--ink-2)' }} />
-                </button>
-              </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '10px', color: 'var(--ink-2)', fontSize: 12 }}>No songs in this list yet.</div>
-            )}
-          </div>
-        )}
-
       {/* Upcoming */}
       {upcoming.length > 0 && (
         <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
@@ -512,9 +511,9 @@ export default function Home() {
                     <div style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700 }}>{mon.split(' ')[0].toUpperCase()}</div>
                     <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--sakura-deep)', lineHeight: 1 }}>{mon.split(' ')[1]}</div>
                   </div>
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{ev.title}</p>
-                    <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{ev.time}{ev.location ? ` · ${ev.location}` : ''}</p>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</p>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.time}{ev.location ? ` · ${ev.location}` : ''}</p>
                   </div>
                 </div>
               );

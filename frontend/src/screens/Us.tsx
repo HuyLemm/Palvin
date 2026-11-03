@@ -1488,7 +1488,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
               : <div style={{ width: 60, height: 60, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={p.emoji} size={26} /></div>}
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
-              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
               {p.releaseDate && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Released {formatReleaseDate(p.releaseDate)}</p>}
               {p.note && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
             </div>
