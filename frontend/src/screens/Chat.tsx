@@ -65,7 +65,7 @@ function AudioBubble({ src, duration, mine }: { src: string; duration: number | 
         <Icon emoji={playing ? '⏸️' : '▶️'} size={13} />
       </button>
       <div style={{ flex: 1, height: 3, borderRadius: 99, background: mine ? 'rgba(255,255,255,0.35)' : 'var(--border)' }} />
-      <span style={{ fontSize: 11, opacity: 0.85, flexShrink: 0 }}>{duration != null ? formatDuration(duration) : ''}</span>
+      <span style={{ fontSize: 12, opacity: 0.85, flexShrink: 0 }}>{duration != null ? formatDuration(duration) : ''}</span>
       <audio ref={audioRef} src={src} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onEnded={() => setPlaying(false)} style={{ display: 'none' }} />
     </div>
   );
@@ -89,7 +89,7 @@ function ChatImage({ src, pending }: { src: string; pending?: boolean }) {
     <img
       ref={imgRef}
       src={src}
-      alt=""
+      alt="Photo"
       onLoad={() => setLoaded(true)}
       style={{
         // width (not max-width) fills whatever the flex-item wrapper resolves
@@ -131,7 +131,7 @@ function CategoryTile({ label, previewUrl, onClick }: { label: string; previewUr
     <button className="sticker-tile" onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
       <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
         <img src={previewUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 6px 5px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: 'white', fontSize: 11, fontWeight: 700, textTransform: 'capitalize', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
+        <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 6px 5px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: 'white', fontSize: 12, fontWeight: 700, textTransform: 'capitalize', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
       </div>
     </button>
   );
@@ -595,7 +595,7 @@ export default function Chat({ onBack }: Props) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{partnerName}</p>
-          <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatPresence(partnerProfile?.lastActiveAt)}</p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{formatPresence(partnerProfile?.lastActiveAt)}</p>
         </div>
         <button onClick={() => setShowThemePicker(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--ink-2)', flexShrink: 0 }} title="Chat theme">
           <Icon emoji="🎨" size={19} />
@@ -629,7 +629,7 @@ export default function Chat({ onBack }: Props) {
             return (
               <div key={msgKey} className={isNew ? 'chat-bubble-in' : undefined}>
                 {newDay && (
-                  <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '14px 0 10px' }}>{dayLabel(m.createdAt)}</p>
+                  <p style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '14px 0 10px' }}>{dayLabel(m.createdAt)}</p>
                 )}
                 <div style={{ display: 'flex', justifyContent: m.mine ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: 6, marginTop: startOfGroup ? 10 : 2 }}>
                   {!m.mine && (
@@ -654,7 +654,7 @@ export default function Chat({ onBack }: Props) {
                       onClick={() => setExpandedId(id => id === msgKey ? null : msgKey)}
                       style={{
                         maxWidth: '72%', padding: m.audioUrl ? '8px 12px' : '9px 14px', fontSize: 14, lineHeight: 1.4, wordBreak: 'break-word', cursor: 'pointer',
-                        background: m.mine ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--card)',
+                        background: m.mine ? 'var(--btn-grad)' : 'var(--card)',
                         color: m.mine ? 'white' : 'var(--ink)',
                         border: m.mine ? 'none' : '1px solid var(--border)',
                         opacity: m.pending ? 0.6 : 1,
@@ -668,7 +668,7 @@ export default function Chat({ onBack }: Props) {
                   )}
                 </div>
                 {showStatus && (
-                  <p style={{ textAlign: 'right', fontSize: 10, color: m.failed ? '#DC2626' : 'var(--ink-2)', marginTop: 3, marginRight: 2 }}>
+                  <p style={{ textAlign: 'right', fontSize: 12, color: m.failed ? '#DC2626' : 'var(--ink-2)', marginTop: 3, marginRight: 2 }}>
                     {m.pending ? 'Sending...' : m.failed ? 'Failed to send' : m.mine && m.read ? 'Seen' : timeLabel(m.createdAt)}
                   </p>
                 )}
@@ -782,7 +782,7 @@ export default function Chat({ onBack }: Props) {
             <>
               <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3.5px solid rgba(255,255,255,0.25)', borderTopColor: 'white', animation: 'palvin-spin 0.8s linear infinite' }} />
               <p style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>Cutting out your sticker{importProgress != null ? `... ${importProgress}%` : '...'}</p>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, textAlign: 'center' }}>First time takes longer — it's remembered after that.</p>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, textAlign: 'center' }}>First time takes longer — it's remembered after that.</p>
             </>
           )}
           {importStage === 'error' && (
@@ -857,7 +857,7 @@ export default function Chat({ onBack }: Props) {
               <span style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 600 }}>{formatDuration(recordSeconds)}</span>
               <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>Recording...</span>
             </div>
-            <button className="chat-send-btn" onClick={() => stopRecording(true)} style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <button className="chat-send-btn" onClick={() => stopRecording(true)} style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
             </button>
           </>
@@ -885,7 +885,7 @@ export default function Chat({ onBack }: Props) {
               style={{ flex: 1, minWidth: 0, padding: '9px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontSize: 14, outline: 'none' }}
             />
             {text.trim() ? (
-              <button className="chat-send-btn" onMouseDown={e => e.preventDefault()} onClick={handleSend} style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button className="chat-send-btn" onMouseDown={e => e.preventDefault()} onClick={handleSend} style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
               </button>
             ) : (

@@ -108,7 +108,7 @@ export default function Money() {
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
           }}>
             <Icon emoji={t.icon} size={16} />
-            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.02em' }}>{t.label}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.02em' }}>{t.label}</span>
           </button>
         ))}
       </div>
@@ -217,29 +217,29 @@ function PrivateLedgerTab() {
 
   return (
     <div>
-      <div style={{ background: net >= 0 ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', borderRadius: 20, padding: '18px 20px', marginBottom: 16 }}>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Balance</p>
+      <div style={{ background: net >= 0 ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'var(--btn-grad)', borderRadius: 20, padding: '18px 20px', marginBottom: 16 }}>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Balance</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 31, color: 'white', lineHeight: 1.1 }}>{VND(net)}</p>
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 6 }}>Income {VND(totalIncome)} · Spent {VND(totalExpense)}</p>
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <button onClick={() => openAdd('income')} style={{ flex: 1, padding: '11px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, #5AC26A, #3D8A4E)', color: 'white', fontWeight: 700, fontSize: 14 }}>+ Income</button>
-        <button onClick={() => openAdd('expense')} style={{ flex: 1, padding: '11px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 14 }}>+ Expense</button>
+        <button onClick={() => openAdd('expense')} style={{ flex: 1, padding: '11px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 14 }}>+ Expense</button>
       </div>
 
       {dates.length === 0 ? (
         <EmptyState icon="🔐" title="No transactions yet" sub="Add your first private income or expense." />
       ) : dates.map(date => (
         <div key={date} style={{ marginBottom: 16 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>{formatDate(date)}</p>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>{formatDate(date)}</p>
           <div className="card" style={{ overflow: 'hidden', padding: 0 }}>
             {byDate[date].map((e, i) => (
               <div key={e.id} onClick={() => openEdit(e)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', cursor: 'pointer', borderTop: i > 0 ? '1px solid var(--border)' : 'none' }}>
                 <div style={{ width: 40, height: 40, background: e.type === 'income' ? 'rgba(90,194,106,0.12)' : 'var(--sakura-light)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 21, flexShrink: 0 }}>{e.categoryEmoji}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</p>
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{e.category}</p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{e.category}</p>
                 </div>
                 <p style={{ fontSize: 15, fontWeight: 700, flexShrink: 0, color: e.type === 'income' ? '#5AC26A' : 'var(--sakura-deep)' }}>{e.type === 'income' ? '+' : '-'}{VND(e.amount)}</p>
               </div>
@@ -271,7 +271,7 @@ function PrivateLedgerTab() {
               <input className="input-field" type="date" value={date} onChange={e => setDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
               <input className="input-field" placeholder="Note (optional)" value={note} onChange={e => setNote(e.target.value)} />
               {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Save</button>
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15 }}>Save</button>
             </div>
           </div>
         </div>
@@ -302,7 +302,7 @@ function PrivateLedgerTab() {
               {editError && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{editError}</p>}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => { setConfirmDeleteId(editingId); closeEdit(); }} style={{ padding: '13px 16px', borderRadius: 14, border: '1.5px solid #E8524A', background: 'var(--white)', color: '#E8524A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Delete</button>
-                <button onClick={handleSaveEdit} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Save changes</button>
+                <button onClick={handleSaveEdit} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15 }}>Save changes</button>
               </div>
             </div>
           </div>
@@ -368,13 +368,13 @@ function PrivateJarsTab() {
 
   return (
     <div>
-      <div style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', borderRadius: 24, padding: '24px 20px', marginBottom: 16 }}>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Total saved</p>
+      <div style={{ background: 'var(--btn-grad)', borderRadius: 24, padding: '24px 20px', marginBottom: 16 }}>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Total saved</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 34, color: 'white', lineHeight: 1 }}>{VND(totalSaved)}</p>
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 6 }}>{jars.length} jar{jars.length === 1 ? '' : 's'}</p>
       </div>
 
-      <button onClick={openAdd} style={{ width: '100%', padding: '11px', marginBottom: 16, borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 14 }}>+ New jar</button>
+      <button onClick={openAdd} style={{ width: '100%', padding: '11px', marginBottom: 16, borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 14 }}>+ New jar</button>
 
       {jars.length === 0 && <EmptyState icon="🫙" title="No jars yet" sub="Create a jar to start setting money aside." />}
 
@@ -387,7 +387,7 @@ function PrivateJarsTab() {
                 <div style={{ width: 44, height: 44, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={j.emoji} size={22} /></div>
                 <div>
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{j.title}</p>
-                  {j.target != null && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Target: {VND(j.target)}</p>}
+                  {j.target != null && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Target: {VND(j.target)}</p>}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -469,7 +469,7 @@ function PrivateJarsTab() {
               </label>
               {hasTarget && <AmountInput placeholder="Target (VND)" value={target} onChange={setTarget} />}
               {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Create jar'}</button>
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Create jar'}</button>
             </div>
           </div>
         </div>
@@ -570,7 +570,7 @@ function PrivateStatsTab() {
         {(mode === 'month' ? MONTHS : YEARS).map(m => (
           <button key={m} onClick={() => mode === 'month' ? setMonth(m) : setYear(m)} style={{
             flexShrink: 0, padding: '6px 14px', borderRadius: 99, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-            background: m === period ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--white)',
+            background: m === period ? 'var(--btn-grad)' : 'var(--white)',
             color: m === period ? 'white' : 'var(--ink-2)',
             border: m === period ? 'none' : '1px solid var(--border)',
             boxShadow: m === period ? '0 2px 8px rgba(201,95,124,0.3)' : 'none',
@@ -580,17 +580,17 @@ function PrivateStatsTab() {
 
       <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{periodLabel} · Spending</p>
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{periodLabel} · Spending</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, color: 'white', lineHeight: 1.1, marginBottom: 6 }}>{VND(total)}</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {change !== null && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: change > 0 ? 'rgba(255,100,100,0.25)' : 'rgba(100,220,140,0.25)', borderRadius: 99, padding: '3px 10px' }}>
-              <span style={{ color: 'white', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji={change > 0 ? '↑' : '↓'} size={11} /> {Math.abs(change).toFixed(0)}% vs {prevPeriodLabel}</span>
+              <span style={{ color: 'white', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji={change > 0 ? '↑' : '↓'} size={11} /> {Math.abs(change).toFixed(0)}% vs {prevPeriodLabel}</span>
             </div>
           )}
           {totalInc > 0 && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(90,194,106,0.25)', borderRadius: 99, padding: '3px 10px' }}>
-              <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>Income: {VND(totalInc)}</span>
+              <span style={{ color: 'white', fontSize: 12, fontWeight: 700 }}>Income: {VND(totalInc)}</span>
             </div>
           )}
         </div>
@@ -609,11 +609,11 @@ function PrivateStatsTab() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ width: 28, height: 28, background: 'var(--bg)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={c.emoji} size={14} /></div>
                       <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{c.cat}</span>
-                      <span style={{ fontSize: 10, color: 'var(--ink-2)', background: 'var(--bg)', padding: '1px 6px', borderRadius: 99 }}>{c.count}x</span>
+                      <span style={{ fontSize: 12, color: 'var(--ink-2)', background: 'var(--bg)', padding: '1px 6px', borderRadius: 99 }}>{c.count}x</span>
                     </div>
                     <div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{VND(c.amount)}</span>
-                      <span style={{ fontSize: 10, color: 'var(--ink-2)', marginLeft: 6 }}>{pctOfTotal}%</span>
+                      <span style={{ fontSize: 12, color: 'var(--ink-2)', marginLeft: 6 }}>{pctOfTotal}%</span>
                     </div>
                   </div>
                   <div style={{ height: 5, background: 'var(--bg)', borderRadius: 99, overflow: 'hidden' }}>
@@ -653,7 +653,7 @@ function PrivateStatsTab() {
       <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{mode === 'month' ? 'Last 6 months' : 'Last 5 years'}</p>
-          <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Avg: <strong style={{ color: 'var(--ink)' }}>{VND(periodAvg)}</strong></p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Avg: <strong style={{ color: 'var(--ink)' }}>{VND(periodAvg)}</strong></p>
         </div>
         <MonthlyBar data={monthlyData} avg={periodAvg} />
       </div>
@@ -664,11 +664,11 @@ function PrivateStatsTab() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {topExpenses.map((e, i) => (
               <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', width: 14, flexShrink: 0 }}>{i + 1}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', width: 14, flexShrink: 0 }}>{i + 1}</span>
                 <div style={{ width: 32, height: 32, background: 'var(--sakura-light)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{e.categoryEmoji}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</p>
-                  <p style={{ fontSize: 10, color: 'var(--ink-2)' }}>{formatDate(e.date)}</p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{formatDate(e.date)}</p>
                 </div>
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', flexShrink: 0 }}>{VND(e.amount)}</p>
               </div>
@@ -715,11 +715,11 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
 
       {/* Net balance hero */}
       <div key={`net-${filter}-${month}`} className="money-in" style={{
-        background: net >= 0 ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
+        background: net >= 0 ? 'linear-gradient(135deg, #5AC26A, #3D8A4E)' : 'var(--btn-grad)',
         borderRadius: 20, padding: '18px 20px', marginBottom: 12, position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 90, height: 90, background: 'rgba(255,255,255,0.08)', borderRadius: '50%' }} />
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Remaining</p>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Remaining</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 31, color: 'white', lineHeight: 1.1 }}>{VND(net)}</p>
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 6 }}>Income {VND(totalIncome)} · Spent {VND(totalExpense)}</p>
       </div>
@@ -727,11 +727,11 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
       {/* Summary strip */}
       <div key={`sum-${filter}-${month}`} className="money-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16, animationDelay: '0.04s' }}>
         <div style={{ background: 'linear-gradient(135deg, #5AC26A, #38a853)', borderRadius: 16, padding: '14px 16px' }}>
-          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Income</p>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Income</p>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'white', lineHeight: 1 }}>{VND(totalIncome)}</p>
         </div>
-        <div style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', borderRadius: 16, padding: '14px 16px' }}>
-          <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Expenses</p>
+        <div style={{ background: 'var(--btn-grad)', borderRadius: 16, padding: '14px 16px' }}>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Expenses</p>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, color: 'white', lineHeight: 1 }}>{VND(totalExpense)}</p>
         </div>
       </div>
@@ -741,7 +741,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
         <div style={{ display: 'flex', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', flex: 1 }}>
           {(['all', 'income', 'expense'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
-              flex: 1, padding: '7px 4px', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700,
+              flex: 1, padding: '7px 4px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
               background: filter === f ? 'var(--sakura-accent)' : 'transparent',
               color: filter === f ? 'white' : 'var(--ink-2)',
               transition: 'all 0.2s ease',
@@ -755,7 +755,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
         <select
           value={month}
           onChange={e => setMonth(e.target.value)}
-          style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '7px 10px', fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', cursor: 'pointer' }}
+          style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '7px 10px', fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', cursor: 'pointer' }}
         >
           <option value="all">All</option>
           {MONTHS.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
@@ -773,7 +773,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
         }}>+ Income</button>
         <button onClick={onAdd} style={{
           flex: 1, padding: '11px', borderRadius: 14, border: 'none', cursor: 'pointer',
-          background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
+          background: 'var(--btn-grad)',
           color: 'white', fontWeight: 700, fontSize: 14,
           boxShadow: '0 4px 12px rgba(201,95,124,0.3)',
           transition: 'transform 0.15s ease',
@@ -786,8 +786,8 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
         : dates.map((date, gi) => (
           <div key={`${date}-${filter}-${month}`} className="money-in" style={{ marginBottom: 16, animationDelay: `${0.08 + gi * 0.05}s` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>{formatDate(date)}</p>
-              <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>
+              <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>{formatDate(date)}</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>
                 {VND(byDate[date].filter(e => e.type !== 'income').reduce((s, e) => s + e.amount, 0))}
               </p>
             </div>
@@ -808,7 +808,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
                   }}>{e.categoryEmoji}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</p>
-                    <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{e.category} · {e.paidBy}</p>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{e.category} · {e.paidBy}</p>
                   </div>
                   <p style={{
                     fontSize: 15, fontWeight: 700, flexShrink: 0,
@@ -839,9 +839,9 @@ function GoalsTab({ goals, addToGoal, withdrawFromGoal }: { goals: SavingsGoal[]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       {/* Hero */}
-      <div style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', borderRadius: 24, padding: '24px 20px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: 'var(--btn-grad)', borderRadius: 24, padding: '24px 20px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -24, right: -24, width: 100, height: 100, background: 'rgba(255,255,255,0.08)', borderRadius: '50%' }} />
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Total savings</p>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 6 }}>Total savings</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 40, color: 'white', lineHeight: 1, marginBottom: 6 }}>{VND(totalSaved)}</p>
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>Target: {VND(totalTarget)} · {goals.length} goals</p>
         <div style={{ height: 6, background: 'rgba(255,255,255,0.2)', borderRadius: 99, marginTop: 14, overflow: 'hidden' }}>
@@ -852,7 +852,7 @@ function GoalsTab({ goals, addToGoal, withdrawFromGoal }: { goals: SavingsGoal[]
       {/* Add goal */}
       <button onClick={() => setShowAddGoal(true)} style={{
         width: '100%', padding: '11px', marginBottom: 16, borderRadius: 14, border: 'none', cursor: 'pointer',
-        background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
+        background: 'var(--btn-grad)',
         color: 'white', fontWeight: 700, fontSize: 14,
         boxShadow: '0 4px 12px rgba(201,95,124,0.3)',
       }}>+ Create new goal</button>
@@ -869,7 +869,7 @@ function GoalsTab({ goals, addToGoal, withdrawFromGoal }: { goals: SavingsGoal[]
                 <div style={{ width: 44, height: 44, background: 'var(--sakura-light)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={g.emoji} size={22} /></div>
                 <div>
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{g.title}</p>
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Target: {g.deadline}</p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Target: {g.deadline}</p>
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1076,7 +1076,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
         {(mode === 'month' ? MONTHS : YEARS).map(m => (
           <button key={m} onClick={() => mode === 'month' ? setMonth(m) : setYear(m)} style={{
             flexShrink: 0, padding: '6px 14px', borderRadius: 99, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-            background: m === period ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--white)',
+            background: m === period ? 'var(--btn-grad)' : 'var(--white)',
             color: m === period ? 'white' : 'var(--ink-2)',
             border: m === period ? 'none' : '1px solid var(--border)',
             boxShadow: m === period ? '0 2px 8px rgba(201,95,124,0.3)' : 'none',
@@ -1087,17 +1087,17 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       {/* Hero — tổng chi tiêu, % so tháng trước, thu nhập */}
       <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 12, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
-        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{periodLabel} · Spending</p>
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{periodLabel} · Spending</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, color: 'white', lineHeight: 1.1, marginBottom: 6 }}>{VND(total)}</p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {change !== null && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: change > 0 ? 'rgba(255,100,100,0.25)' : 'rgba(100,220,140,0.25)', borderRadius: 99, padding: '3px 10px' }}>
-              <span style={{ color: 'white', fontSize: 11, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji={change > 0 ? '↑' : '↓'} size={11} /> {Math.abs(change).toFixed(0)}% vs {prevPeriodLabel}</span>
+              <span style={{ color: 'white', fontSize: 12, fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji={change > 0 ? '↑' : '↓'} size={11} /> {Math.abs(change).toFixed(0)}% vs {prevPeriodLabel}</span>
             </div>
           )}
           {totalInc > 0 && (
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'rgba(90,194,106,0.25)', borderRadius: 99, padding: '3px 10px' }}>
-              <span style={{ color: 'white', fontSize: 11, fontWeight: 700 }}>Income: {VND(totalInc)}</span>
+              <span style={{ color: 'white', fontSize: 12, fontWeight: 700 }}>Income: {VND(totalInc)}</span>
             </div>
           )}
         </div>
@@ -1121,7 +1121,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
                 </div>
                 <div>
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{VND(p.amount)}</span>
-                  <span style={{ fontSize: 11, color: 'var(--ink-2)', marginLeft: 6 }}>{Math.round((p.amount / total) * 100)}%</span>
+                  <span style={{ fontSize: 12, color: 'var(--ink-2)', marginLeft: 6 }}>{Math.round((p.amount / total) * 100)}%</span>
                 </div>
               </div>
             ))}
@@ -1148,18 +1148,18 @@ function StatsTab({ expenses }: { expenses: any[] }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <div style={{ width: 28, height: 28, background: 'var(--bg)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={c.emoji} size={14} /></div>
                       <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{c.cat}</span>
-                      <span style={{ fontSize: 10, color: 'var(--ink-2)', background: 'var(--bg)', padding: '1px 6px', borderRadius: 99 }}>{c.count}x</span>
+                      <span style={{ fontSize: 12, color: 'var(--ink-2)', background: 'var(--bg)', padding: '1px 6px', borderRadius: 99 }}>{c.count}x</span>
                     </div>
                     <div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{VND(c.amount)}</span>
-                      <span style={{ fontSize: 10, color: 'var(--ink-2)', marginLeft: 6 }}>{pctOfTotal}%</span>
+                      <span style={{ fontSize: 12, color: 'var(--ink-2)', marginLeft: 6 }}>{pctOfTotal}%</span>
                     </div>
                   </div>
                   <div style={{ height: 5, background: 'var(--bg)', borderRadius: 99, overflow: 'hidden', marginBottom: catChange !== null ? 4 : 0 }}>
                     <div style={{ width: `${(c.amount / maxCat) * 100}%`, height: '100%', background: CAT_COLORS[c.cat] || '#A0A0A0', borderRadius: 99, transition: 'width 0.5s' }} />
                   </div>
                   {catChange !== null && (
-                    <p style={{ fontSize: 10, color: catChange > 0 ? '#E8524A' : '#5AC26A', display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <p style={{ fontSize: 12, color: catChange > 0 ? '#E8524A' : '#5AC26A', display: 'flex', alignItems: 'center', gap: 3 }}>
                       <Icon emoji={catChange > 0 ? '↑' : '↓'} size={10} /> {Math.abs(Math.round(catChange))}% vs {prevPeriodLabel}
                     </p>
                   )}
@@ -1213,7 +1213,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{mode === 'month' ? 'Last 6 months' : 'Last 5 years'}</p>
-          <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Avg: <strong style={{ color: 'var(--ink)' }}>{VND(sixMonthAvg)}</strong></p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Avg: <strong style={{ color: 'var(--ink)' }}>{VND(sixMonthAvg)}</strong></p>
         </div>
         <MonthlyBar data={monthlyData} avg={sixMonthAvg} />
       </div>
@@ -1225,11 +1225,11 @@ function StatsTab({ expenses }: { expenses: any[] }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {topExpenses.map((e, i) => (
               <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', width: 14, flexShrink: 0 }}>{i + 1}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', width: 14, flexShrink: 0 }}>{i + 1}</span>
                 <div style={{ width: 32, height: 32, background: 'var(--sakura-light)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{e.categoryEmoji}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</p>
-                  <p style={{ fontSize: 10, color: 'var(--ink-2)' }}>{formatDate(e.date)}</p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{formatDate(e.date)}</p>
                 </div>
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', flexShrink: 0 }}>{VND(e.amount)}</p>
               </div>
@@ -1260,7 +1260,7 @@ function MonthlyBar({ data, avg }: { data: { key: string; label: string; exp: nu
       </div>
       <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
         {data.map(d => (
-          <p key={d.key} style={{ flex: 1, fontSize: 9, color: 'var(--ink-2)', textAlign: 'center', lineHeight: 1 }}>{d.label}</p>
+          <p key={d.key} style={{ flex: 1, fontSize: 11, color: 'var(--ink-2)', textAlign: 'center', lineHeight: 1 }}>{d.label}</p>
         ))}
       </div>
     </div>
@@ -1302,19 +1302,19 @@ function BillsTab({ bills, onAdd, onTogglePaid }: {
       {/* Summary */}
       <div style={{ background: 'linear-gradient(135deg, #8B6FD4, #6A4FB8)', borderRadius: 20, padding: '20px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, background: 'rgba(255,255,255,0.08)', borderRadius: '50%' }} />
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Due this month</p>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Due this month</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 36, color: 'white', lineHeight: 1.1, marginBottom: 8 }}>{VND(totalUnpaid)}</p>
         <div style={{ display: 'flex', gap: 16 }}>
           <div>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Unpaid</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Unpaid</p>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{unpaid.length} bills</p>
           </div>
           <div>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Paid</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Paid</p>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{paid.length} bills</p>
           </div>
           <div>
-            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Total this month</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 1 }}>Total this month</p>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{VND(totalMonth)}</p>
           </div>
         </div>
@@ -1331,7 +1331,7 @@ function BillsTab({ bills, onAdd, onTogglePaid }: {
       {/* Unpaid */}
       {unpaid.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Unpaid</p>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Unpaid</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {unpaid.map(b => <BillCard key={b.id} bill={b} onTogglePaid={onTogglePaid} onEdit={setEditingBill} getDueStatus={getDueStatus} />)}
           </div>
@@ -1341,7 +1341,7 @@ function BillsTab({ bills, onAdd, onTogglePaid }: {
       {/* Paid */}
       {paid.length > 0 && (
         <div>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Paid</p>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Paid</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {paid.map(b => <BillCard key={b.id} bill={b} onTogglePaid={onTogglePaid} onEdit={setEditingBill} getDueStatus={getDueStatus} />)}
           </div>
@@ -1370,17 +1370,17 @@ function BillCard({ bill: b, onTogglePaid, onEdit, getDueStatus }: {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: b.paid ? 'var(--ink-2)' : 'var(--ink)', textDecoration: b.paid ? 'line-through' : 'none' }}>{b.title}</p>
-            <span style={{ fontSize: 10, fontWeight: 700, color: status.color, background: status.bg, padding: '2px 7px', borderRadius: 99 }}>{status.label}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: status.color, background: status.bg, padding: '2px 7px', borderRadius: 99 }}>{status.label}</span>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--ink-2)' }}>{BILL_CAT_LABELS[b.category]}</span>
+            <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{BILL_CAT_LABELS[b.category]}</span>
             {b.frequencyMonths !== 1 && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#8B6FD4', background: 'rgba(139,111,212,0.1)', padding: '1px 6px', borderRadius: 99 }}>{frequencyLabel(b.frequencyMonths)}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#8B6FD4', background: 'rgba(139,111,212,0.1)', padding: '1px 6px', borderRadius: 99 }}>{frequencyLabel(b.frequencyMonths)}</span>
             )}
-            {b.note && <span style={{ fontSize: 10, color: 'var(--ink-2)', opacity: 0.7 }}>· {b.note}</span>}
+            {b.note && <span style={{ fontSize: 12, color: 'var(--ink-2)', opacity: 0.7 }}>· {b.note}</span>}
           </div>
           {b.paid && b.paidDate && (
-            <p style={{ fontSize: 10, color: '#5AC26A', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}><Icon emoji="✓" size={10} /> Paid {formatDate(b.paidDate)}</p>
+            <p style={{ fontSize: 12, color: '#5AC26A', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}><Icon emoji="✓" size={10} /> Paid {formatDate(b.paidDate)}</p>
           )}
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -1397,7 +1397,7 @@ function BillCard({ bill: b, onTogglePaid, onEdit, getDueStatus }: {
               style={{
                 background: b.paid ? 'var(--bg)' : '#5AC26A', color: b.paid ? 'var(--ink-2)' : 'white',
                 border: b.paid ? '1.5px solid var(--border)' : 'none', borderRadius: 8,
-                padding: '4px 10px', cursor: 'pointer', fontSize: 11, fontWeight: 700,
+                padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 700,
               }}
             >{b.paid ? 'Undo' : 'Paid'}</button>
           </div>
@@ -1440,7 +1440,7 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
         </div>
 
         {/* Emoji picker */}
-        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 8 }}>ICON</p>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 8 }}>ICON</p>
         <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           {EMOJIS.map(e => (
             <button key={e} onClick={() => setEmoji(e)} style={{
@@ -1596,16 +1596,16 @@ function DebtsTab() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: d.paid ? 'line-through' : 'none' }}>{d.debtorName}</p>
             {d.note && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{d.note}</p>}
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 3 }}>{d.direction === 'they_owe' ? 'Lent on' : 'Borrowed on'}: {formatShortDate(d.date)}{d.createdBy === 'Both' && ' · Both'}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 3 }}>{d.direction === 'they_owe' ? 'Lent on' : 'Borrowed on'}: {formatShortDate(d.date)}{d.createdBy === 'Both' && ' · Both'}</p>
             {d.dueDate && !d.paid && (
-              <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <p style={{ fontSize: 12, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
                 {overdue && <Icon emoji="⚠️" size={11} />} Due: {formatShortDate(d.dueDate)}{overdue ? ' — overdue' : ''}
               </p>
             )}
             {d.paidAmount > 0 && !d.paid && (
-              <p style={{ fontSize: 11, color: d.direction === 'i_owe' ? 'var(--lavender)' : 'var(--sakura-deep)', fontWeight: 600, marginTop: 1 }}>Paid {VND(d.paidAmount)} of {VND(d.amount)} so far</p>
+              <p style={{ fontSize: 12, color: d.direction === 'i_owe' ? 'var(--lavender)' : 'var(--sakura-deep)', fontWeight: 600, marginTop: 1 }}>Paid {VND(d.paidAmount)} of {VND(d.amount)} so far</p>
             )}
-            {d.paid && d.paidDate && <p style={{ fontSize: 11, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
+            {d.paid && d.paidDate && <p style={{ fontSize: 12, color: '#5AC26A', fontWeight: 600, marginTop: 1 }}>Paid on {formatShortDate(d.paidDate)}</p>}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
             <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)' }}>{VND(d.paid ? d.amount : remaining)}</p>
@@ -1629,7 +1629,7 @@ function DebtsTab() {
     return (
       <div style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji={icon} size={12} /> {label}</p>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji={icon} size={12} /> {label}</p>
           {unpaidTotal > 0 && <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)' }}>{VND(unpaidTotal)}</p>}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1665,7 +1665,7 @@ function DebtsTab() {
 
       <button onClick={openAdd} style={{
         width: '100%', padding: '11px', marginBottom: 20, borderRadius: 14, border: 'none', cursor: 'pointer',
-        background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
+        background: 'var(--btn-grad)',
         color: 'white', fontWeight: 700, fontSize: 14,
       }}>+ Log debt</button>
 
@@ -1718,13 +1718,13 @@ function DebtsTab() {
                 <input type="checkbox" checked={countInMoney} onChange={e => setCountInMoney(e.target.checked)} style={{ marginTop: 2, width: 16, height: 16, flexShrink: 0, accentColor: 'var(--sakura-accent)' }} />
                 <span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', display: 'block' }}>Also count payments in Expenses</span>
-                  <span style={{ fontSize: 11, color: 'var(--ink-2)' }}>
+                  <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>
                     {direction === 'they_owe' ? 'Each payment logged toward this later will count as income.' : 'Each payment logged toward this later will count as an expense.'}
                   </span>
                 </span>
               </label>
               {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Log debt'}</button>
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Log debt'}</button>
             </div>
           </div>
         </div>
@@ -1738,7 +1738,7 @@ function DebtsTab() {
             <AmountInput placeholder="Amount paid (VND)" value={paymentAmount} onChange={setPaymentAmount} />
             {paymentError && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, marginTop: 8 }}>{paymentError}</p>}
             {payingDebt.countInMoney && (
-              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 8 }}>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 8 }}>
                 This will also be logged as {payingDebt.direction === 'i_owe' ? 'an expense' : 'income'} in the Expenses tab.
               </p>
             )}

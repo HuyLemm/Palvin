@@ -173,7 +173,7 @@ function Field({ label, placeholder, value, onChange, type = 'text', delay = '0s
     <div className="auth-fade-up" style={{ marginBottom: 16, animationDelay: delay }}>
       <label style={{
         display: 'block',
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
         color: 'var(--sakura-deep)',
         textTransform: 'uppercase',
@@ -489,7 +489,7 @@ export default function AuthScreen() {
             </div>
           </Card>
 
-          <p style={{ textAlign: 'center', fontSize: 11, color: '#B09AA0', lineHeight: 1.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          <p style={{ textAlign: 'center', fontSize: 12, color: '#B09AA0', lineHeight: 1.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
             <Icon emoji="🔒" size={11} /> Signing up requires email confirmation before you can log in
           </p>
         </div>

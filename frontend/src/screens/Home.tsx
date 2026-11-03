@@ -269,7 +269,7 @@ export default function Home() {
                 { k: currentUser, label: currentUser },
                 ...(partnerName ? [{ k: partnerName, label: partnerName }] : []),
               ].map(f => (
-                <button key={f.k} onClick={() => setPlaylistFilter(f.k)} style={{ padding: '3px 10px', borderRadius: 99, border: 'none', background: playlistFilter === f.k ? 'var(--sakura-accent)' : 'var(--glass)', color: playlistFilter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 10, cursor: 'pointer' }}>{f.label}</button>
+                <button key={f.k} onClick={() => setPlaylistFilter(f.k)} style={{ padding: '3px 10px', borderRadius: 99, border: 'none', background: playlistFilter === f.k ? 'var(--sakura-accent)' : 'var(--glass)', color: playlistFilter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>{f.label}</button>
               ))}
             </div>
 
@@ -286,12 +286,12 @@ export default function Home() {
                 {/* Decorative — only the dedicated Play button below is interactive */}
                 <div style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0, position: 'relative', animation: isPlaying ? 'spin-vinyl 3s linear infinite, vinyl-glow 1.6s ease-in-out infinite' : 'none', boxShadow: '0 3px 14px rgba(0,0,0,0.3)' }}>
                   <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'conic-gradient(#1a1a1a 0deg, #2d2d2d 2deg, #1a1a1a 4deg, #2a2a2a 6deg, #111 10deg, #222 14deg, #1a1a1a 18deg, #2d2d2d 22deg, #111 30deg, #1a1a1a 40deg, #222 50deg, #111 60deg, #1a1a1a 80deg, #2a2a2a 100deg, #111 130deg, #222 160deg, #1a1a1a 180deg, #2d2d2d 200deg, #111 220deg, #222 240deg, #1a1a1a 260deg, #2a2a2a 280deg, #111 300deg, #222 320deg, #1a1a1a 340deg, #2d2d2d 360deg)' }} />
-                  <div style={{ position: 'absolute', inset: '28%', borderRadius: '50%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ position: 'absolute', inset: '28%', borderRadius: '50%', background: 'var(--btn-grad)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.6)' }} />
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                  <p style={{ fontSize: 11, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
                     <Icon emoji="♪" size={11} /> Our Playlist
                     {isPlaying && (
                       <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2, height: 15, marginLeft: 2 }}>
@@ -316,7 +316,7 @@ export default function Home() {
                   onClick={() => togglePlay(currentSong.previewUrl)}
                   disabled={!currentSong.previewUrl}
                   title={currentSong.previewUrl ? '30s preview' : 'No preview available'}
-                  style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: currentSong.previewUrl ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', cursor: currentSong.previewUrl ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                  style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: currentSong.previewUrl ? 'var(--btn-grad)' : 'var(--border)', cursor: currentSong.previewUrl ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                 >
                   <Icon emoji={isPlaying ? '⏸️' : '▶️'} size={16} style={{ color: currentSong.previewUrl ? 'white' : 'var(--ink-2)' }} />
                 </button>
@@ -336,7 +336,7 @@ export default function Home() {
         className="card"
         style={{
           display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', marginBottom: 16, cursor: 'pointer',
-          background: todosLeft > 0 ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : undefined,
+          background: todosLeft > 0 ? 'var(--btn-grad)' : undefined,
         }}
       >
         <div style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0, background: todosLeft > 0 ? 'rgba(255,255,255,0.2)' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -362,7 +362,7 @@ export default function Home() {
           <div key={s.label} onClick={() => navigate(s.target)} className="card" style={{ padding: '12px 6px', textAlign: 'center', cursor: 'pointer' }}>
             <p style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={s.emoji} size={20} /></p>
             <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--sakura-deep)', lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 10, color: 'var(--ink-2)', marginTop: 2 }}>{s.label}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{s.label}</p>
           </div>
         ))}
       </div>
@@ -381,7 +381,7 @@ export default function Home() {
         >
           <Icon emoji={hugConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: hugAnim ? 'scale(1.3)' : 'scale(1)' }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : hugConfig.color }}>{hugConfig.label}</span>
-          <span style={{ fontSize: 11, color: hugAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 12, color: hugAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
             to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
           </span>
         </button>
@@ -398,7 +398,7 @@ export default function Home() {
         >
           <Icon emoji={thinkConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: thinkAnim ? 'scale(1.3)' : 'scale(1)' }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : thinkConfig.color }}>{thinkConfig.label}</span>
-          <span style={{ fontSize: 11, color: thinkAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ fontSize: 12, color: thinkAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
             to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
           </span>
         </button>
@@ -429,7 +429,7 @@ export default function Home() {
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.2 }}>{cat.label} today?</p>
                       {list.length === 0 && (
-                        <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>No spots added yet</p>
+                        <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>No spots added yet</p>
                       )}
                     </div>
                   </div>
@@ -471,7 +471,7 @@ export default function Home() {
                   <FadeImage src={m.image} alt={m.title} style={{ width: '100%', height: '100%' }} />
                 </div>
                 <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3 }}>{m.title}</p>
-                <p style={{ fontSize: 11, color: '#B8860B', marginTop: 2 }}>{m.date}</p>
+                <p style={{ fontSize: 12, color: '#B8860B', marginTop: 2 }}>{m.date}</p>
               </div>
             ))}
           </div>
@@ -492,7 +492,7 @@ export default function Home() {
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
                 >
                   <div style={{ background: 'var(--sakura-light)', borderRadius: 10, padding: '6px 10px', textAlign: 'center', minWidth: 48 }}>
-                    <div style={{ fontSize: 11, color: 'var(--sakura-deep)', fontWeight: 700 }}>{mon.split(' ')[0].toUpperCase()}</div>
+                    <div style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700 }}>{mon.split(' ')[0].toUpperCase()}</div>
                     <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--sakura-deep)', lineHeight: 1 }}>{mon.split(' ')[1]}</div>
                   </div>
                   <div>
@@ -527,7 +527,7 @@ export default function Home() {
         </div>
 
         {/* 7-day mood chart */}
-        <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Mood over the last 7 days</p>
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Mood over the last 7 days</p>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
           {moodChartData.map(d => (
             <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
@@ -540,8 +540,8 @@ export default function Home() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A8AE8' }} /><span style={{ fontSize: 10, color: 'var(--ink-2)' }}>{currentUser}</span></div>
-          {partnerName && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sakura-accent)' }} /><span style={{ fontSize: 10, color: 'var(--ink-2)' }}>{partnerName}</span></div>}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A8AE8' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{currentUser}</span></div>
+          {partnerName && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sakura-accent)' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{partnerName}</span></div>}
         </div>
       </div>
 
@@ -559,7 +559,7 @@ export default function Home() {
                 <FadeImage src={p.images[0]} alt={p.caption} style={{ width: '100%', height: '100%' }} />
               </div>
               <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{p.caption || p.author}</p>
-              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{p.date}</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{p.date}</p>
             </div>
           ))}
         </div>
@@ -576,7 +576,7 @@ export default function Home() {
                 <button key={m.emoji} onClick={() => { setMood(currentUser, m); setShowMoodPicker(false); }}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '14px 8px', borderRadius: 14, background: state.moods[currentUser]?.emoji === m.emoji ? 'var(--sakura-light)' : 'var(--bg)', border: state.moods[currentUser]?.emoji === m.emoji ? '1.5px solid var(--sakura)' : '1.5px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s' }}>
                   <Icon emoji={m.emoji} size={28} />
-                  <span style={{ fontSize: 11, color: 'var(--ink-2)', textAlign: 'center', lineHeight: 1.2, fontWeight: 500 }}>{m.label}</span>
+                  <span style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', lineHeight: 1.2, fontWeight: 500 }}>{m.label}</span>
                 </button>
               ))}
             </div>

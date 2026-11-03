@@ -37,7 +37,7 @@ export default function CoupleLocked() {
           onClick={() => navigate('settings')}
           style={{
             width: '100%', padding: '12px', borderRadius: 14, border: 'none',
-            background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))',
+            background: 'var(--btn-grad)',
             color: 'white', fontWeight: 600, fontSize: 14, cursor: 'pointer',
             boxShadow: '0 6px 18px rgba(201,95,124,0.3)',
           }}

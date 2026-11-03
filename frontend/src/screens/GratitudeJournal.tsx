@@ -194,7 +194,7 @@ export default function GratitudeJournal({ onBack }: Props) {
                 <Avatar user={g.from} size={32} ring />
                 <div>
                   <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{g.from}</p>
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatDate(g.date)}</p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{formatDate(g.date)}</p>
                 </div>
                 {(g.from === currentUser || isAdmin) ? (
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>

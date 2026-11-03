@@ -100,7 +100,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
           ))}
         </div>
         {post.images.length > 1 && (
-          <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(51,42,45,0.6)', color: 'white', fontSize: 11, fontWeight: 700, borderRadius: 99, padding: '2px 8px' }}>
+          <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(51,42,45,0.6)', color: 'white', fontSize: 12, fontWeight: 700, borderRadius: 99, padding: '2px 8px' }}>
             {imgIndex + 1}/{post.images.length}
           </div>
         )}
@@ -154,7 +154,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
                     onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.3)')}
                     onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}>
                     <Icon emoji={emoji} size={24} />
-                    {r?.count > 0 && <span style={{ fontSize: 10, color: 'var(--sakura-deep)', fontWeight: 700 }}>{r.count}</span>}
+                    {r?.count > 0 && <span style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700 }}>{r.count}</span>}
                   </button>
                 );
               })}
@@ -167,7 +167,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
             {topReactions.map(([emoji, r]) => (
               <span key={emoji} style={{ fontSize: 13, background: 'var(--sakura-light)', borderRadius: 20, padding: '2px 8px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                <Icon emoji={emoji} size={13} /> <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--sakura-deep)' }}>{r.count}</span>
+                <Icon emoji={emoji} size={13} /> <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--sakura-deep)' }}>{r.count}</span>
               </span>
             ))}
           </div>

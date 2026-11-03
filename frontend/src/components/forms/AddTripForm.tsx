@@ -91,7 +91,7 @@ export default function AddTripForm({ onClose, onAdd }: { onClose: () => void; o
         </div>
 
         <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
-          <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-2)', marginBottom: 10 }}>When are you going?</p>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-2)', marginBottom: 10 }}>When are you going?</p>
           <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <button type="button" onClick={() => setDatesKnown('approx')} style={{ flex: 1, padding: '8px', borderRadius: 10, border: datesKnown === 'approx' ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: datesKnown === 'approx' ? 'var(--sakura-light)' : 'var(--bg)', color: 'var(--ink)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Just a rough timeframe</button>
             <button type="button" onClick={() => setDatesKnown('exact')} style={{ flex: 1, padding: '8px', borderRadius: 10, border: datesKnown === 'exact' ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: datesKnown === 'exact' ? 'var(--sakura-light)' : 'var(--bg)', color: 'var(--ink)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>I know exact dates</button>
@@ -102,11 +102,11 @@ export default function AddTripForm({ onClose, onAdd }: { onClose: () => void; o
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div>
-                <p style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Departure date</p>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Departure date</p>
                 <input className="input-field" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ width: '100%' }} />
               </div>
               <div>
-                <p style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Return date</p>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Return date</p>
                 <input className="input-field" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ width: '100%' }} />
               </div>
             </div>
@@ -121,7 +121,7 @@ export default function AddTripForm({ onClose, onAdd }: { onClose: () => void; o
         <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <MoneyInput placeholder="Budget (VND)" value={budget} onChange={setBudget} />
           <textarea className="input-field" placeholder="Notes..." value={notes} onChange={e => setNotes(e.target.value)} rows={3} style={{ resize: 'none' }} />
-          <button onClick={handleSubmit} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Add trip</button>
+          <button onClick={handleSubmit} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15 }}>Add trip</button>
         </div>
       </div>
     </div>

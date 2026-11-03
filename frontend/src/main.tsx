@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { AppProvider } from './context'
 import './index.css'
+import { initA11y } from './a11y'
+
+initA11y()
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

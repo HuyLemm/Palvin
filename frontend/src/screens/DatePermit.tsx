@@ -198,21 +198,21 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
               <div style={{ background: 'var(--white)', borderRadius: 20, border: '2px dashed var(--sakura)', padding: '24px 20px', marginBottom: 16 }}>
                 {/* Document header */}
                 <div style={{ textAlign: 'center', borderBottom: '2px solid var(--sakura-light)', paddingBottom: 16, marginBottom: 20 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', color: 'var(--ink-2)', textTransform: 'uppercase' }}>REPUBLIC OF LOVE</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.15em', color: 'var(--ink-2)', textTransform: 'uppercase' }}>REPUBLIC OF LOVE</p>
                   <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--sakura-deep)', marginTop: 2 }}>REQUEST FOR PERMISSION TO GO OUT</p>
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>Applicant: <strong>{currentUser}</strong> → Approver: <strong>{partnerUser}</strong></p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>Applicant: <strong>{currentUser}</strong> → Approver: <strong>{partnerUser}</strong></p>
                 </div>
 
                 {/* Category picker */}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
                     Activity Type *
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                     {CATEGORIES.map(c => (
                       <button key={c.label} onClick={() => { setCategory(c.label); setCategoryEmoji(c.emoji); setActivity(c.label); }} style={{ padding: '10px 4px', border: `2px solid ${category === c.label ? 'var(--sakura-accent)' : 'var(--border)'}`, borderRadius: 12, background: category === c.label ? 'var(--sakura-light)' : 'white', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'all 0.15s' }}>
                         <Icon emoji={c.emoji} size={22} />
-                        <span style={{ fontSize: 10, fontWeight: 600, color: category === c.label ? 'var(--sakura-deep)' : 'var(--ink-2)', lineHeight: 1.2, textAlign: 'center' }}>{c.label}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: category === c.label ? 'var(--sakura-deep)' : 'var(--ink-2)', lineHeight: 1.2, textAlign: 'center' }}>{c.label}</span>
                       </button>
                     ))}
                   </div>
@@ -220,13 +220,13 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
 
                 {/* Activity detail */}
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Specific Activity *</label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Specific Activity *</label>
                   <input className="permit-input" placeholder="e.g. Pool with Minh, Tuan..." value={activity} onChange={e => setActivity(e.target.value)} />
                 </div>
 
                 {/* Location */}
                 <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Location</label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Location</label>
                   <input className="permit-input" placeholder="e.g. Binh Thanh District, Saigon..." value={location} onChange={e => setLocation(e.target.value)} />
                 </div>
 
@@ -240,18 +240,18 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
                     locale's formatting regardless of length. */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Date *</label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Date *</label>
                     <input type="date" className="permit-input" value={date} onChange={e => setDate(e.target.value)} style={{ width: '100%' }} />
                   </div>
                   <div>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Time *</label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Time *</label>
                     <input type="time" className="permit-input" value={time} onChange={e => setTime(e.target.value)} style={{ width: '100%' }} />
                   </div>
                 </div>
 
                 {/* Reason */}
                 <div style={{ marginBottom: 20 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Reason / Promise <Icon emoji="🥺" size={12} /></label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Reason / Promise <Icon emoji="🥺" size={12} /></label>
                   <textarea
                     className="permit-input"
                     placeholder="e.g. I promise to be home before 10pm and bring you dessert~"
@@ -265,11 +265,11 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
                 {/* Signature area */}
                 <div style={{ borderTop: '1.5px dashed var(--sakura-light)', paddingTop: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                   <div>
-                    <p style={{ fontSize: 10, color: 'var(--ink-2)', marginBottom: 2 }}>Applicant</p>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 2 }}>Applicant</p>
                     <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--sakura-deep)', fontStyle: 'italic' }}>{currentUser}</p>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <p style={{ fontSize: 10, color: 'var(--ink-2)', marginBottom: 2 }}>Signature</p>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 2 }}>Signature</p>
                     <p style={{ display: 'flex', justifyContent: 'flex-end' }}><Icon emoji="❤️" size={16} /></p>
                   </div>
                 </div>
@@ -296,7 +296,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {groupByDay(allForMe).map(group => (
                 <div key={group.label}>
-                  <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10, padding: '0 2px' }}>{group.label}</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10, padding: '0 2px' }}>{group.label}</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {group.items.map((req, i) => (
                       <PermitCard key={req.id} req={req} showActions={req.status === 'pending'} formatDate={formatDate} formatCreated={formatCreated}
@@ -330,7 +330,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {groupByDay(myRequests).map(group => (
                 <div key={group.label}>
-                  <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10, padding: '0 2px' }}>{group.label}</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10, padding: '0 2px' }}>{group.label}</p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {group.items.map((req, i) => (
                       <PermitCard key={req.id} req={req} showActions={false} formatDate={formatDate} formatCreated={formatCreated}
@@ -380,13 +380,13 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
           <Icon emoji={req.categoryEmoji} size={22} />
           <div>
             <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{req.from} → {req.to}</p>
-            <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatCreated(req.createdAt)}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{formatCreated(req.createdAt)}</p>
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {/* Stamp */}
           <div className={req.status !== 'pending' ? 'stamp-anim' : ''} style={{ padding: '4px 10px', border: `2.5px solid ${cfg.stamp}`, borderRadius: 8, transform: req.status !== 'pending' ? 'rotate(-8deg)' : 'none', opacity: req.status === 'pending' ? 0.6 : 1 }}>
-            <p style={{ fontSize: 11, fontWeight: 900, color: cfg.stamp, letterSpacing: '0.06em', fontFamily: 'monospace' }}>{cfg.label}</p>
+            <p style={{ fontSize: 12, fontWeight: 900, color: cfg.stamp, letterSpacing: '0.06em', fontFamily: 'monospace' }}>{cfg.label}</p>
           </div>
           {onEdit && (
             <button
@@ -412,7 +412,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {/* Reason */}
         {req.reason && (
           <div style={{ background: 'var(--sakura-light)', borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="🥺" size={12} /> REASON / PROMISE</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="🥺" size={12} /> REASON / PROMISE</p>
             <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.5, fontStyle: 'italic' }}>"{req.reason}"</p>
           </div>
         )}
@@ -420,7 +420,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {/* Response note */}
         {req.responseNote && (
           <div style={{ background: req.status === 'approved' ? '#F0FDF4' : '#FEF2F2', borderRadius: 12, padding: '10px 14px', marginBottom: 12, border: `1px solid ${req.status === 'approved' ? '#86EFAC' : '#FCA5A5'}` }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: req.status === 'approved' ? '#16A34A' : '#DC2626', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: req.status === 'approved' ? '#16A34A' : '#DC2626', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
               <Icon emoji={req.status === 'approved' ? '✅' : '❌'} size={12} /> {req.status === 'approved' ? 'APPROVAL NOTE' : 'REJECTION REASON'}
             </p>
             <p style={{ fontSize: 13, color: 'var(--ink)', fontStyle: 'italic' }}>"{req.responseNote}"</p>
@@ -465,7 +465,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
 function InfoCell({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', border: '1px solid var(--border)' }}>
-      <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji={icon} size={11} /> {label}</p>
+      <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2, display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji={icon} size={11} /> {label}</p>
       <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{value || '—'}</p>
     </div>
   );

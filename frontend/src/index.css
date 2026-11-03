@@ -8,7 +8,9 @@
   --sakura-accent: #E67F9A;
   --sakura-deep: #C95F7C;
   --ink: #332A2D;
-  --ink-2: #8C7A80;
+  --ink-2: #6F5F65;
+  --btn-grad: linear-gradient(135deg, #C0506D, #A8405C);
+  --badge-bg: #B8435F;
   --white: #FFFFFF;
   --card: #FFFFFF;
   --border: #F0E4E8;
@@ -30,7 +32,9 @@
   --sakura-accent: #E67F9A;
   --sakura-deep: #F3A6B9;
   --ink: #F5E8EC;
-  --ink-2: #A08898;
+  --ink-2: #B49FAB;
+  --btn-grad: linear-gradient(135deg, #C0506D, #A8405C);
+  --badge-bg: #B8435F;
   --white: #241318;
   --card: #241318;
   --border: #3D2230;
@@ -64,7 +68,9 @@ body[data-theme="dark"] {
   --sakura-accent: #E67F9A;
   --sakura-deep: #C95F7C;
   --ink: #332A2D;
-  --ink-2: #8C7A80;
+  --ink-2: #6F5F65;
+  --btn-grad: linear-gradient(135deg, #C0506D, #A8405C);
+  --badge-bg: #B8435F;
   --white: #FFFFFF;
   --card: #FFFFFF;
   --border: #F0E4E8;
@@ -80,7 +86,7 @@ html, body {
   height: 100%;
   background: linear-gradient(135deg, #f7d4df 0%, #fce8f0 40%, #ede0f5 100%);
   font-family: 'Nunito', sans-serif;
-  font-weight: 900;
+  font-weight: 400;
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
   transition: background 0.3s ease, color 0.3s ease;
@@ -96,7 +102,7 @@ html, body {
 /* iPhone device mockup — desktop/preview default look */
 .phone-shell {
   width: 393px;
-  height: 1000px;
+  height: min(1000px, calc(100dvh - 24px));
   background: #1a1a1a;
   border-radius: 54px;
   box-shadow: 0 0 0 2px #3a3a3a, 0 0 0 4px #222, 0 32px 80px rgba(0,0,0,0.45), inset 0 0 0 2px #555;
@@ -194,8 +200,17 @@ html, body {
 
 * { box-sizing: border-box; }
 
-::-webkit-scrollbar { display: none; }
-* { scrollbar-width: none; }
+/* Hide scrollbars on touch devices only; keep a thin one with a mouse so
+   desktop users can tell that more content is available. */
+@media (hover: none), (pointer: coarse) {
+  ::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: none; }
+}
+@media (hover: hover) and (pointer: fine) {
+  * { scrollbar-width: thin; scrollbar-color: var(--sakura) transparent; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--sakura); border-radius: 99px; }
+}
 
 /* Momentum ("inertia") scrolling on iOS — without this, every scrollable
    area (feed, lists, bottom sheets...) feels stiff/laggy instead of the
@@ -301,7 +316,7 @@ html, body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep));
+  background: var(--btn-grad);
   color: white;
   border-radius: 12px;
   padding: 12px 24px;
@@ -390,25 +405,6 @@ select.input-field { cursor: pointer; }
   margin: 0 auto 16px;
 }
 
-.nav-item {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 3px; cursor: pointer; padding: 6px 12px;
-  border-radius: 12px; transition: background 0.15s;
-  flex: 1;
-}
-.nav-item:hover { background: var(--sakura-light); }
-.nav-item.active { color: var(--sakura-deep); }
-
-.sidebar-item {
-  display: flex; align-items: center; gap: 12px;
-  padding: 11px 16px; border-radius: 12px;
-  cursor: pointer; transition: background 0.15s;
-  font-weight: 500; font-size: 15px;
-  color: var(--ink-2);
-}
-.sidebar-item:hover { background: var(--sakura-light); color: var(--ink); }
-.sidebar-item.active { background: var(--sakura-light); color: var(--sakura-deep); font-weight: 600; }
-
 .memory-grid {
   columns: 2;
   gap: 12px;
@@ -438,25 +434,23 @@ select.input-field { cursor: pointer; }
 .heart-liked { color: #E67F9A; }
 .heart-unliked { color: var(--ink-2); }
 
-/* Responsive sidebar */
-.sidebar-desktop { display: none !important; }
-@media (min-width: 768px) {
-  .sidebar-desktop { display: flex !important; }
-  .mobile-only { display: none !important; }
+/* Accessibility: visible keyboard focus on every interactive element. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--sakura-deep);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
+.input-field:focus-visible { outline-offset: 0; }
+[role="button"] { cursor: pointer; }
 
-/* md:hidden = mobile only nav */
-.md\:hidden { display: flex; }
-@media (min-width: 768px) {
-  .md\:hidden { display: none !important; }
+/* Accessibility: respect the OS "reduce motion" setting. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
-
-/* hidden md:flex = sidebar */
-.hidden { display: none; }
-.md\:flex { display: flex; }
-@media (max-width: 767px) {
-  .md\:flex { display: none !important; }
-}
-@media (min-width: 768px) {
-  .hidden.md\:flex { display: flex !important; }
-}
+[role="dialog"]:focus-visible { outline: none; }

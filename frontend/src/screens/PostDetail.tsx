@@ -78,7 +78,7 @@ export default function PostDetail({ id }: { id?: string } = {}) {
             ))}
           </div>
           {post.images.length > 1 && (
-            <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(51,42,45,0.6)', color: 'white', fontSize: 11, fontWeight: 700, borderRadius: 99, padding: '2px 8px' }}>
+            <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(51,42,45,0.6)', color: 'white', fontSize: 12, fontWeight: 700, borderRadius: 99, padding: '2px 8px' }}>
               {imgIndex + 1}/{post.images.length}
             </div>
           )}

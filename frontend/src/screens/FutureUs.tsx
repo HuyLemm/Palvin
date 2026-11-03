@@ -178,8 +178,8 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
         <Icon emoji={g.emoji} size={20} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', textDecoration: g.completed ? 'line-through' : 'none', opacity: g.completed ? 0.5 : 1 }}>{g.title}</p>
-          {g.completed && g.completedDate && <p style={{ fontSize: 11, color: 'var(--sakura-accent)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>Achieved {g.completedDate} <Icon emoji="✨" size={11} /></p>}
-          {!g.completed && hasTarget && g.deadline && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{formatRemaining(g.deadline)}</p>}
+          {g.completed && g.completedDate && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 4 }}>Achieved {g.completedDate} <Icon emoji="✨" size={11} /></p>}
+          {!g.completed && hasTarget && g.deadline && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{formatRemaining(g.deadline)}</p>}
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button onClick={() => onEdit(g)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
@@ -256,7 +256,7 @@ function AddFutureGoalForm({ onClose, onAdd, defaultOwner, existing }: {
             <button type="button" onClick={() => setKind('savings')} style={{ flex: 1, padding: '8px', borderRadius: 10, border: kind === 'savings' ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', background: kind === 'savings' ? 'var(--sakura-light)' : 'var(--bg)', color: 'var(--ink)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Savings goal</button>
           </div>
           <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>WHOSE GOAL</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>WHOSE GOAL</p>
             <div style={{ display: 'flex', gap: 8 }}>
               {['both', currentUser, ...(partnerName ? [partnerName] : [])].map(o => (
                 <button key={o} type="button" onClick={() => setOwner(o)} style={{ flex: 1, padding: '8px', border: owner === o ? '2px solid var(--sakura-accent)' : '1.5px solid var(--border)', borderRadius: 10, background: owner === o ? 'var(--sakura-light)' : 'var(--bg)', color: owner === o ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: 700, cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
@@ -278,7 +278,7 @@ function AddFutureGoalForm({ onClose, onAdd, defaultOwner, existing }: {
             <>
               <AmountInput placeholder="Savings target (VND)" value={target} onChange={setTarget} />
               <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>DEADLINE — ROUGHLY (optional, leave at 0 if none)</p>
+                <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>DEADLINE — ROUGHLY (optional, leave at 0 if none)</p>
                 <div style={{ display: 'flex', gap: 8 }}>
                   <input className="input-field" type="number" min={0} value={deadlineAmount} onChange={e => setDeadlineAmount(e.target.value)} style={{ width: 80, flexShrink: 0 }} />
                   <div style={{ display: 'flex', gap: 8, flex: 1 }}>
@@ -291,7 +291,7 @@ function AddFutureGoalForm({ onClose, onAdd, defaultOwner, existing }: {
             </>
           )}
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-          <button onClick={handleSubmit} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{isEdit ? 'Save changes' : 'Add Goal'}</button>
+          <button onClick={handleSubmit} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15 }}>{isEdit ? 'Save changes' : 'Add Goal'}</button>
         </div>
       </div>
     </div>

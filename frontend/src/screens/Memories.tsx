@@ -53,8 +53,8 @@ export default function Memories() {
               </div>
               <div style={{ padding: '10px 12px 12px' }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', lineHeight: 1.3, marginBottom: 3 }}>{m.title}</p>
-                <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>{m.date}</p>
-                {m.location && <p style={{ fontSize: 11, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 3 }}><Icon emoji="📍" size={11} /> {m.location}</p>}
+                <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{m.date}</p>
+                {m.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 3 }}><Icon emoji="📍" size={11} /> {m.location}</p>}
               </div>
             </div>
           ))}
@@ -63,7 +63,7 @@ export default function Memories() {
 
       <button
         onClick={() => setShowAdd(true)}
-        style={{ position: 'fixed', bottom: 96, right: 20, width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', fontSize: 23, cursor: 'pointer', boxShadow: '0 4px 16px rgba(201,95,124,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
+        style={{ position: 'fixed', bottom: 96, right: 20, width: 52, height: 52, borderRadius: '50%', background: 'var(--btn-grad)', color: 'white', border: 'none', fontSize: 23, cursor: 'pointer', boxShadow: '0 4px 16px rgba(201,95,124,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
       >+</button>
 
       {showAdd && <AddMemoryForm onClose={() => setShowAdd(false)} />}

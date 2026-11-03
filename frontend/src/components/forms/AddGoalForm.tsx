@@ -49,7 +49,7 @@ export default function AddGoalForm({ onClose }: { onClose: () => void }) {
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
-            <button onClick={handleSubmit} disabled={saving} style={{ flex: 2, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : 'Create Fund'}</button>
+            <button onClick={handleSubmit} disabled={saving} style={{ flex: 2, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : 'Create Fund'}</button>
           </div>
         </div>
       </div>

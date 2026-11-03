@@ -53,7 +53,7 @@ export default function Notifications() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button
               onClick={() => acceptInvite(pendingInvite.id)}
-              style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+              style={{ flex: 1, padding: '10px', borderRadius: 12, border: 'none', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
             >
               Accept <Icon emoji="💕" size={14} />
             </button>

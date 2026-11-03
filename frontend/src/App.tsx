@@ -108,11 +108,11 @@ function IconSettings({ active }: { active: boolean }) {
 }
 
 const NAV_TABS = [
-  { key: 'home',     Icon: IconHome },
-  { key: 'feed',     Icon: IconFeed },
-  { key: 'stats',    Icon: IconStats },
-  { key: 'us',       Icon: IconUs },
-  { key: 'settings', Icon: IconSettings },
+  { key: 'home',     label: 'Home', Icon: IconHome },
+  { key: 'feed',     label: 'Feed', Icon: IconFeed },
+  { key: 'stats',    label: 'Money', Icon: IconStats },
+  { key: 'us',       label: 'Us', Icon: IconUs },
+  { key: 'settings', label: 'Settings', Icon: IconSettings },
 ];
 
 
@@ -524,7 +524,7 @@ export default function App() {
                 profile/link state, so the UI never flashes the wrong screen (e.g.
                 "locked" before we actually know isLinked) while that resolves. */}
             {loadingVisible && (
-              <div style={{
+              <div role="status" aria-live="polite" aria-label="Loading" style={{
                 position: 'absolute', inset: 0, zIndex: 200, background: 'var(--bg)',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 overflow: 'hidden', opacity: loadProgress >= 100 ? 0 : 1, transition: 'opacity 0.35s ease',
@@ -620,45 +620,45 @@ export default function App() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {isSubScreen && (
-                  <button onClick={goBack} style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 10, width: 32, height: 32, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sakura-deep)', marginRight: 2 }}>‹</button>
+                  <button onClick={goBack} aria-label="Back" style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 12, width: 44, height: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sakura-deep)', marginRight: 2 }}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
                 )}
                 {screen === 'home' ? (
                   <div>
-                    <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', lineHeight: 1 }}>PALVIN</p>
-                    <p style={{ fontSize: 10, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>{currentUser}{partnerProfile && <><Icon emoji="❤️" size={10} /> {partnerProfile.displayName}</>}</p>
+                    <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, fontWeight: 700, color: 'var(--ink)', lineHeight: 1, margin: 0 }}>PALVIN</h1>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>{currentUser}{partnerProfile && <><Icon emoji="❤️" size={10} /> {partnerProfile.displayName}</>}</p>
                   </div>
                 ) : (
-                  <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
                     {title}
                     {SCREEN_TITLE_EMOJI[screen] && <Icon emoji={SCREEN_TITLE_EMOJI[screen]} size={15} />}
-                  </p>
+                  </h1>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button onClick={() => handleTabClick('search')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)' }}>
+                <button onClick={() => handleTabClick('search')} aria-label="Search" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)' }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 </button>
-                <button onClick={() => handleTabClick('notifications')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
+                <button onClick={() => handleTabClick('notifications')} aria-label={unreadNotifs > 0 ? `Notifications, ${unreadNotifs} unread` : 'Notifications'} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
                   {unreadNotifs > 0 && (
                     <div key={unreadNotifs} className="animate-heart-pop" style={{
-                      position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, padding: '0 3px',
-                      background: '#DC2626', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, padding: '0 4px',
+                      background: 'var(--badge-bg)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: '1.5px solid var(--white)',
                     }}>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: 'white', lineHeight: 1 }}>{unreadNotifs > 99 ? '99+' : unreadNotifs}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: 'white', lineHeight: 1 }}>{unreadNotifs > 99 ? '99+' : unreadNotifs}</span>
                     </div>
                   )}
                 </button>
-                <button onClick={() => handleTabClick('chat')} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 38, height: 38, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
+                <button onClick={() => handleTabClick('chat')} aria-label={state.unreadChatCount > 0 ? `Chat, ${state.unreadChatCount} unread` : 'Chat'} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
                   {state.unreadChatCount > 0 && (
                     <div key={state.unreadChatCount} className="animate-heart-pop" style={{
-                      position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, padding: '0 3px',
-                      background: '#DC2626', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      position: 'absolute', top: -4, right: -4, minWidth: 18, height: 18, padding: '0 4px',
+                      background: 'var(--badge-bg)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: '1.5px solid var(--white)',
                     }}>
-                      <span style={{ fontSize: 9, fontWeight: 800, color: 'white', lineHeight: 1 }}>{state.unreadChatCount > 99 ? '99+' : state.unreadChatCount}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: 'white', lineHeight: 1 }}>{state.unreadChatCount > 99 ? '99+' : state.unreadChatCount}</span>
                     </div>
                   )}
                 </button>
@@ -666,7 +666,7 @@ export default function App() {
             </header>
 
             {/* Scroll area */}
-            <main ref={mainRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 80px' }}>
+            <main ref={mainRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 96px' }}>
               {/* ScreenRouter keeps every visited screen mounted (just
                   hidden) internally — see its own per-key .screen-transition
                   wrapper — so this can't have a key={screen} of its own
@@ -677,7 +677,7 @@ export default function App() {
             </main>
 
             {/* Bottom Nav */}
-            <nav className="app-bottom-nav" style={{
+            <nav aria-label="Main" className="app-bottom-nav" style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
               background: 'var(--navbar-bg)',
               backdropFilter: 'blur(16px)',
@@ -687,26 +687,27 @@ export default function App() {
               zIndex: 20,
             }}>
               {NAV_TABS.slice(0, 2).map(tab => (
-                <NavItem key={tab.key} Icon={tab.Icon} active={activeTab === tab.key} onClick={() => handleTabClick(tab.key)} />
+                <NavItem key={tab.key} Icon={tab.Icon} active={activeTab === tab.key} onClick={() => handleTabClick(tab.key)} label={tab.label} />
               ))}
 
               {/* Center + Create */}
               <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <button
+                  aria-label={isLinked ? 'Create new' : 'Create new (link with your partner first)'}
                   onClick={() => {
                     if (!isLinked) { toast('Link with your partner first 💕', '🔒', { passive: true }); return; }
                     openCreate();
                   }}
                   style={{
-                    width: 42, height: 42, borderRadius: 12,
-                    background: isLinked ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)',
-                    border: 'none', color: isLinked ? 'white' : 'var(--ink-2)', cursor: 'pointer',
-                    boxShadow: isLinked ? '0 3px 12px rgba(201,95,124,0.35)' : 'none',
+                    width: 56, height: 56, borderRadius: 18, marginTop: -22, border: '3px solid var(--bg)',
+                    background: isLinked ? 'var(--btn-grad)' : 'var(--border)',
+                    color: isLinked ? 'white' : 'var(--ink-2)', cursor: 'pointer',
+                    boxShadow: isLinked ? '0 6px 16px rgba(168,64,92,0.4)' : 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     transition: 'transform 0.1s, box-shadow 0.1s',
                   }}>
                   {isLinked ? (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                    <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
                   ) : (
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg>
                   )}
@@ -714,22 +715,17 @@ export default function App() {
               </div>
 
               {NAV_TABS.slice(2, 4).map(tab => (
-                <NavItem key={tab.key} Icon={tab.Icon} active={activeTab === tab.key} onClick={() => handleTabClick(tab.key)} />
+                <NavItem key={tab.key} Icon={tab.Icon} active={activeTab === tab.key} onClick={() => handleTabClick(tab.key)} label={tab.label} />
               ))}
 
               {/* Settings = user avatar */}
-              <button onClick={() => handleTabClick('settings')} style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              <button onClick={() => handleTabClick('settings')} aria-label="Settings" aria-current={activeTab === 'settings' ? 'page' : undefined} style={{
+                flex: 1, minHeight: 48, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', justifyContent: 'center',
                 background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
-                transition: 'transform 0.15s',
-                transform: activeTab === 'settings' ? 'scale(1.12)' : 'scale(1)',
+                color: activeTab === 'settings' ? 'var(--sakura-deep)' : 'var(--ink-2)',
               }}>
-                <div style={{ position: 'relative' }}>
-                  <Avatar user={currentUser} size={26} />
-                  {activeTab === 'settings' && (
-                    <div style={{ position: 'absolute', bottom: -4, left: '50%', transform: 'translateX(-50%)', width: 4, height: 4, borderRadius: '50%', background: 'var(--sakura-deep)' }} />
-                  )}
-                </div>
+                <Avatar user={currentUser} size={24} />
+                <span style={{ fontSize: 12, fontWeight: activeTab === 'settings' ? 700 : 500, lineHeight: 1 }}>Settings</span>
               </button>
             </nav>
 
@@ -770,17 +766,17 @@ export default function App() {
   );
 }
 
-function NavItem({ Icon, active, onClick }: { Icon: (p: { active: boolean }) => JSX.Element; active: boolean; onClick: () => void }) {
+function NavItem({ Icon, active, onClick, label }: { Icon: (p: { active: boolean }) => JSX.Element; active: boolean; onClick: () => void; label: string }) {
   return (
-    <button onClick={onClick} style={{
-      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    <button onClick={onClick} aria-label={label} aria-current={active ? 'page' : undefined} style={{
+      flex: 1, minHeight: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
       background: 'none', border: 'none', cursor: 'pointer',
       color: active ? 'var(--sakura-deep)' : 'var(--ink-2)',
       padding: '4px 0',
-      transition: 'transform 0.15s, color 0.15s',
-      transform: active ? 'scale(1.12)' : 'scale(1)',
+      transition: 'color 0.15s',
     }}>
       <Icon active={active} />
+      <span style={{ fontSize: 12, fontWeight: active ? 700 : 500, lineHeight: 1 }}>{label}</span>
     </button>
   );
 }

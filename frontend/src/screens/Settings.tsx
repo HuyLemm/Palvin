@@ -162,7 +162,7 @@ export default function Settings() {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.4 }}>{entry.message}</p>
-          <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{formatRelativeTime(entry.createdAt)}</p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{formatRelativeTime(entry.createdAt)}</p>
         </div>
       </div>
     );
@@ -191,7 +191,7 @@ export default function Settings() {
           <p style={{ fontSize: 13, color: 'var(--ink)' }}>
             <strong>{m.profileName}</strong> {kind === 'streak' ? "didn't keep the streak" : "left a daily task unfinished"}
           </p>
-          <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{formatMissDate(m.date)}</p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{formatMissDate(m.date)}</p>
         </div>
         <button
           onClick={() => dismissMiss(kind, m)}
@@ -355,9 +355,9 @@ export default function Settings() {
             <Avatar user={partnerProfile.displayName as User} size={36} />
             <div>
               <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{partnerProfile.displayName}</p>
-              <p style={{ fontSize: 11, color: 'var(--sakura-deep)', display: 'flex', alignItems: 'center', gap: 4 }}>Your other half <Icon emoji="💖" size={11} /></p>
+              <p style={{ fontSize: 12, color: 'var(--sakura-deep)', display: 'flex', alignItems: 'center', gap: 4 }}>Your other half <Icon emoji="💖" size={11} /></p>
             </div>
-            <div style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ink-2)', textAlign: 'right' }}>
+            <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--ink-2)', textAlign: 'right' }}>
               <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><Icon emoji="🔒" size={11} /> Linked</p>
               <p>Forever</p>
             </div>
@@ -371,7 +371,7 @@ export default function Settings() {
               <button
                 onClick={() => handleRespond(true)}
                 disabled={responding}
-                style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               >
                 Accept <Icon emoji="💕" size={13} />
               </button>
@@ -389,7 +389,7 @@ export default function Settings() {
             <p style={{ fontSize: 13, color: 'var(--ink)', marginBottom: 4 }}>
               Invite sent to <strong>{sentInvite.name}</strong>
             </p>
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', marginBottom: 10 }}>Waiting for confirmation...</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 10 }}>Waiting for confirmation...</p>
             <button
               onClick={() => cancelSentInvite(sentInvite.id)}
               style={{ width: '100%', padding: '8px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
@@ -520,7 +520,7 @@ export default function Settings() {
                   <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>{formatLastActive(p.lastActiveAt)}</p>
                 </div>
                 {p.lastActiveAt && (
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)', textAlign: 'right' }}>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'right' }}>
                     {new Date(p.lastActiveAt).toLocaleString('en-US', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 )}
@@ -554,10 +554,10 @@ export default function Settings() {
                 {complianceNames.map(name => (
                   <div key={name} style={{ flex: 1, textAlign: 'center', padding: '10px 6px', borderRadius: 12, background: 'var(--bg)' }}>
                     <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>{name}</p>
-                    <p style={{ fontSize: 11, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
                       <Icon emoji="🔥" size={11} /> {compliance.streakMisses.filter(m => m.profileName === name).length} streak miss{compliance.streakMisses.filter(m => m.profileName === name).length === 1 ? '' : 'es'}
                     </p>
-                    <p style={{ fontSize: 11, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 2 }}>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, marginTop: 2 }}>
                       <Icon emoji="✅" size={11} /> {compliance.todoMisses.filter(m => m.profileName === name).length} incomplete day{compliance.todoMisses.filter(m => m.profileName === name).length === 1 ? '' : 's'}
                     </p>
                   </div>
@@ -715,7 +715,7 @@ export default function Settings() {
               <div>
                 <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Message sent (optional)</p>
                 <input className="input-field" placeholder="e.g. I love you so much" value={qaMessage} onChange={e => setQaMessage(e.target.value)} maxLength={80} />
-                <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 6 }}>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 6 }}>
                   This is what your partner actually sees — separate from the button label above. Leave blank to keep the rotating surprise messages.
                 </p>
               </div>
@@ -753,7 +753,7 @@ export default function Settings() {
             />
             {passwordError && <p style={{ color: '#DC2626', fontSize: 12, marginBottom: 10 }}>{passwordError}</p>}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={submitPassword} disabled={savingPassword} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{savingPassword ? '...' : 'Save password'}</button>
+              <button onClick={submitPassword} disabled={savingPassword} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>{savingPassword ? '...' : 'Save password'}</button>
               <button onClick={() => setShowPasswordModal(false)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
             </div>
           </div>

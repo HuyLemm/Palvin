@@ -85,7 +85,7 @@ export default function LoveNotes() {
                           <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{note.from}</p>
                           <Icon emoji="→" size={13} />
                           <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--sakura-deep)' }}>{note.to}</p>
-                          {!note.read && !isMine && <span style={{ background: 'var(--sakura-accent)', color: 'white', fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '2px 6px' }}>NEW</span>}
+                          {!note.read && !isMine && <span style={{ background: 'var(--sakura-accent)', color: 'white', fontSize: 12, fontWeight: 700, borderRadius: 99, padding: '2px 6px' }}>NEW</span>}
                         </div>
                         <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{note.date}</p>
                       </div>
@@ -200,7 +200,7 @@ export default function LoveNotes() {
       {tab === 'notes' && (
         <button
           onClick={() => setShowAdd(true)}
-          style={{ position: 'fixed', bottom: 96, right: 20, width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', fontSize: 23, cursor: 'pointer', boxShadow: '0 4px 16px rgba(201,95,124,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
+          style={{ position: 'fixed', bottom: 96, right: 20, width: 52, height: 52, borderRadius: '50%', background: 'var(--btn-grad)', color: 'white', border: 'none', fontSize: 23, cursor: 'pointer', boxShadow: '0 4px 16px rgba(201,95,124,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}
         >+</button>
       )}
 
@@ -233,7 +233,7 @@ function LetterReader({ letter, onClose, onDelete }: { letter: LoveLetter; onClo
         <div style={{ position: 'relative', zIndex: 1 }}>
           {/* Header */}
           <div style={{ marginBottom: 24, paddingBottom: 16, borderBottom: `1.5px solid ${st.border}40` }}>
-            <p style={{ fontSize: 11, color: isDark ? '#A080D8' : st.accent, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>{letter.date}</p>
+            <p style={{ fontSize: 12, color: isDark ? '#A080D8' : st.accent, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>{letter.date}</p>
             <p style={{ fontFamily: FONTS[letter.font], fontSize: 23, color: isDark ? '#F0E8FF' : 'var(--ink)', lineHeight: 1.3, marginBottom: 6 }}>{letter.title}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span style={{ fontSize: 12, color: isDark ? '#A080D8' : st.accent }}>From {letter.from} · To {letter.to}</span>
@@ -308,7 +308,7 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <button onClick={onClose} disabled={sending} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✕" size={14} /> Cancel</button>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'white', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✉️" size={18} /> Write Letter</p>
-          <button onClick={handleSend} disabled={sending} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14, opacity: (title && body && !sending) ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>{sending ? 'Sending...' : <>Send <Icon emoji="💌" size={14} /></>}</button>
+          <button onClick={handleSend} disabled={sending} style={{ background: 'var(--btn-grad)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14, opacity: (title && body && !sending) ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>{sending ? 'Sending...' : <>Send <Icon emoji="💌" size={14} /></>}</button>
         </div>
 
         {/* Stationery picker */}
@@ -337,7 +337,7 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
             <div key={i} style={{ position: 'absolute', left: 0, right: 0, top: 46 + i * 34, height: 1, background: isDark ? 'rgba(160,128,220,0.10)' : `${st.border}18` }} />
           ))}
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <p style={{ fontSize: 11, color: isDark ? '#A080D8' : st.accent, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
+            <p style={{ fontSize: 12, color: isDark ? '#A080D8' : st.accent, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 14 }}>
               To {to} — {new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
             </p>
             <input

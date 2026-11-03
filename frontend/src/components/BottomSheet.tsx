@@ -27,12 +27,12 @@ export default function BottomSheet({ onClose, children, title }: Props) {
   return (
     <>
       <div className={`bottom-sheet-overlay${closing ? ' closing' : ''}`} onClick={handleClose} />
-      <div className={`bottom-sheet${closing ? ' closing' : ''}`} style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}>
+      <div role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined} className={`bottom-sheet${closing ? ' closing' : ''}`} style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}>
         <div className="sheet-handle" />
         {title && (
           <div style={{ padding: '0 20px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)' }}>{title}</span>
-            <button onClick={handleClose} style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 99, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--ink-2)' }}><Icon emoji="✕" size={16} /></button>
+            <button onClick={handleClose} aria-label="Close" style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 99, width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--ink-2)' }}><Icon emoji="✕" size={16} /></button>
           </div>
         )}
         <div style={{ padding: '0 20px 8px' }}>

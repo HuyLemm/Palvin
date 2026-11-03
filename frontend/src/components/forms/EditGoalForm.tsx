@@ -64,7 +64,7 @@ export default function EditGoalForm({ goal, onClose }: { goal: SavingsGoal; onC
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
             <button onClick={() => setConfirmDelete(true)} style={{ padding: '13px 16px', borderRadius: 14, border: '1.5px solid #E8524A', background: 'var(--white)', color: '#E8524A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Delete</button>
-            <button onClick={handleSubmit} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>Save Changes</button>
+            <button onClick={handleSubmit} style={{ flex: 1, padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15 }}>Save Changes</button>
           </div>
         </div>
       </div>
@@ -77,7 +77,7 @@ export default function EditGoalForm({ goal, onClose }: { goal: SavingsGoal; onC
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>The fund's info will be updated.</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setConfirmSave(false)} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={confirmSubmit} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Saving...' : 'Save'}</button>
+              <button onClick={confirmSubmit} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Saving...' : 'Save'}</button>
             </div>
           </div>
         </div>

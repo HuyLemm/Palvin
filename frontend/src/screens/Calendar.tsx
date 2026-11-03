@@ -85,7 +85,7 @@ function SpecialDatesTab() {
         {/* Day headers */}
         <div className="calendar-grid" style={{ marginBottom: 8 }}>
           {DAYS.map(d => (
-            <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', padding: '4px 0' }}>{d}</div>
+            <div key={d} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', padding: '4px 0' }}>{d}</div>
           ))}
         </div>
 
@@ -274,7 +274,7 @@ function CycleTrackerTab() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Cycle <Icon emoji="🌸" size={18} /></p>
-        <button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Log entry</button>
+        <button onClick={() => setShowAdd(true)} style={{ background: 'var(--btn-grad)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Log entry</button>
       </div>
 
       {logs.length === 0 ? (
@@ -289,7 +289,7 @@ function CycleTrackerTab() {
           <div style={{ background: 'linear-gradient(135deg, var(--sakura-deep), #a8436a)', borderRadius: 20, padding: '20px', marginBottom: 16, position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: -20, right: -20, width: 90, height: 90, background: 'rgba(255,255,255,0.07)', borderRadius: '50%' }} />
 
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="🩸" size={12} /> Next period (predicted)</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="🩸" size={12} /> Next period (predicted)</p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'white' }}>{stats.nextStart && formatShortDate(stats.nextStart)}</p>
               {daysUntilNext !== null && (
@@ -301,16 +301,16 @@ function CycleTrackerTab() {
 
             <div style={{ height: 1, background: 'rgba(255,255,255,0.18)', marginBottom: 14 }} />
 
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="🥚" size={12} /> Predicted ovulation day</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="🥚" size={12} /> Predicted ovulation day</p>
             <p style={{ fontSize: 15, fontWeight: 700, color: 'white', marginBottom: 12 }}>{stats.ovulation && formatShortDate(stats.ovulation)}</p>
 
             <div style={{ background: 'rgba(255,255,255,0.14)', borderRadius: 12, padding: '10px 14px' }}>
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: 600, marginBottom: 2 }}>Fertile window: {stats.fertileStart && formatShortDate(stats.fertileStart)} – {stats.fertileEnd && formatShortDate(stats.fertileEnd)}</p>
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>This is the window with the highest chance of conception.</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)' }}>This is the window with the highest chance of conception.</p>
             </div>
 
             {!stats.hasEnoughData && (
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', fontStyle: 'italic', marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="⚠️" size={11} /> Only one entry logged so far, so this estimate uses a default 28-day cycle. Log the next period for a more accurate prediction.</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontStyle: 'italic', marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="⚠️" size={11} /> Only one entry logged so far, so this estimate uses a default 28-day cycle. Log the next period for a more accurate prediction.</p>
             )}
           </div>
 
@@ -318,15 +318,15 @@ function CycleTrackerTab() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 20 }}>
             <div className="card" style={{ padding: '14px 12px', textAlign: 'center' }}>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}><Icon emoji="🔄" size={18} /></div>
-              <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Average cycle length</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Average cycle length</p>
               <p style={{ fontSize: 21, fontWeight: 700, color: 'var(--sakura-deep)' }}>{stats.avgCycle} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-2)' }}>days</span></p>
-              <p style={{ fontSize: 10, color: 'var(--ink-2)', marginTop: 2 }}>from the start of one period to the start of the next</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>from the start of one period to the start of the next</p>
             </div>
             <div className="card" style={{ padding: '14px 12px', textAlign: 'center' }}>
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}><Icon emoji="🩸" size={18} /></div>
-              <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Average period length</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Average period length</p>
               <p style={{ fontSize: 21, fontWeight: 700, color: 'var(--sakura-deep)' }}>{stats.avgPeriod} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-2)' }}>days</span></p>
-              <p style={{ fontSize: 10, color: 'var(--ink-2)', marginTop: 2 }}>how long each period lasts</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>how long each period lasts</p>
             </div>
           </div>
 
@@ -341,7 +341,7 @@ function CycleTrackerTab() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: (!l.endDate) ? 10 : 0 }}>
                   <div style={{ width: 42, height: 42, borderRadius: 12, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🩸" size={19} /></div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 11, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>Period #{sorted.length - i}</p>
+                    <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>Period #{sorted.length - i}</p>
                     <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{formatShortDate(l.startDate)}{l.endDate ? ` → ${formatShortDate(l.endDate)}` : ''}</p>
                     <p style={{ fontSize: 12, color: l.endDate ? 'var(--ink-2)' : '#5AC26A', fontWeight: l.endDate ? 400 : 700 }}>{l.endDate ? `${daysBetweenISO(l.startDate, l.endDate) + 1}-day period` : '● Ongoing'}</p>
                   </div>
@@ -401,14 +401,14 @@ function CycleLogForm({ onClose, onSave, existing }: {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>START DATE</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>START DATE</p>
             <input className="input-field" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
           </div>
           <div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>END DATE (optional — leave blank if ongoing)</p>
+            <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>END DATE (optional — leave blank if ongoing)</p>
             <input className="input-field" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ width: 'auto', maxWidth: 170 }} />
           </div>
-          <button onClick={handleSubmit} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{existing ? 'Save changes' : 'Log entry'}</button>
+          <button onClick={handleSubmit} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15 }}>{existing ? 'Save changes' : 'Log entry'}</button>
         </div>
       </div>
     </div>

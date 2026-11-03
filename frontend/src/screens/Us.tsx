@@ -221,12 +221,12 @@ export default function Us() {
         <div style={{ display: 'inline-flex', gap: 12, background: 'var(--white)', borderRadius: 12, padding: '8px 16px', border: '1px solid var(--border)' }}>
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, fontWeight: 700, color: 'var(--sakura-deep)' }}>{days.toLocaleString()}</p>
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 500 }}>Days</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 500 }}>Days</p>
           </div>
           <div style={{ width: 1, background: 'var(--border)' }} />
           <div style={{ textAlign: 'center' }}>
             <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--sakura-deep)' }}>{dur.years}</p>
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 500 }}>Years</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 500 }}>Years</p>
           </div>
         </div>
       </div>
@@ -241,7 +241,7 @@ export default function Us() {
         ].map(s => (
           <div key={s.label} style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 8px', textAlign: 'center' }}>
             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--sakura-deep)' }}>{s.val}</div>
-            <div style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 500, marginTop: 2 }}>{s.label}</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 500, marginTop: 2 }}>{s.label}</div>
           </div>
         ))}
       </div>
@@ -556,7 +556,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
                   <input ref={editFileInputRef} type="file" accept="image/*" onChange={e => { handleEditFile(e.target.files); e.target.value = ''; }} style={{ display: 'none' }} />
                 </div>
               </div>
-              <button onClick={handleSavePlace} disabled={!editPlaceName.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editPlaceName.trim() ? 'pointer' : 'default', background: editPlaceName.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editPlaceName.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save changes</button>
+              <button onClick={handleSavePlace} disabled={!editPlaceName.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editPlaceName.trim() ? 'pointer' : 'default', background: editPlaceName.trim() ? 'var(--btn-grad)' : 'var(--border)', color: editPlaceName.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save changes</button>
             </div>
           </div>
         </div>
@@ -924,7 +924,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
             {w.linkDescription && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{w.linkDescription}</p>}
             {w.price && <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="💰" size={12} /> {/^\d+$/.test(w.price) ? `${Number(w.price).toLocaleString('en-US')} VND` : w.price}</p>}
             {w.link && (
-              <a href={w.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: '#4A8AE8', fontWeight: 600, marginTop: 3, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+              <a href={w.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#4A8AE8', fontWeight: 600, marginTop: 3, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
                 <Icon emoji="🔗" size={10} /> View product
               </a>
             )}
@@ -932,14 +932,14 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
         </div>
 
         {/* Whose wishlist + date — pulled down, de-emphasized */}
-        <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
+        <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
           <Icon emoji={isOwner ? '💙' : '💗'} size={10} /> {w.from}'s wishlist · {w.date}
         </p>
 
         {/* Bought/Undo gets its own full-width row */}
         <div style={{ marginTop: 10 }}>
           {!isBought ? (
-            <button className="wish-action-btn" onClick={() => drawWish(w.id, true)} style={{ width: '100%', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '9px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Bought <Icon emoji="🎁" size={13} /></button>
+            <button className="wish-action-btn" onClick={() => drawWish(w.id, true)} style={{ width: '100%', background: 'var(--btn-grad)', color: 'white', border: 'none', borderRadius: 10, padding: '9px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Bought <Icon emoji="🎁" size={13} /></button>
           ) : (
             <button className="wish-action-btn" onClick={() => drawWish(w.id, false)} style={{ width: '100%', background: 'var(--bg)', color: 'var(--ink-2)', border: '1.5px solid var(--border)', borderRadius: 10, padding: '9px', cursor: 'pointer', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>Undo <Icon emoji="↩️" size={13} /></button>
           )}
@@ -1044,9 +1044,9 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
 
                 <input className="input-field" placeholder="Product link (optional)" value={wishLink} onChange={e => setWishLink(e.target.value)} />
 
-                {wishMode === 'link' && previewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
+                {wishMode === 'link' && previewLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
                 {wishMode === 'link' && !previewLoading && previewFailed && (
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still add the item without one, or switch to "Enter manually".</p>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still add the item without one, or switch to "Enter manually".</p>
                 )}
                 {wishMode === 'link' && !previewLoading && linkPreview && (linkPreview.image || linkPreview.title) && (
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
@@ -1055,7 +1055,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                       : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🔗" size={18} /></div>}
                     <div style={{ minWidth: 0 }}>
                       <p style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 700, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{linkPreview.title || 'Product image found'}</p>
-                      {linkPreview.description && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{linkPreview.description}</p>}
+                      {linkPreview.description && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{linkPreview.description}</p>}
                     </div>
                   </div>
                 )}
@@ -1105,7 +1105,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                     }
                   }}
                   disabled={addingWish}
-                  style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: addingWish ? 0.7 : 1 }}
+                  style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: addingWish ? 0.7 : 1 }}
                 >{addingWish ? 'Adding...' : <>Add to wishlist<Icon emoji="🎁" size={15} /></>}</button>
               </div>
             </div>
@@ -1153,9 +1153,9 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
 
               <input className="input-field" placeholder="Product link (optional)" value={editLink} onChange={e => setEditLink(e.target.value)} />
 
-              {editMode === 'link' && editPreviewLoading && <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
+              {editMode === 'link' && editPreviewLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
               {editMode === 'link' && !editPreviewLoading && editPreviewFailed && (
-                <p style={{ fontSize: 11, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still keep the link without one, or switch to "Enter manually".</p>
+                <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still keep the link without one, or switch to "Enter manually".</p>
               )}
               {editMode === 'link' && !editPreviewLoading && editLinkPreview && (editLinkPreview.image || editLinkPreview.title) && (
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', padding: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)' }}>
@@ -1164,14 +1164,14 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                     : <div style={{ width: 44, height: 44, borderRadius: 10, background: 'var(--white)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🔗" size={18} /></div>}
                   <div style={{ minWidth: 0 }}>
                     <p style={{ fontSize: 12, color: 'var(--ink)', fontWeight: 700, lineHeight: 1.35, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical' }}>{editLinkPreview.title || 'Product image found'}</p>
-                    {editLinkPreview.description && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{editLinkPreview.description}</p>}
+                    {editLinkPreview.description && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{editLinkPreview.description}</p>}
                   </div>
                 </div>
               )}
               <button
                 onClick={saveEditWish}
                 disabled={!editText.trim()}
-                style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editText.trim() ? 'pointer' : 'default', background: editText.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editText.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editText.trim() ? 'pointer' : 'default', background: editText.trim() ? 'var(--btn-grad)' : 'var(--border)', color: editText.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
               >Save changes <Icon emoji="✓" size={15} /></button>
             </div>
           </div>
@@ -1374,7 +1374,7 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
                   : <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="🎵" size={16} /></div>}
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.title}</p>
-                  <p style={{ fontSize: 11, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {r.artist}{r.releaseDate && ` · ${formatReleaseDate(r.releaseDate)}`}
                   </p>
                 </div>
@@ -1391,7 +1391,7 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</p>
             <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{artist}</p>
             {(durationSeconds != null || releaseDate) && (
-              <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1 }}>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 1 }}>
                 {durationSeconds != null && formatDuration(durationSeconds)}
                 {durationSeconds != null && releaseDate && ' · '}
                 {releaseDate && formatReleaseDate(releaseDate)}
@@ -1458,7 +1458,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Our Playlist <Icon emoji="🎵" size={20} /></p>
-        <button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 12, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add</button>
+        <button onClick={() => setShowAdd(true)} style={{ background: 'var(--btn-grad)', color: 'white', border: 'none', borderRadius: 12, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add</button>
       </div>
 
       {/* Filter tabs */}
@@ -1484,11 +1484,11 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
               <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2 }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
-              {p.releaseDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Released {formatReleaseDate(p.releaseDate)}</p>}
+              {p.releaseDate && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Released {formatReleaseDate(p.releaseDate)}</p>}
               {p.note && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-              <p style={{ fontSize: 10, color: 'var(--ink-2)' }}>by {p.addedBy}</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>by {p.addedBy}</p>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button onClick={() => openEditSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
                 <button onClick={() => setConfirmDeleteSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
@@ -1518,7 +1518,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
                   ))}
                 </div>
               </div>
-              <button onClick={handleAdd} disabled={!title.trim() || addingSong} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: (title.trim() && !addingSong) ? 'pointer' : 'default', background: (title.trim() && !addingSong) ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: (title.trim() && !addingSong) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>{addingSong ? 'Adding...' : 'Add to playlist'}</button>
+              <button onClick={handleAdd} disabled={!title.trim() || addingSong} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: (title.trim() && !addingSong) ? 'pointer' : 'default', background: (title.trim() && !addingSong) ? 'var(--btn-grad)' : 'var(--border)', color: (title.trim() && !addingSong) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>{addingSong ? 'Adding...' : 'Add to playlist'}</button>
             </div>
           </div>
         </div>
@@ -1543,7 +1543,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
                   ))}
                 </div>
               </div>
-              <button onClick={handleSaveSong} disabled={!editTitle.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editTitle.trim() ? 'pointer' : 'default', background: editTitle.trim() ? 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))' : 'var(--border)', color: editTitle.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save changes</button>
+              <button onClick={handleSaveSong} disabled={!editTitle.trim()} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: editTitle.trim() ? 'pointer' : 'default', background: editTitle.trim() ? 'var(--btn-grad)' : 'var(--border)', color: editTitle.trim() ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>Save changes</button>
             </div>
           </div>
         </div>
@@ -1615,7 +1615,7 @@ function PhotoCollage({ onBack }: { onBack: () => void }) {
                 <button key={post.postId} onClick={() => navigate('post-detail', post.postId)} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '1', background: 'var(--sakura-light)', border: 'none', padding: 0, cursor: 'pointer' }}>
                   <FadeImage src={post.image} alt="" style={{ width: '100%', height: '100%' }} />
                   {post.count > 1 && (
-                    <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 9, fontWeight: 700, color: 'white', background: 'rgba(0,0,0,0.5)', padding: '1px 5px', borderRadius: 99 }}>1/{post.count}</span>
+                    <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 11, fontWeight: 700, color: 'white', background: 'rgba(0,0,0,0.5)', padding: '1px 5px', borderRadius: 99 }}>1/{post.count}</span>
                   )}
                   {i === 3 && rest > 0 && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(51,42,45,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1675,7 +1675,7 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Quote of the Day <Icon emoji="💬" size={20} /></p>
-        <button onClick={openAdd} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add quote</button>
+        <button onClick={openAdd} style={{ background: 'var(--btn-grad)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add quote</button>
       </div>
       <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>The Dashboard automatically switches to a different quote from this list each day.</p>
 
@@ -1708,7 +1708,7 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
               <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <textarea className="input-field" placeholder="VD: Our little story continues." value={text} onChange={e => setText(e.target.value)} rows={3} style={{ resize: 'none', marginBottom: 14 }} autoFocus />
-            <button onClick={handleSubmit} disabled={saving} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : (editing ? 'Save changes' : 'Add quote')}</button>
+            <button onClick={handleSubmit} disabled={saving} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : (editing ? 'Save changes' : 'Add quote')}</button>
           </div>
         </div>
       )}
@@ -1809,7 +1809,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', textDecoration: t.completed ? 'line-through' : 'none' }}>{t.title}</p>
-            <p style={{ fontSize: 11, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 2 }}>
+            <p style={{ fontSize: 12, color: overdue ? '#DC2626' : 'var(--ink-2)', fontWeight: overdue ? 700 : 400, marginTop: 2 }}>
               {meta.label}{t.owner === 'Both' && ' · Both'}{t.kind === 'once' && t.date && ` · ${formatShortDate(t.date)}${overdue ? ' — overdue' : ''}`}
             </p>
           </div>
@@ -1827,7 +1827,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>To Do List <Icon emoji="✅" size={20} /></p>
-        <button onClick={openAdd} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add task</button>
+        <button onClick={openAdd} style={{ background: 'var(--btn-grad)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add task</button>
       </div>
       <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>Recurring daily habits and one-off tasks, shared between you two. No notifications — just check back here.</p>
 
@@ -1851,7 +1851,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
         <>
           {dailyTodos.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Daily · {dailyTodos.filter(t => !t.completed).length} left today</p>
+              <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Daily · {dailyTodos.filter(t => !t.completed).length} left today</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {dailyTodos.map(t => renderTodoRow(t))}
               </div>
@@ -1859,7 +1859,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
           )}
           {onceOverdue.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Overdue · {onceOverdue.length}</p>
+              <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Overdue · {onceOverdue.length}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {onceOverdue.map(t => renderTodoRow(t, true))}
               </div>
@@ -1867,7 +1867,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
           )}
           {oncePending.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Upcoming · {oncePending.length}</p>
+              <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Upcoming · {oncePending.length}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {oncePending.map(t => renderTodoRow(t))}
               </div>
@@ -1875,7 +1875,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
           )}
           {onceDone.length > 0 && (
             <div>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Done · {onceDone.length}</p>
+              <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 10 }}>Done · {onceDone.length}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {onceDone.map(t => renderTodoRow(t))}
               </div>
@@ -1925,7 +1925,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
                 </div>
               </div>
               {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Add task'}</button>
+              <button onClick={handleSubmit} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15 }}>{editing ? 'Save changes' : 'Add task'}</button>
             </div>
           </div>
         </div>
@@ -2008,7 +2008,7 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Places We've Been <Icon emoji="🗺️" size={20} /></p>
-        <button onClick={openAdd} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add place</button>
+        <button onClick={openAdd} style={{ background: 'var(--btn-grad)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add place</button>
       </div>
       <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Save the places you've visited together.</p>
 
@@ -2025,7 +2025,7 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
               <div style={{ position: 'relative', width: '100%', paddingTop: '75%', background: 'var(--bg)' }}>
                 {p.images[0] && <FadeImage src={p.images[0]} alt={p.name} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />}
                 {p.images.length > 1 && (
-                  <span style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>1/{p.images.length}</span>
+                  <span style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>1/{p.images.length}</span>
                 )}
                 <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
                   <button onClick={e => { e.stopPropagation(); openEdit(p); }} title="Edit" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
@@ -2034,8 +2034,8 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
               </div>
               <div style={{ padding: '10px 12px' }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>{p.flag} {p.name}</p>
-                {p.visitedDate && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{formatShortDate(p.visitedDate)}</p>}
-                {p.memoryIds.length > 0 && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{p.memoryIds.length} memories</p>}
+                {p.visitedDate && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{formatShortDate(p.visitedDate)}</p>}
+                {p.memoryIds.length > 0 && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{p.memoryIds.length} memories</p>}
               </div>
             </div>
           ))}
@@ -2069,7 +2069,7 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
                   {images.map(url => (
                     <div key={url} style={{ position: 'relative', width: 72, height: 72, flexShrink: 0, borderRadius: 12, overflow: 'hidden', border: '2px solid var(--border)' }}>
                       <FadeImage src={url} alt="" style={{ width: '100%', height: '100%' }} />
-                      <button onClick={() => removeImage(url)} style={{ position: 'absolute', top: 3, right: 3, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 99, width: 18, height: 18, color: 'white', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+                      <button onClick={() => removeImage(url)} style={{ position: 'absolute', top: 3, right: 3, background: 'rgba(0,0,0,0.6)', border: 'none', borderRadius: 99, width: 18, height: 18, color: 'white', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
                     </div>
                   ))}
                   <button
@@ -2089,7 +2089,7 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
                 <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
               </div>
               {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-              <button onClick={handleSubmit} disabled={uploading} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', fontWeight: 700, fontSize: 15, opacity: uploading ? 0.6 : 1 }}>{editing ? 'Save changes' : 'Add place'}</button>
+              <button onClick={handleSubmit} disabled={uploading} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15, opacity: uploading ? 0.6 : 1 }}>{editing ? 'Save changes' : 'Add place'}</button>
             </div>
           </div>
         </div>

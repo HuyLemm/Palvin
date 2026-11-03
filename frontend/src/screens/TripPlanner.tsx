@@ -80,7 +80,7 @@ export default function TripPlanner({ onBack }: { onBack: () => void }) {
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={16} /> Back</button>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)' }}>Trip Planner</p>
-        <button onClick={() => setShowAdd(true)} style={{ background: 'linear-gradient(135deg, var(--sakura-accent), var(--sakura-deep))', color: 'white', border: 'none', borderRadius: 10, padding: '6px 11px', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Add trip</button>
+        <button onClick={() => setShowAdd(true)} style={{ background: 'var(--btn-grad)', color: 'white', border: 'none', borderRadius: 10, padding: '6px 11px', fontWeight: 700, fontSize: 12, cursor: 'pointer', flexShrink: 0 }}>+ Add trip</button>
       </div>
       <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Plan out a future trip — how many days, where to go each day, where to stay.</p>
 
@@ -122,28 +122,28 @@ export default function TripPlanner({ onBack }: { onBack: () => void }) {
                       </p>
                     </div>
                   </div>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: STATUS_COLORS[t.status], background: `${STATUS_COLORS[t.status]}18`, padding: '4px 10px', borderRadius: 99 }}>{STATUS_LABELS[t.status]}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: STATUS_COLORS[t.status], background: `${STATUS_COLORS[t.status]}18`, padding: '4px 10px', borderRadius: 99 }}>{STATUS_LABELS[t.status]}</span>
                 </div>
 
                 {t.status !== 'completed' && d !== null && d > 0 && (
                   <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Icon emoji="⏳" size={16} />
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)' }}>{d} days to go</span>
-                    <span style={{ fontSize: 11, color: 'var(--ink-2)' }}>· {t.startDate}</span>
+                    <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>· {t.startDate}</span>
                   </div>
                 )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
                   <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 10px' }}>
-                    <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2 }}>CHECKLIST</p>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{done}/{t.checklist.length} <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--ink-2)' }}>done</span></p>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2 }}>CHECKLIST</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{done}/{t.checklist.length} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-2)' }}>done</span></p>
                     <div style={{ height: 4, background: 'var(--border)', borderRadius: 99, marginTop: 4 }}>
                       <div style={{ width: `${pct}%`, height: '100%', background: '#5AC26A', borderRadius: 99 }} />
                     </div>
                   </div>
                   <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 10px' }}>
-                    <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2 }}>ESTIMATED SPEND</p>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{VNDRange(cost.min, cost.max)} <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--ink-2)' }}>/ {VND(t.budget)}</span></p>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2 }}>ESTIMATED SPEND</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{VNDRange(cost.min, cost.max)} <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-2)' }}>/ {VND(t.budget)}</span></p>
                     <div style={{ height: 4, background: 'var(--border)', borderRadius: 99, marginTop: 4 }}>
                       <div style={{ width: `${budgetPct}%`, height: '100%', background: budgetPct > 90 ? '#E8524A' : 'var(--sakura-accent)', borderRadius: 99 }} />
                     </div>
@@ -193,7 +193,7 @@ function ItineraryDayCard({ day, onAddPlace, onRemovePlace, onRemoveDay, locked 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', display: 'flex', alignItems: 'baseline', gap: 6 }}>
           Day {day.day}
-          {day.date && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--ink-2)' }}>{day.date}</span>}
+          {day.date && <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-2)' }}>{day.date}</span>}
         </p>
         {!locked && <button onClick={() => onRemoveDay(day.id)} title="Delete day" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', display: 'flex' }}><Icon emoji="🗑️" size={13} /></button>}
       </div>
@@ -204,10 +204,10 @@ function ItineraryDayCard({ day, onAddPlace, onRemovePlace, onRemoveDay, locked 
             <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, background: 'var(--white)', borderRadius: 8, padding: '8px 10px' }}>
               <div style={{ minWidth: 0 }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="📍" size={12} /> {p.name}</p>
-                {p.location && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{p.location}</p>}
+                {p.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{p.location}</p>}
                 {p.activity && <p style={{ fontSize: 12, color: 'var(--ink)', marginTop: 2 }}>{p.activity}</p>}
                 {(p.costMin != null || p.costMax != null) && (
-                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', marginTop: 3 }}>{VNDRange(p.costMin ?? p.costMax ?? 0, p.costMax ?? p.costMin ?? 0)}</p>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', marginTop: 3 }}>{VNDRange(p.costMin ?? p.costMax ?? 0, p.costMax ?? p.costMin ?? 0)}</p>
                 )}
               </div>
               {!locked && <button onClick={() => onRemovePlace(day.id, p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex' }}><Icon emoji="✕" size={11} /></button>}
@@ -220,12 +220,12 @@ function ItineraryDayCard({ day, onAddPlace, onRemovePlace, onRemoveDay, locked 
         <button onClick={() => setShowForm(true)} style={{ width: '100%', padding: '8px', borderRadius: 8, border: '1.5px dashed var(--sakura-accent)', background: 'none', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Add place</button>
       ) : (
         <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>New place</p>
+          <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>New place</p>
           <input className="input-field" placeholder="Place name" value={name} onChange={e => setName(e.target.value)} style={{ padding: '7px 10px', fontSize: 13 }} />
           <input className="input-field" placeholder="Address (optional)" value={location} onChange={e => setLocation(e.target.value)} style={{ padding: '7px 10px', fontSize: 13 }} />
           <input className="input-field" placeholder="What to do there (optional)" value={activity} onChange={e => setActivity(e.target.value)} style={{ padding: '7px 10px', fontSize: 13 }} />
           <div>
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Estimated cost (VND)</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Estimated cost (VND)</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <MoneyInput placeholder="From" value={costMin} onChange={setCostMin} style={{ flex: 1, padding: '7px 10px', fontSize: 13, minWidth: 0 }} />
               <span style={{ color: 'var(--ink-2)', fontSize: 12 }}>–</span>
@@ -257,7 +257,7 @@ function LodgingForm({ onAdd, hasDates }: { onAdd: (l: Omit<TripLodging, 'id'>) 
 
   return (
     <div style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>New lodging</p>
+      <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>New lodging</p>
       <input className="input-field" placeholder="Hotel / lodging name" value={name} onChange={e => setName(e.target.value)} style={{ padding: '8px 12px' }} />
       <input className="input-field" placeholder="Address (optional)" value={address} onChange={e => setAddress(e.target.value)} style={{ padding: '8px 12px' }} />
       {/* Only shown when the trip has real dates — a check-in/check-out
@@ -268,11 +268,11 @@ function LodgingForm({ onAdd, hasDates }: { onAdd: (l: Omit<TripLodging, 'id'>) 
       {hasDates && (
         <>
           <div>
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Check-in</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Check-in</p>
             <input className="input-field" type="date" value={checkIn} onChange={e => setCheckIn(e.target.value)} style={{ padding: '8px 12px', width: '100%' }} />
           </div>
           <div>
-            <p style={{ fontSize: 11, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Check-out</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 600, marginBottom: 4 }}>Check-out</p>
             <input className="input-field" type="date" value={checkOut} onChange={e => setCheckOut(e.target.value)} style={{ padding: '8px 12px', width: '100%' }} />
           </div>
         </>
@@ -390,11 +390,11 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
           <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 10px' }}>
-            <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2 }}>BUDGET</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2 }}>BUDGET</p>
             <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)' }}>{VND(t.budget)}</p>
           </div>
           <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 10px' }}>
-            <p style={{ fontSize: 10, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2 }}>ESTIMATED SPEND</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 700, marginBottom: 2 }}>ESTIMATED SPEND</p>
             <p style={{ fontSize: 14, fontWeight: 700, color: t.budget > 0 && cost.max > t.budget ? '#E8524A' : 'var(--sakura-deep)' }}>{VNDRange(cost.min, cost.max)}</p>
           </div>
         </div>
@@ -425,7 +425,7 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
                 <div style={{ minWidth: 0 }}>
                   <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🏨" size={13} /> {l.name}</p>
                   {l.address && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{l.address}</p>}
-                  {(l.checkIn || l.checkOut) && <p style={{ fontSize: 11, color: 'var(--ink-2)', marginTop: 2 }}>{l.checkIn ?? '?'} <Icon emoji="→" size={10} /> {l.checkOut ?? '?'}</p>}
+                  {(l.checkIn || l.checkOut) && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{l.checkIn ?? '?'} <Icon emoji="→" size={10} /> {l.checkOut ?? '?'}</p>}
                   {l.note && <p style={{ fontSize: 12, color: 'var(--ink)', marginTop: 4 }}>{l.note}</p>}
                 </div>
                 {!locked && <button onClick={() => removeLodging(l.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0 }}><Icon emoji="✕" size={13} /></button>}
