@@ -695,7 +695,7 @@ Vì `backend/` hiện rỗng, phần này phác thảo cách mapping `AppState` 
 | Câu hỏi mỗi ngày | Home, migration `0095` | Chỉ thấy câu trả lời của người kia sau khi đã trả lời (RLS) |
 | Đăng ký lịch | Calendar, migration `0096`, function `calendar-feed` | Link riêng (token), có thể đổi link mới |
 
-Các mục từ `0093` trở đi **chưa được áp dụng tự động**: cần `supabase db push` và deploy function. Khi chưa có, giao diện tự ẩn (`lib/serverFeatures.ts`, `isMissing`).
+Migration `0093`–`0096` và function `calendar-feed` đã được áp dụng lên production (11/2026). Lưu ý: production không lưu lịch sử migration (các bản cũ được dán tay), nên **không dùng `supabase db push`** — áp dụng từng file bằng `supabase db query --remote -f <file>` hoặc SQL editor. Nếu máy chủ thiếu một phần, giao diện tự ẩn mục đó (`lib/serverFeatures.ts`, `isMissing`).
 
 ### 12.4 Kiểm thử & CI
 - `pnpm test` (Vitest + jsdom): logic điều hướng, plural, màu chữ, ICS/CSV, nhập chi tiêu, gợi ý danh mục, thời tiết.
