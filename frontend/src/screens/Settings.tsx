@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { parseExpenseFile, splitNew, type ImportRow } from '../lib/importExpenses';
 import { downloadFile, toCSV } from '../lib/exportData';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
@@ -65,7 +66,7 @@ function StatusDot({ online }: { online: boolean }) {
 
 export default function Settings() {
   const {
-    currentUser, toast, updateProfilePhoto, state, screen, toggleDarkMode, updateQuickAction, logout,
+    currentUser, toast, updateProfilePhoto, state, screen, toggleDarkMode, updateQuickAction, logout, addExpense,
     isLinked, isAdmin, myProfile, partnerProfile, sentInvite, invitePartner, cancelSentInvite, pendingInvite, acceptInvite, rejectInvite,
     updateNotifyPrefs, setRelationshipStart, updateDisplayName, changePassword,
     addMoneyCategory, updateMoneyCategory, removeMoneyCategory,
@@ -93,6 +94,42 @@ export default function Settings() {
     setEditingQuickAction(null);
   };
   const [showLogout, setShowLogout] = useState(false);
+  // Import expenses from a file made by "Export expenses" (CSV) or the JSON backup.
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importPlan, setImportPlan] = useState<{ name: string; fresh: ImportRow[]; dupes: number } | null>(null);
+  const [importProgress, setImportProgress] = useState<{ done: number; total: number } | null>(null);
+  const IMPORT_LIMIT = 300;
+
+  const onImportFile = async (file: File | null) => {
+    if (!file) return;
+    try {
+      const rows = parseExpenseFile(file.name, await file.text());
+      const { fresh, dupes } = splitNew(rows, state.expenses);
+      if (rows.length === 0) { toast('No expenses found in that file', '⚠️'); return; }
+      setImportPlan({ name: file.name, fresh: fresh.slice(0, IMPORT_LIMIT), dupes: dupes + Math.max(0, fresh.length - IMPORT_LIMIT) });
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not read that file', '⚠️');
+    }
+  };
+
+  const runImport = async () => {
+    if (!importPlan) return;
+    const partnerName = partnerProfile?.displayName;
+    const todo = importPlan.fresh;
+    setImportProgress({ done: 0, total: todo.length });
+    for (let i = 0; i < todo.length; i++) {
+      const r = todo[i];
+      const who = r.paidBy.toLowerCase();
+      const paidBy = who === 'both' ? 'Both' : partnerName && who === partnerName.toLowerCase() ? partnerName : currentUser;
+      const cats = state.moneyCategories[r.type === 'income' ? 'income' : 'expense'];
+      const cat = cats.find(c => c.label.toLowerCase() === r.category.toLowerCase());
+      await addExpense({ title: r.title, category: r.category || cat?.label || 'Other', categoryEmoji: cat?.emoji ?? '💰', amount: r.amount, paidBy: paidBy as never, date: r.date, note: r.note, type: r.type });
+      setImportProgress({ done: i + 1, total: todo.length });
+    }
+    setImportProgress(null);
+    setImportPlan(null);
+    toast(`Imported ${todo.length} expense${todo.length === 1 ? '' : 's'}`, '🧾');
+  };
 
   // Push notifications — a real system notification even with Palvin fully
   // closed (chat messages only, for now). Off by default everywhere: only a
@@ -526,6 +563,25 @@ export default function Settings() {
             toast('Backup exported', '📦');
           }}
         />
+        <ExportRow emoji="📥" label="Import expenses (CSV or JSON)" hint="Only entries that are not already here get added — nothing is overwritten." icon="⬆️" onClick={() => importInputRef.current?.click()} />
+        <input ref={importInputRef} type="file" accept=".csv,.json,text/csv,application/json" style={{ display: 'none' }}
+          onChange={e => { void onImportFile(e.target.files?.[0] ?? null); e.target.value = ''; }} />
+        {importPlan && (
+          <div role="group" aria-label="Confirm import" style={{ padding: '12px 16px', background: 'var(--pink-glow)', borderBottom: '1px solid var(--border)' }}>
+            <p style={{ fontSize: 13, color: 'var(--ink)', marginBottom: 10 }}>
+              <strong>{importPlan.fresh.length}</strong> new expense{importPlan.fresh.length === 1 ? '' : 's'} in <em>{importPlan.name}</em>
+              {importPlan.dupes > 0 && <> ({importPlan.dupes} already here or skipped)</>}.
+            </p>
+            {importProgress
+              ? <p role="status" style={{ fontSize: 13, color: 'var(--ink-2)' }}>Importing {importProgress.done} / {importProgress.total}…</p>
+              : (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn-ghost" onClick={() => setImportPlan(null)} style={{ flex: 1, padding: '10px' }}>Cancel</button>
+                  <button className="btn-primary" disabled={importPlan.fresh.length === 0} onClick={() => void runImport()} style={{ flex: 2, padding: '10px', opacity: importPlan.fresh.length === 0 ? 0.5 : 1 }}>Import {importPlan.fresh.length}</button>
+                </div>
+              )}
+          </div>
+        )}
       </Section>
 
       {/* Private — only visible on this specific account */}
@@ -842,7 +898,7 @@ function ToggleRow({ emoji, label, value, onToggle }: { emoji: string; label: st
   );
 }
 
-function ExportRow({ emoji, label, hint, onClick }: { emoji: string; label: string; hint: string; onClick: () => void }) {
+function ExportRow({ emoji, label, hint, onClick, icon = '⬇️' }: { emoji: string; label: string; hint: string; onClick: () => void; icon?: string }) {
   return (
     <button onClick={onClick} className="settings-row" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
       <Icon emoji={emoji} size={20} style={{ flexShrink: 0 }} />
@@ -850,7 +906,7 @@ function ExportRow({ emoji, label, hint, onClick }: { emoji: string; label: stri
         <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{label}</span>
         <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{hint}</span>
       </span>
-      <Icon emoji="⬇️" size={16} style={{ color: 'var(--ink-2)', flexShrink: 0 }} />
+      <Icon emoji={icon} size={16} style={{ color: 'var(--ink-2)', flexShrink: 0 }} />
     </button>
   );
 }

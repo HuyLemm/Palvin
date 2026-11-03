@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import MapLink from '../components/MapLink';
 import { downloadFile, eventToICS } from '../lib/exportData';
 import { plural } from '../lib/plural';
 import { useApp } from '../context';
@@ -170,7 +171,7 @@ function EventCard({ event: ev, displayDate, onEdit, onDelete }: { event: Calend
           {ev.recurrence !== 'none' && <Icon emoji="🔁" size={12} style={{ opacity: 0.6 }} />}
         </p>
         <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}{ev.time ? ` · ${ev.time}` : ''}</p>
-        {ev.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={12} /> {ev.location}</p>}
+        {ev.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={12} /> {ev.location}<MapLink place={ev.location} /></p>}
         {ev.notes && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 4 }}>{ev.notes}</p>}
       </div>
       {!confirm

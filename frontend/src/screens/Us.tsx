@@ -1,4 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, Suspense, lazy } from 'react';
+import { spotifyUrl, youtubeMusicUrl } from '../lib/links';
+import MapLink from '../components/MapLink';
 import { plural } from '../lib/plural';
 import { useBackButton } from '../hooks/useBackButton';
 import { readableText } from '../lib/color';
@@ -29,6 +31,7 @@ import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem, St
 // imports of the same module (one here, one there) risked Vite bundling
 // the same code twice instead of sharing one async chunk.
 const FutureUs = lazy(() => import('./FutureUs'));
+const OurStory = lazy(() => import('./OurStory'));
 const Calendar = lazy(() => import('./Calendar'));
 const TripPlanner = lazy(() => import('./TripPlanner'));
 const TimeCapsule = lazy(() => import('./TimeCapsule'));
@@ -69,7 +72,7 @@ function SubScreenLoadingFallback() {
   );
 }
 
-type SubScreen = 'main' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'places' | 'todos';
+type SubScreen = 'main' | 'story' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'places' | 'todos';
 
 // Remembers which sub-screen was showing when the user drilled into a
 // separate top-level screen (e.g. a memory's detail page) from within Us —
@@ -208,6 +211,7 @@ export default function Us() {
   else if (sub === 'quotes')   content = <StoryQuotesScreen onBack={() => setSub('main')} />;
   else if (sub === 'places')   content = <OurPlacesScreen onBack={() => setSub('main')} />;
   else if (sub === 'todos')    content = <TodoScreen onBack={() => setSub('main')} />;
+  else if (sub === 'story')    content = <OurStory onBack={() => setSub('main')} onOpenTrips={() => setSub('trips')} />;
   else {
 
   // Main
@@ -311,6 +315,7 @@ export default function Us() {
         {
           title: 'Memories & keepsakes',
           items: [
+            { label: 'Our Story', emoji: '📖', key: 'story' as SubScreen, sub: 'Every milestone, memory and trip' },
             { label: 'Time Capsule', labelIcon: '💌', emoji: '⏳', key: 'capsule' as SubScreen, sub: `${state.capsules.length} ${plural(state.capsules.length, 'letter')}` },
             { label: 'Photo Collage', emoji: '🖼️', key: 'collage' as SubScreen, sub: 'A month-by-month recap from your memories' },
             { label: "Places We've Been", emoji: '🗺️', key: 'places' as SubScreen, sub: `${state.places.length} saved places` },
@@ -493,7 +498,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
                 </div>
               )}
             <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}</p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}<MapLink place={pl.name} /></p>
               {pl.note && <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 3 }}>{pl.note}</p>}
             </div>
             <button aria-label="Edit" onClick={() => openEditPlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
@@ -1513,6 +1518,11 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
               <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.title}</p>
               <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.artist}{p.durationSeconds != null && ` · ${formatDuration(p.durationSeconds)}`}</p>
               {p.releaseDate && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 1, opacity: 0.8 }}>Released {formatReleaseDate(p.releaseDate)}</p>}
+              <p style={{ fontSize: 12, marginTop: 3 }}>
+                <a href={spotifyUrl(p.title, p.artist)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--sakura-deep)', fontWeight: 700, textDecoration: 'none', padding: '4px 0', display: 'inline-block' }}>Spotify</a>
+                <span aria-hidden="true" style={{ color: 'var(--ink-2)', margin: '0 8px' }}>·</span>
+                <a href={youtubeMusicUrl(p.title, p.artist)} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--sakura-deep)', fontWeight: 700, textDecoration: 'none', padding: '4px 0', display: 'inline-block' }}>YouTube Music</a>
+              </p>
               {p.note && <p style={{ fontSize: 12, color: 'var(--sakura-accent)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="💬" size={11} /> {p.note}</p>}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
@@ -2061,7 +2071,7 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
                 </div>
               </div>
               <div style={{ padding: '10px 12px' }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>{p.flag} {p.name}</p>
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>{p.flag} {p.name}<MapLink place={p.name} /></p>
                 {p.visitedDate && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{formatShortDate(p.visitedDate)}</p>}
                 {p.memoryIds.length > 0 && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{p.memoryIds.length} memories</p>}
               </div>

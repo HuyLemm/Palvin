@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { spotifyUrl } from '../lib/links';
+import WeatherChip from '../components/WeatherChip';
 import { plural } from '../lib/plural';
 import { readableText } from '../lib/color';
 import { useApp } from '../context';
@@ -344,6 +346,10 @@ export default function Home() {
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.title}</p>
                   <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.artist}</p>
                 </div>
+                <a href={spotifyUrl(currentSong.title, currentSong.artist)} target="_blank" rel="noopener noreferrer" aria-label={`Open ${currentSong.title} in Spotify`} title="Open in Spotify"
+                  style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--white)', color: 'var(--sakura-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, textDecoration: 'none' }}>
+                  <Icon emoji="🎵" size={15} />
+                </a>
                 <button
                   onClick={nextSong}
                   disabled={playlistPool.length < 2}
@@ -452,6 +458,7 @@ export default function Home() {
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title}</p>
                     <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.time}{ev.location ? ` · ${ev.location}` : ''}</p>
+                    {ev.location && <WeatherChip place={ev.location} date={displayDate} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} />}
                   </div>
                 </div>
               );

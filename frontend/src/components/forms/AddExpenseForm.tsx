@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { suggestCategory } from '../../lib/suggestCategory';
 import { useApp } from '../../context';
 import AmountInput from '../AmountInput';
 import Icon from '../Icon';
@@ -10,6 +11,7 @@ export default function AddExpenseForm({ onClose }: { onClose: () => void }) {
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
+  const suggestion = suggestCategory(title, CATEGORIES);
   const [paidBy, setPaidBy] = useState<string>(currentUser);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState('');
@@ -34,6 +36,11 @@ export default function AddExpenseForm({ onClose }: { onClose: () => void }) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <input className="input-field" placeholder="What was it for?" value={title} onChange={e => setTitle(e.target.value)} />
+          {suggestion && suggestion.label !== category.label && (
+            <button type="button" onClick={() => setCategory(suggestion)} style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: -6, padding: '8px 12px', borderRadius: 99, border: '1.5px dashed var(--sakura)', background: 'var(--pink-glow)', color: 'var(--ink)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <Icon emoji={suggestion.emoji} size={14} /> Looks like {suggestion.label} — use it
+            </button>
+          )}
           <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
           <div>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Category</p>

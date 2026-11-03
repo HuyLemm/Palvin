@@ -1,4 +1,6 @@
 import { useRef, useState, type CSSProperties } from 'react';
+import WeatherChip from '../components/WeatherChip';
+import MapLink from '../components/MapLink';
 import { plural } from '../lib/plural';
 import { useUndoDelete } from '../hooks/useUndoDelete';
 import { useBackButton } from '../hooks/useBackButton';
@@ -362,9 +364,10 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
         <p style={{ marginBottom: 4 }}><Icon emoji={t.emoji} size={32} style={{ color: 'white' }} /></p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 27, color: 'white', lineHeight: 1.2, marginBottom: 2 }}>{t.title}</p>
         <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 4, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
-          <Icon emoji="📍" size={13} /> {t.destination}
+          <Icon emoji="📍" size={13} /> {t.destination}<MapLink place={t.destination} color="#fff" />
           {t.startDate && <> · {t.startDate} <Icon emoji="→" size={13} /> {t.endDate}</>}
         </p>
+        {t.startDate && <WeatherChip place={t.destination} date={t.startDate} style={{ color: 'rgba(255,255,255,0.85)', marginBottom: 4 }} />}
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginBottom: 8 }}>{t.startDate ? `${nDays} ${plural(nDays, 'day')} ${nDays - 1} ${plural(nDays - 1, 'night')}` : `~${nDays} days · dates not set yet`}</p>
         {t.status !== 'completed' && d !== null && d > 0 && (
           <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.2)', borderRadius: 99, padding: '4px 12px' }}>

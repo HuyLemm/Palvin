@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { suggestCategory } from '../../lib/suggestCategory';
 import { useApp } from '../../context';
 import { parseVietQR } from '../../lib/vietqr';
 import AmountInput from '../AmountInput';
@@ -19,6 +20,8 @@ export default function AddCoupleTransactionForm({ onClose }: { onClose: () => v
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
+  // Only expenses get a suggestion; income categories are different words.
+  const suggestion = type === 'expense' ? suggestCategory(title, CATEGORIES) : null;
   const [paidBy, setPaidBy] = useState<string>(currentUser);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState('');
@@ -103,6 +106,11 @@ export default function AddCoupleTransactionForm({ onClose }: { onClose: () => v
             <button onClick={() => switchType('income')} style={{ flex: 1, padding: '9px', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', background: type === 'income' ? 'rgba(90,194,106,0.12)' : 'var(--bg)', border: type === 'income' ? '1.5px solid #5AC26A' : '1.5px solid var(--border)', color: type === 'income' ? '#3D8A4E' : 'var(--ink-2)' }}>Income</button>
           </div>
           <input className="input-field" placeholder={type === 'income' ? "What's the income source?" : 'What was it for?'} value={title} onChange={e => setTitle(e.target.value)} />
+          {suggestion && suggestion.label !== category.label && (
+            <button type="button" onClick={() => setCategory(suggestion)} style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: -6, padding: '8px 12px', borderRadius: 99, border: '1.5px dashed var(--sakura)', background: 'var(--pink-glow)', color: 'var(--ink)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <Icon emoji={suggestion.emoji} size={14} /> Looks like {suggestion.label} — use it
+            </button>
+          )}
           <AmountInput placeholder="Amount (VND)" value={amount} onChange={setAmount} />
           <div>
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Category</p>
