@@ -5,6 +5,7 @@ import { usePortalPanel } from '../hooks/usePortalPanel';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
 import FadeImage from '../components/FadeImage';
+import { consumeCommentFocus, hasPendingCommentFocus } from '../lib/pendingComment';
 
 function BookmarkIcon({ filled }: { filled: boolean }) {
   return (
@@ -15,7 +16,7 @@ function BookmarkIcon({ filled }: { filled: boolean }) {
 }
 
 export default function PostDetail({ id }: { id?: string } = {}) {
-  const { state, screen, selectedId, goBack, toggleLike, toggleSave, addComment, currentUser } = useApp();
+  const { state, screen, selectedId, navSeq, goBack, toggleLike, toggleSave, addComment, currentUser } = useApp();
   const post = state.posts.find(p => p.id === (id ?? selectedId));
   const [text, setText] = useState('');
   const [imgIndex, setImgIndex] = useState(0);
@@ -28,6 +29,22 @@ export default function PostDetail({ id }: { id?: string } = {}) {
   const commentsEndRef = useRef<HTMLDivElement>(null);
   const pendingScrollRef = useRef(false);
   const prevCommentsLenRef = useRef(post?.comments.length ?? 0);
+
+  // Arrived via the feed's comment button: open the composer and bring the
+  // comments into view (once — see lib/pendingComment.ts).
+  useEffect(() => {
+    const pid = id ?? selectedId;
+    // Peek first, consume when the timer fires: a React StrictMode double-run of this
+    // effect would otherwise eat the request and cancel its own timer.
+    if (screen !== 'post-detail' || !pid || selectedId !== pid || !hasPendingCommentFocus(pid)) return;
+    const t = window.setTimeout(() => {
+      if (!consumeCommentFocus(pid)) return;
+      openComment();
+      commentsEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 260);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, selectedId, navSeq]);
 
   // Scrolls the new comment into view once it actually lands — addComment
   // awaits a network round trip and refetches before post.comments grows,

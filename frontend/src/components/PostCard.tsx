@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { burstHearts, haptic } from '../lib/effects';
+import { requestCommentFocus } from '../lib/pendingComment';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context';
-import { usePortalPanel } from '../hooks/usePortalPanel';
 import Avatar from './Avatar';
 import Icon from './Icon';
 import FadeImage from './FadeImage';
@@ -30,10 +30,7 @@ function MoreIcon() {
 }
 
 export default function PostCard({ post, reactions }: { post: Post; reactions: Record<string, { count: number; reacted: boolean }> }) {
-  const { toggleLike, toggleSave, addComment, addReaction, navigate, currentUser, isAdmin, deletePost, screen } = useApp();
-  const { open: commentingId, closing: commentClosing, show: openComment, hide: closeComment } = usePortalPanel(screen);
-  const toggleComment = () => ((commentingId && !commentClosing) ? closeComment(200) : openComment());
-  const [commentText, setCommentText] = useState('');
+  const { toggleLike, toggleSave, addReaction, navigate, currentUser, isAdmin, deletePost, screen } = useApp();
   const [likedAnim, setLikedAnim] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
   const [imgIndex, setImgIndex] = useState(0);
@@ -54,12 +51,8 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
     }
   };
 
-  const handleComment = () => {
-    if (!commentText.trim()) return;
-    addComment(post.id, commentText);
-    setCommentText('');
-    closeComment(200);
-  };
+  // Comments live on the post's own screen: tapping the bubble opens it with the composer ready.
+  const openComments = () => { requestCommentFocus(post.id); navigate('post-detail', post.id); };
 
   const handleReaction = (emoji: string) => {
     addReaction(post.id, emoji);
@@ -133,7 +126,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
           </button>
 
           {/* Comment */}
-          <button onClick={toggleComment} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: 'var(--ink-2)', padding: 0 }}>
+          <button onClick={openComments} aria-label={`Comments (${post.comments.length})`} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: 'var(--ink-2)', padding: 0 }}>
             <Icon emoji="💬" size={18} /> {post.comments.length}
           </button>
 
@@ -195,35 +188,6 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
           </div>
         )}
 
-        {/* Comment input — portaled to a fixed bar riding just above the
-            keyboard (see below), Facebook-style, instead of an inline field
-            that scrolls away with the card and needs Safari's own "scroll
-            the focused input into view" to even stay visible. */}
-        {commentingId && createPortal(
-          <div style={{
-            position: 'fixed', left: 0, right: 0, top: 'var(--kb-vh, 100dvh)',
-            zIndex: 250, background: 'var(--card)', borderTop: '1px solid var(--border)',
-            display: 'flex', gap: 8, alignItems: 'center', padding: '10px 14px',
-            paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
-            animation: commentClosing
-              ? 'commentBarOut 0.2s cubic-bezier(0.32,0.72,0,1) forwards'
-              : 'commentBarIn 0.25s cubic-bezier(0.32,0.72,0,1) forwards',
-          }}>
-            <Avatar user={currentUser} size={28} />
-            <input
-              className="input-field"
-              placeholder="Write a comment…"
-              value={commentText}
-              onChange={e => setCommentText(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleComment(); }}
-              autoFocus
-              style={{ flex: 1, padding: '8px 12px', fontSize: 13 }}
-            />
-            <button onClick={handleComment} style={{ background: 'var(--sakura-accent)', color: 'white', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>Post</button>
-            <button aria-label="Close" onClick={() => closeComment(200)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 }}><Icon emoji="✕" size={16} /></button>
-          </div>,
-          document.body
-        )}
       </div>
     </div>
 
