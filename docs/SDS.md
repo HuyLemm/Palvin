@@ -124,7 +124,7 @@ const goBack = () => setStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev
 ```
 - `screen` hiện tại = phần tử cuối stack; `selectedId` = `id` của phần tử đó (dùng để tra cứu bản ghi, VD `memory-detail`).
 - Không có giới hạn độ sâu, không loại bỏ trùng lặp — có thể push cùng 1 `screen` nhiều lần liên tiếp (VD Home → Calendar → Home → Calendar... vẫn hợp lệ, mỗi lần thêm 1 frame).
-- Không đồng bộ với URL trình duyệt — nút Back vật lý của trình duyệt **không hoạt động** với ngăn xếp này (không dùng `history.pushState`).
+- Ngăn xếp được đồng bộ với lịch sử trình duyệt qua `navHistory.ts` (xem §12.1): nút Back của điện thoại/trình duyệt lùi 1 màn trong app thay vì thoát app. (Không có URL riêng cho từng màn — không hỗ trợ deep link.)
 
 `App.tsx`'s `ScreenRouter` là 1 `switch` thuần map `screen` → component:
 
@@ -148,7 +148,7 @@ const goBack = () => setStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev
 → `MonthlyStats.tsx` được `import` ở đầu `App.tsx` nhưng **không xuất hiện trong bất kỳ nhánh `switch` nào** → dead code đã import (xem Chương 10).
 
 ### 3.2 Bottom Tab & Header (App.tsx)
-- 5 tab chính cố định (`MAIN_TABS = ['home','feed','stats','us','settings']`), tab thứ 5 hiển thị Avatar thay icon.
+- Thanh điều hướng dưới có 4 tab (Home, Feed, Money, Us) đối xứng quanh nút "+" ở giữa; **Settings nằm ở header** dưới dạng nút avatar (`MAIN_TABS` vẫn gồm `'settings'`). Mỗi tab có nhãn chữ; chấm đỏ nhỏ báo thông báo chưa đọc trỏ vào tab Feed/Money/Us.
 - Header hiển thị nút back `‹` khi `screen` không thuộc `MAIN_TABS` và khác `'home'` (biến `isSubScreen`).
 - Nút search/notification trong header luôn gọi `navigate('search')` / `navigate('notifications')` — có mặt ở **mọi màn hình**, không phụ thuộc tab hiện tại.
 
@@ -653,3 +653,52 @@ Vì `backend/` hiện rỗng, phần này phác thảo cách mapping `AppState` 
 | `postReactions` | addReaction | Feed |
 | `darkMode` | toggleDarkMode | Settings |
 | `favPlaces` | addFavPlace, removeFavPlace | Us→Favourites, Home |
+
+---
+
+## 12. Cập nhật 11/2026 (so với nội dung các chương trên)
+
+> Các chương trước mô tả bản prototype ban đầu; mục này ghi những gì đã thay đổi trong mã hiện tại. Khi mâu thuẫn, mục này và mã nguồn là chuẩn.
+
+### 12.1 Điều hướng & nút Back (`navHistory.ts`, `hooks/useBackButton.ts`)
+- Mỗi "tầng" người dùng có thể thoát ra được thêm 1 mục vào `history`: màn trong `stack` (kind `screen`) và màn con trong state cục bộ như Us/TripPlanner (kind `handler`, đăng ký bằng `useBackButton`).
+- Đóng bằng UI của app thì mục tương ứng bị đánh dấu `dead` và bị bỏ qua lặng lẽ ở lần Back kế tiếp. Hộp thoại (`.kb-modal-overlay`, `.bottom-sheet`) không có mục riêng: Back chỉ đóng hộp thoại trên cùng rồi đẩy lại mục lịch sử.
+- Có unit test (`navHistory.test.ts`).
+
+### 12.2 Accessibility & UX hạ tầng
+- `a11y.ts`: lớp "vá" toàn cục (role/tabindex + Enter/Space cho phần tử bấm được nhưng không phải `<button>`, nhãn cho ô nhập, dialog + khoá Tab, đồng bộ `theme-color`). Mục tiêu dài hạn: gắn nhãn trực tiếp trong từng component.
+- Phần shell (`header`, `main`, `nav`) đặt `inert` khi chưa đăng nhập.
+- Token: `--btn-grad`, `--fill-strong`, `--badge-bg`, `--green`, `--area*` (màu nhấn theo khu vực: Money = mint, Us = lavender; gán bằng `data-area` trên `.phone-screen`). Số dùng chữ số "lining" toàn app; ô nhập 16px trên thiết bị cảm ứng.
+- `useUndoDelete`: xoá có Undo 5 giây (thông báo, mục tiêu Future Us) và `offer()` cho gỡ địa điểm/chỗ ở trong Trip Planner.
+- Safe-area: header dùng `env(safe-area-inset-top)`; điện thoại nằm ngang không còn khung iPhone giả.
+
+### 12.3 Tính năng thêm
+| Tính năng | Vị trí | Ghi chú |
+|---|---|---|
+| Bình luận | Feed → màn Post | Bấm bong bóng chuyển sang màn chi tiết và mở sẵn ô nhập (`lib/pendingComment.ts`) |
+| Mood một chạm | Home | Hàng 8 emoji khi chưa đặt mood hôm nay |
+| Tìm nhanh trong Us | `Us.tsx` | Lọc 14 mục theo tên/mô tả |
+| Our Story | `screens/OurStory.tsx` | Dòng thời gian từ ngày bắt đầu, mốc 100 ngày, kỷ niệm, chuyến đi, sự kiện kỷ niệm |
+| Liên kết ngoài | `lib/links.ts`, `MapLink` | Google Maps, Spotify, YouTube Music (chỉ mở link, không gửi dữ liệu) |
+| Thời tiết | `lib/weather.ts`, `WeatherChip` | Open-Meteo (không cần khoá), chỉ trong 16 ngày, chỉ khớp thành phố/vùng; có công tắc tắt trong Settings |
+| Gợi ý danh mục chi tiêu | `lib/suggestCategory.ts` | Chỉ gợi ý, không tự đổi |
+| Xuất / nhập dữ liệu | Settings → Your data | CSV + JSON (không gồm Private Stash); nhập có xem trước, bỏ trùng, tối đa 300 dòng |
+| Thêm vào lịch điện thoại | Calendar | File `.ics` (`lib/exportData.ts`) |
+| Chia sẻ kỷ niệm | MemoryDetail | Thẻ ảnh 4:5 qua Web Share, dự phòng tải PNG (`lib/shareCard.ts`) |
+
+### 12.3b Khoá ứng dụng & tính năng cần máy chủ
+| Tính năng | Vị trí | Ghi chú |
+|---|---|---|
+| Khoá ứng dụng | Settings → Privacy, `lib/appLock.ts`, `LockScreen` | PIN (PBKDF2, khoá tạm sau 5 lần sai) + Face ID/vân tay qua WebAuthn; chỉ khoá trên thiết bị, không gửi lên máy chủ |
+| Nhắc sự kiện & mốc yêu | migration `0093` | pg_cron + pg_net gửi push |
+| Ngân sách tháng | Money → Stats, migration `0094` | Cảnh báo 80% / 100% |
+| Câu hỏi mỗi ngày | Home, migration `0095` | Chỉ thấy câu trả lời của người kia sau khi đã trả lời (RLS) |
+| Đăng ký lịch | Calendar, migration `0096`, function `calendar-feed` | Link riêng (token), có thể đổi link mới |
+| Tổng kết tháng AI | Money → Stats, function `monthly-recap` | Chỉ gửi tổng số liệu tháng, cần secret `ANTHROPIC_API_KEY` |
+
+Các mục từ `0093` trở đi **chưa được áp dụng tự động**: cần `supabase db push` và deploy function. Khi chưa có, giao diện tự ẩn (`lib/serverFeatures.ts`, `isMissing`).
+
+### 12.4 Kiểm thử & CI
+- `pnpm test` (Vitest + jsdom): logic điều hướng, plural, màu chữ, ICS/CSV, nhập chi tiêu, gợi ý danh mục, thời tiết.
+- `pnpm test:e2e` (Playwright, Chrome hệ thống): smoke test dùng tài khoản thử qua `PALVIN_E2E_USER/PASS`; **chặn mọi request ghi tới Supabase**.
+- `.github/workflows/ci.yml`: `tsc`, `vitest`, `build` cho mỗi push/PR; job e2e chỉ chạy khi đặt biến repo `E2E_ENABLED=true` và hai secret trên.

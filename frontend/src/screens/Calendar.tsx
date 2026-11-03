@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import CalendarFeedLink from '../components/CalendarFeedLink';
 import MapLink from '../components/MapLink';
 import { downloadFile, eventToICS } from '../lib/exportData';
 import { plural } from '../lib/plural';
@@ -25,6 +26,7 @@ export default function Calendar() {
           </button>
         ))}
       </div>
+      {tab === 'special' && <CalendarFeedLink />}
       {tab === 'special' ? <SpecialDatesTab /> : <CycleTrackerTab />}
     </div>
   );

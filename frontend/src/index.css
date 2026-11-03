@@ -169,11 +169,11 @@ html, body {
      wifi/battery) — padding-top on the header itself grows the header, it
      doesn't shrink the flex column's total height like padding on
      .phone-screen did (which left a gap at the bottom instead). */
-  .app-header { padding-top: 4rem !important; }
+  .app-header { padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 12px)) !important; }
   /* AuthScreen (welcome/login/register/check-email) renders as its own
      full-screen overlay covering .app-header entirely, so it needs the same
      top offset applied directly — .app-header's padding never reaches it. */
-  .auth-slide { padding-top: 4rem !important; }
+  .auth-slide { padding-top: max(24px, calc(env(safe-area-inset-top, 0px) + 24px)) !important; }
   .app-bottom-nav { padding-bottom: calc(3px + env(safe-area-inset-bottom)) !important; }
   /* Chat's input bar only — independent from .app-bottom-nav above so it can
      be tuned separately for how it sits above the keyboard. Fill in the

@@ -1,4 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type JSX } from 'react';
+import { useAppLock } from './hooks/useAppLock';
+import LockScreen from './components/LockScreen';
 import { useApp } from './context';
 import OfflineBanner from './components/OfflineBanner';
 import Toast from './components/Toast';
@@ -119,7 +121,7 @@ const NAV_TABS = [
 
 const SCREEN_TITLES: Record<string, string> = {
   home: 'PALVIN', feed: 'Feed', money: 'Our Money', us: 'Us',
-  memories: 'Memories', 'love-notes': 'For You', calendar: 'Our Calendar',
+  memories: 'Memories', 'love-notes': 'Love Notes', calendar: 'Our Calendar',
   'future-us': 'Future Us', search: 'Search', notifications: 'Notifications',
   settings: 'Settings', stats: 'Our Money', bills: 'Bills', goals: 'Savings Goals',
   wishlist: 'Gift Wishlist',
@@ -275,6 +277,7 @@ export default function App() {
   // so re-launching the home-screen icon after the OS killed the tab no
   // longer means sitting through the full boot sequence again every reopen.
   const stillResolvingSession = !hydratedFromCache && (authLoading || (authed && !profileLoaded) || (authed && !isLinkedSettled) || (authed && isLinked && (!dataReady || !imagesReady)));
+  const { locked, unlock } = useAppLock(authed);
 
   // Keeps Chat mounted (just hidden) once opened, same reasoning as
   // ScreenRouter's KEEP_ALIVE_SCREENS — reopening it shouldn't re-fetch or
@@ -631,6 +634,8 @@ export default function App() {
               </div>
             )}
 
+            {locked && <LockScreen onUnlock={unlock} />}
+
             {/* Auth guard */}
             {!stillResolvingSession && !authed && (
               <div style={{ position: 'absolute', inset: 0, zIndex: 100, background: 'var(--bg)', display: 'flex', flexDirection: 'column' }}>
@@ -639,7 +644,7 @@ export default function App() {
             )}
 
             {/* App Header */}
-            <header className="app-header" inert={!authed} style={{
+            <header className="app-header" inert={!authed || locked} style={{
               background: 'var(--header-bg)',
               backdropFilter: 'blur(12px)',
               borderBottom: '2px solid var(--area-line, var(--border))',
@@ -664,11 +669,11 @@ export default function App() {
                   </h1>
                 )}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button onClick={() => handleTabClick('search')} aria-label="Search" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={() => handleTabClick('search')} aria-label="Search" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)' }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 </button>
-                <button onClick={() => handleTabClick('notifications')} aria-label={unreadNotifs > 0 ? `Notifications, ${unreadNotifs} unread` : 'Notifications'} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
+                <button onClick={() => handleTabClick('notifications')} aria-label={unreadNotifs > 0 ? `Notifications, ${unreadNotifs} unread` : 'Notifications'} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
                   {unreadNotifs > 0 && (
                     <div key={unreadNotifs} className="animate-heart-pop" style={{
@@ -680,7 +685,7 @@ export default function App() {
                     </div>
                   )}
                 </button>
-                <button onClick={() => handleTabClick('chat')} aria-label={state.unreadChatCount > 0 ? `Chat, ${state.unreadChatCount} unread` : 'Chat'} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
+                <button onClick={() => handleTabClick('chat')} aria-label={state.unreadChatCount > 0 ? `Chat, ${state.unreadChatCount} unread` : 'Chat'} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)', position: 'relative' }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
                   {state.unreadChatCount > 0 && (
                     <div key={state.unreadChatCount} className="animate-heart-pop" style={{
@@ -692,11 +697,15 @@ export default function App() {
                     </div>
                   )}
                 </button>
+                <button onClick={() => handleTabClick('settings')} aria-label="Settings" aria-current={activeTab === 'settings' ? 'page' : undefined}
+                  style={{ background: 'var(--bg)', border: activeTab === 'settings' ? '2px solid var(--sakura-deep)' : '1px solid var(--border)', borderRadius: 12, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, overflow: 'hidden' }}>
+                  <Avatar user={currentUser} size={30} />
+                </button>
               </div>
             </header>
 
             {/* Scroll area */}
-            <main ref={mainRef} inert={!authed} style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 96px' }}>
+            <main ref={mainRef} inert={!authed || locked} style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 96px' }}>
               {/* ScreenRouter keeps every visited screen mounted (just
                   hidden) internally — see its own per-key .screen-transition
                   wrapper — so this can't have a key={screen} of its own
@@ -707,7 +716,7 @@ export default function App() {
             </main>
 
             {/* Bottom Nav */}
-            <nav aria-label="Main" inert={!authed} className="app-bottom-nav" style={{
+            <nav aria-label="Main" inert={!authed || locked} className="app-bottom-nav" style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
               background: 'var(--navbar-bg)',
               backdropFilter: 'blur(16px)',
@@ -749,15 +758,6 @@ export default function App() {
                 <NavItem key={tab.key} Icon={tab.Icon} active={activeTab === tab.key} onClick={() => handleTabClick(tab.key)} label={tab.label} dot={tabDot(tab.key)} accent={TAB_ACCENT[tab.key]} />
               ))}
 
-              {/* Settings = user avatar */}
-              <button onClick={() => handleTabClick('settings')} aria-label="Settings" aria-current={activeTab === 'settings' ? 'page' : undefined} style={{
-                flex: 1, minHeight: 48, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', justifyContent: 'center',
-                background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0',
-                color: activeTab === 'settings' ? 'var(--sakura-deep)' : 'var(--ink-2)',
-              }}>
-                <Avatar user={currentUser} size={24} />
-                <span style={{ fontSize: 12, fontWeight: activeTab === 'settings' ? 700 : 500, lineHeight: 1 }}>Settings</span>
-              </button>
             </nav>
 
             {/* Chat — full-screen overlay (own header + input bar), like an

@@ -31,3 +31,7 @@ Thumbs.db
 # Misc
 *-debug.log*
 .tmp-*
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/

@@ -227,7 +227,7 @@ export default function Us() {
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>{currentUser}{partnerProfile && <><Icon emoji="❤️" size={18} /> {partnerProfile.displayName}</>}</p>
         <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 8 }}>
           {relationshipStart
-            ? `Together since ${relationshipStart.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+            ? `Together since ${relationshipStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
             : <button onClick={() => navigate('settings')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', fontSize: 14, textDecoration: 'underline' }}><Icon emoji="💕" size={14} /> Set your relationship start date</button>}
         </p>
         <div style={{ display: 'inline-flex', gap: 12, background: 'var(--white)', borderRadius: 12, padding: '8px 16px', border: '1px solid var(--border)' }}>

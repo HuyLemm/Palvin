@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { spotifyUrl } from '../lib/links';
+import DailyQuestionCard from '../components/DailyQuestionCard';
 import WeatherChip from '../components/WeatherChip';
 import { plural } from '../lib/plural';
 import { readableText } from '../lib/color';
@@ -194,11 +194,6 @@ export default function Home() {
     }, 220);
   };
 
-  const cycleFilter = () => {
-    const order = ['all', currentUser, ...(partnerName ? [partnerName] : [])];
-    setPlaylistFilter(order[(order.indexOf(playlistFilter) + 1) % order.length]);
-  };
-
   const handleHug = (e: React.MouseEvent<HTMLElement>) => {
     burstHearts(e.currentTarget);
     haptic(18);
@@ -314,8 +309,19 @@ export default function Home() {
         {/* Spinning Vinyl Disk */}
         {state.playlist.length > 0 && (
           <div>
+            {/* Mine / partner's / All — which pool of songs the widget draws from */}
+            <div style={{ display: 'flex', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
+              {[
+                { k: 'all', label: 'All' },
+                { k: currentUser, label: currentUser },
+                ...(partnerName ? [{ k: partnerName, label: partnerName }] : []),
+              ].map(f => (
+                <button key={f.k} onClick={() => setPlaylistFilter(f.k)} style={{ padding: '3px 10px', borderRadius: 99, border: 'none', background: playlistFilter === f.k ? 'var(--sakura-accent)' : 'var(--glass)', color: playlistFilter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>{f.label}</button>
+              ))}
+            </div>
+
             {currentSong ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--glass)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '10px 20px', border: isPlaying ? '1px solid rgba(201,95,124,0.5)' : '1px solid rgba(243,166,185,0.3)', boxShadow: isPlaying ? '0 0 0 4px rgba(243,166,185,0.18)' : 'none', transition: 'box-shadow 0.3s, border-color 0.3s' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--glass)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '10px 14px', border: isPlaying ? '1px solid rgba(201,95,124,0.5)' : '1px solid rgba(243,166,185,0.3)', boxShadow: isPlaying ? '0 0 0 4px rgba(243,166,185,0.18)' : 'none', transition: 'box-shadow 0.3s, border-color 0.3s' }}>
                 <style>{`
                   @keyframes spin-vinyl { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
                   @keyframes vinyl-glow { 0%, 100% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 0 rgba(243,166,185,0.5); } 50% { box-shadow: 0 3px 14px rgba(0,0,0,0.3), 0 0 0 8px rgba(243,166,185,0); } }
@@ -332,7 +338,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-                  <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', overflow: 'hidden' }}>
                     <Icon emoji="♪" size={11} /> Our Playlist
                     {isPlaying && (
                       <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2, height: 15, marginLeft: 2 }}>
@@ -341,15 +347,10 @@ export default function Home() {
                         <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-3 0.9s ease-in-out infinite' }} />
                       </span>
                     )}
-                    <button onClick={cycleFilter} aria-label={`Showing ${playlistFilter === 'all' ? 'everyone' : playlistFilter}'s songs. Tap to change.`} style={{ marginLeft: 'auto', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: 99, padding: '2px 10px', color: 'var(--ink-2)', fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'none', letterSpacing: 0 }}>{playlistFilter === 'all' ? 'All' : playlistFilter}</button>
                   </p>
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.title}</p>
                   <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.artist}</p>
                 </div>
-                <a href={spotifyUrl(currentSong.title, currentSong.artist)} target="_blank" rel="noopener noreferrer" aria-label={`Open ${currentSong.title} in Spotify`} title="Open in Spotify"
-                  style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--white)', color: 'var(--sakura-deep)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, textDecoration: 'none' }}>
-                  <Icon emoji="🎵" size={15} />
-                </a>
                 <button
                   onClick={nextSong}
                   disabled={playlistPool.length < 2}
@@ -548,7 +549,7 @@ export default function Home() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
         {[
           { emoji: '🗺️', value: state.places.length, label: 'Places', target: 'places' },
-          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes', target: 'capsule' },
+          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length, label: 'Love notes', target: 'love-notes' },
           { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist', target: 'wishlist' },
           { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude', target: 'gratitude' },
         ].map(s => (
@@ -614,6 +615,8 @@ export default function Home() {
           <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Your 7-day mood chart will appear after a couple of days of check-ins.</p>
         ))}
       </div>
+
+      <DailyQuestionCard />
 
       {/* Recent Moments — cover photos from recent posts, same source Photo
           Collage (Us tab) draws from. */}

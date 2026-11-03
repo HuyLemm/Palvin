@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
+import AppLockSettings from '../components/AppLockSettings';
+import { setWeatherEnabled, weatherEnabled } from '../lib/prefs';
 import { parseExpenseFile, splitNew, type ImportRow } from '../lib/importExpenses';
 import { downloadFile, toCSV } from '../lib/exportData';
 import { useApp } from '../context';
@@ -94,6 +96,7 @@ export default function Settings() {
     setEditingQuickAction(null);
   };
   const [showLogout, setShowLogout] = useState(false);
+  const [weatherOn, setWeatherOn] = useState(weatherEnabled);
   // Import expenses from a file made by "Export expenses" (CSV) or the JSON backup.
   const importInputRef = useRef<HTMLInputElement>(null);
   const [importPlan, setImportPlan] = useState<{ name: string; fresh: ImportRow[]; dupes: number } | null>(null);
@@ -484,7 +487,7 @@ export default function Settings() {
             emoji="📅"
             label="Anniversary"
             value={state.relationshipStart
-              ? new Date(state.relationshipStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+              ? new Date(state.relationshipStart + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
               : 'Not set'}
             onEdit={() => { setAnniversaryDraft(state.relationshipStart ?? ''); setEditingAnniversary(true); }}
           />
@@ -505,6 +508,7 @@ export default function Settings() {
       {/* Appearance */}
       <Section title="Appearance">
         <ToggleRow emoji="🌙" label="Dark mode" value={darkMode} onToggle={toggleDarkMode} />
+        <ToggleRow emoji="⛅" label="Weather on events & trips" value={weatherOn} onToggle={() => { setWeatherEnabled(!weatherOn); setWeatherOn(!weatherOn); }} />
       </Section>
 
       {/* Dashboard's quick-action buttons — personal to this account, doesn't
@@ -540,6 +544,10 @@ export default function Settings() {
           />
         )}
         <SettingRow emoji="🔒" label="Password" value="••••••••" onEdit={openPasswordModal} />
+      </Section>
+
+      <Section title="Privacy">
+        <AppLockSettings userName={currentUser} toast={toast} />
       </Section>
 
       <Section title="Your data">
@@ -892,7 +900,7 @@ function ToggleRow({ emoji, label, value, onToggle }: { emoji: string; label: st
       <Icon emoji={emoji} size={20} style={{ flexShrink: 0 }} />
       <p style={{ flex: 1, fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{label}</p>
       <button role="switch" aria-checked={value} aria-label={label} onClick={onToggle} style={{ width: 48, height: 27, borderRadius: 99, border: 'none', background: value ? 'var(--sakura-accent)' : 'var(--border)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-        <div style={{ position: 'absolute', top: 3, left: value ? 24 : 3, width: 21, height: 21, borderRadius: '50%', background: 'var(--white)', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }} />
+        <div style={{ position: 'absolute', top: 3, left: value ? 24 : 3, width: 21, height: 21, borderRadius: '50%', background: '#FFFFFF', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }} />
       </button>
     </div>
   );

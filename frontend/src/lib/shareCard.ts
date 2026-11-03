@@ -46,6 +46,12 @@ export async function renderMemoryCard(m: ShareableMemory): Promise<Blob> {
   ctx.fillStyle = '#6F5F65';
   ctx.font = '500 36px Nunito, system-ui, sans-serif';
   ctx.fillText([m.date, m.location].filter(Boolean).join('  ·  '), 60, y2 + 20);
+  if (m.description) {
+    ctx.fillStyle = '#332A2D';
+    ctx.font = 'italic 400 34px "Playfair Display", Georgia, serif';
+    const d = wrap(ctx, m.description, W - 120, 3);
+    d.forEach((l, i) => ctx.fillText(i === 2 && m.description!.length > d.join(' ').length + 2 ? l.replace(/\s*\S*$/, '…') : l, 60, y2 + 90 + i * 48));
+  }
   ctx.fillStyle = '#A83F5F';
   ctx.font = '700 34px "Playfair Display", Georgia, serif';
   ctx.fillText('PALVIN', 60, H - 60);

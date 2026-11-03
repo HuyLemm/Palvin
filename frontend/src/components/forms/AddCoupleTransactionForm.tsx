@@ -54,7 +54,7 @@ export default function AddCoupleTransactionForm({ onClose }: { onClose: () => v
       const info = parseVietQR(raw);
       if (!info) { setError("That QR code isn't a recognized bank transfer QR."); return; }
       switchType('expense');
-      if (info.beneficiaryName) setTitle(`Chuyển khoản cho ${info.beneficiaryName}`);
+      if (info.beneficiaryName) setTitle(`Transfer to ${info.beneficiaryName}`);
       else setTitle('Bank transfer');
       if (info.amount) setAmount(String(Math.round(info.amount)));
       if (info.note) setNote(info.note);

@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import RecapCard from '../components/RecapCard';
+import BudgetsSection from '../components/BudgetsSection';
 import { plural } from '../lib/plural';
 import EmptyState from '../components/EmptyState';
 import { useApp } from '../context';
@@ -1136,6 +1138,13 @@ function StatsTab({ expenses }: { expenses: any[] }) {
         </div>
       )}
 
+      {mode === 'month' && (
+        <>
+          <BudgetsSection month={month} spentByCategory={Object.fromEntries(categories.map(c => [c.cat, c.amount]))} />
+          <RecapCard input={{ month, currency: 'VND', income: totalInc, expense: total, prevExpense: prevTotal > 0 ? prevTotal : null, byCategory: categories.map(c => ({ category: c.cat, amount: c.amount })) }} />
+        </>
+      )}
+
       {/* Chi tiêu theo danh mục — % tổng chi + % so tháng trước */}
       {categories.length > 0 && (
         <div className="card" style={{ padding: '14px 16px', marginBottom: 12 }}>
@@ -1367,9 +1376,9 @@ function BillCard({ bill: b, onTogglePaid, onEdit, getDueStatus }: {
   const status = getDueStatus(b.dueDay, b.paid);
   return (
     <div className="card" style={{ padding: '14px 16px', opacity: b.paid ? 0.7 : 1 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ width: 44, height: 44, background: b.paid ? 'rgba(90,194,106,0.1)' : 'rgba(139,111,212,0.1)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={b.emoji} size={22} /></div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: '1 1 140px', minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: b.paid ? 'var(--ink-2)' : 'var(--ink)', textDecoration: b.paid ? 'line-through' : 'none' }}>{b.title}</p>
             <span style={{ fontSize: 12, fontWeight: 700, color: status.color, background: status.bg, padding: '2px 7px', borderRadius: 99, whiteSpace: 'nowrap' }}>{status.label}</span>
@@ -1385,7 +1394,7 @@ function BillCard({ bill: b, onTogglePaid, onEdit, getDueStatus }: {
             <p style={{ fontSize: 12, color: 'var(--green)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 3 }}><Icon emoji="✓" size={10} /> Paid {formatDate(b.paidDate)}</p>
           )}
         </div>
-        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+        <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 'auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
             <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(13px, 4.1vw, 16px)', whiteSpace: 'nowrap', color: b.paid ? 'var(--ink-2)' : 'var(--lavender)' }}>{VND(b.amount)}</p>
             <button aria-label="Edit"
