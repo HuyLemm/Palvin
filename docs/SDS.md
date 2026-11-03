@@ -694,7 +694,6 @@ Vì `backend/` hiện rỗng, phần này phác thảo cách mapping `AppState` 
 | Ngân sách tháng | Money → Stats, migration `0094` | Cảnh báo 80% / 100% |
 | Câu hỏi mỗi ngày | Home, migration `0095` | Chỉ thấy câu trả lời của người kia sau khi đã trả lời (RLS) |
 | Đăng ký lịch | Calendar, migration `0096`, function `calendar-feed` | Link riêng (token), có thể đổi link mới |
-| Tổng kết tháng AI | Money → Stats, function `monthly-recap` | Chỉ gửi tổng số liệu tháng, cần secret `ANTHROPIC_API_KEY` |
 
 Các mục từ `0093` trở đi **chưa được áp dụng tự động**: cần `supabase db push` và deploy function. Khi chưa có, giao diện tự ẩn (`lib/serverFeatures.ts`, `isMissing`).
 

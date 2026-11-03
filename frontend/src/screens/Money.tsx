@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import RecapCard from '../components/RecapCard';
 import BudgetsSection from '../components/BudgetsSection';
 import { plural } from '../lib/plural';
 import EmptyState from '../components/EmptyState';
@@ -1139,10 +1138,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
       )}
 
       {mode === 'month' && (
-        <>
-          <BudgetsSection month={month} spentByCategory={Object.fromEntries(categories.map(c => [c.cat, c.amount]))} />
-          <RecapCard input={{ month, currency: 'VND', income: totalInc, expense: total, prevExpense: prevTotal > 0 ? prevTotal : null, byCategory: categories.map(c => ({ category: c.cat, amount: c.amount })) }} />
-        </>
+        <BudgetsSection month={month} spentByCategory={Object.fromEntries(categories.map(c => [c.cat, c.amount]))} />
       )}
 
       {/* Chi tiêu theo danh mục — % tổng chi + % so tháng trước */}

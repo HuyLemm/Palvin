@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient';
 
 // Client side of the optional server features (migrations 0094–0096 and the
-// calendar-feed / monthly-recap edge functions). Each call reports `missing: true`
+// calendar-feed edge function). Each call reports `missing: true`
 // when the piece is not deployed yet, so the UI can simply hide that feature
 // instead of showing errors.
 type Err = { code?: string; message?: string; status?: number } | null | undefined;
@@ -69,19 +69,4 @@ export async function getCalendarFeedUrl(rotate = false): Promise<{ url: string 
   if (error || typeof data !== 'string' || !uuid.test(data)) return { url: null, missing: isMissing(error) || !error };
   const base = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? '';
   return { url: `${base}/functions/v1/calendar-feed?token=${data}`, missing: false };
-}
-
-// ------------------------------------------------------------------ recap
-export interface RecapInput {
-  month: string; currency: string; income: number; expense: number; prevExpense: number | null;
-  byCategory: { category: string; amount: number }[];
-}
-
-export async function requestRecap(input: RecapInput): Promise<{ text?: string; unavailable?: boolean; failed?: boolean }> {
-  const { data, error } = await supabase.functions.invoke('monthly-recap', { body: input });
-  if (error) {
-    const status = (error as { context?: { status?: number } }).context?.status;
-    return status === 404 || status === 503 ? { unavailable: true } : { failed: true };
-  }
-  return data?.text ? { text: String(data.text) } : { failed: true };
 }
