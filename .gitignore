@@ -35,3 +35,6 @@ Thumbs.db
 # Playwright
 frontend/test-results/
 frontend/playwright-report/
+
+# Supabase CLI local link state
+backend/supabase/.temp/
