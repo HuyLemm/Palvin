@@ -474,3 +474,34 @@ select.input-field { cursor: pointer; }
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-5px); }
 }
+
+/* Per-area accent: the app stays sakura-pink overall, but Money leans mint and
+   Us/Calendar lean lavender. Everything area-aware reads --area / --area-deep /
+   --area-light; App.tsx sets data-area on the screen wrapper. To dial the
+   effect up or down, edit only this block. */
+:root {
+  --mint: #3AA58E;
+  --mint-deep: #26796A;
+  --mint-light: #DDF3EC;
+  --lav: #8B6FD4;
+  --lav-deep: #6F52C0;
+  --lav-light: #EDE6FF;
+  --area: var(--sakura-accent);
+  --area-deep: var(--sakura-deep);
+  --area-light: var(--sakura-light);
+}
+[data-theme="dark"] {
+  --mint: #5DBBA5;
+  --mint-deep: #8ED8C5;
+  --mint-light: #1F3330;
+  --lav: #B39DDB;
+  --lav-deep: #B39DDB;
+  --lav-light: #2A2038;
+}
+[data-area="money"] { --area: var(--mint); --area-deep: var(--mint-deep); --area-light: var(--mint-light); }
+[data-area="us"]    { --area: var(--lav);  --area-deep: var(--lav-deep);  --area-light: var(--lav-light); }
+[data-area] { --area-line: color-mix(in srgb, var(--area) 40%, var(--border)); }
+
+.tag { background: var(--area-light); color: var(--area-deep); }
+.progress-fill { background: var(--area); background: linear-gradient(90deg, color-mix(in srgb, var(--area) 60%, white), var(--area)); }
+.progress-bar { background: var(--area-light); }

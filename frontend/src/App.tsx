@@ -251,6 +251,15 @@ function ScreenRouter() {
   );
 }
 
+// Which bottom tab a notification's target screen lives under (null = none).
+function notifTab(target?: string): Tab | null {
+  if (!target) return null;
+  if (target === 'feed' || target === 'post-detail' || target === 'saved-posts') return 'feed';
+  if (target === 'money' || target === 'stats') return 'stats';
+  if (target === 'home' || target === 'settings' || target === 'notifications' || target === 'chat' || target === 'search') return null;
+  return 'us'; // love notes, calendar, memories, wishlist, todos, places ... all live under Us
+}
+
 const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 
 export default function App() {
@@ -439,6 +448,26 @@ export default function App() {
   const activeTab = MAIN_TABS.includes(screen as Tab) ? screen as Tab : null;
   const unreadNotifs = state.notifications.filter(n => !n.read).length + (pendingInvite ? 1 : 0);
 
+  // Small "something new here" dot on the Feed / Money / Us tabs: an unread
+  // notification that points into that tab and arrived after the tab was last
+  // opened. Visiting the tab clears it without touching the notification's own
+  // read state (so the bell badge still counts it until it's actually opened).
+  const [tabSeen, setTabSeen] = useState<Record<string, number>>(() => {
+    try { return JSON.parse(localStorage.getItem('palvin:tab-seen') || '{}'); } catch { return {}; }
+  });
+  useEffect(() => {
+    if (activeTab !== 'feed' && activeTab !== 'us' && activeTab !== 'stats') return;
+    setTabSeen(prev => {
+      const next = { ...prev, [activeTab]: Date.now() };
+      try { localStorage.setItem('palvin:tab-seen', JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, [activeTab, state.notifications]);
+  const tabDot = (tab: string) => state.notifications.some(n =>
+    !n.read && notifTab(n.targetScreen) === tab && new Date(n.createdAt).getTime() > (tabSeen[tab] ?? 0));
+  const area = screen === 'stats' || screen === 'money' ? 'money'
+    : screen === 'us' || screen === 'calendar' || screen === 'future-us' ? 'us' : 'home';
+
   // Mirrors the two in-app header badges above onto the installed PWA's own
   // home-screen icon (the Badging API — iOS 16.4+, home-screen-installed
   // only). Safari treats 0/undefined as "remove", not "show a zero badge",
@@ -464,7 +493,7 @@ export default function App() {
     return (
       <div className="app-viewport" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="phone-shell">
-          <div className="phone-screen" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="phone-screen" data-area={area} style={{ display: 'flex', flexDirection: 'column' }}>
             <ResetPasswordScreen />
           </div>
         </div>
@@ -613,7 +642,7 @@ export default function App() {
             <header className="app-header" style={{
               background: 'var(--header-bg)',
               backdropFilter: 'blur(12px)',
-              borderBottom: '1px solid var(--border)',
+              borderBottom: '2px solid var(--area-line, var(--border))',
               padding: '10px 16px',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               flexShrink: 0,
@@ -621,7 +650,7 @@ export default function App() {
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {isSubScreen && (
-                  <button onClick={goBack} aria-label="Back" style={{ background: 'var(--sakura-light)', border: 'none', borderRadius: 12, width: 44, height: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--sakura-deep)', marginRight: 2 }}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+                  <button onClick={goBack} aria-label="Back" style={{ background: 'var(--area-light)', border: 'none', borderRadius: 12, width: 44, height: 44, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--area-deep)', marginRight: 2 }}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
                 )}
                 {screen === 'home' ? (
                   <div>
@@ -631,7 +660,7 @@ export default function App() {
                 ) : (
                   <h1 style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
                     {title}
-                    {SCREEN_TITLE_EMOJI[screen] && <Icon emoji={SCREEN_TITLE_EMOJI[screen]} size={15} />}
+                    {SCREEN_TITLE_EMOJI[screen] && <Icon emoji={SCREEN_TITLE_EMOJI[screen]} size={15} style={{ color: 'var(--area-deep)' }} />}
                   </h1>
                 )}
               </div>
@@ -688,7 +717,7 @@ export default function App() {
               zIndex: 20,
             }}>
               {NAV_TABS.slice(0, 2).map(tab => (
-                <NavItem key={tab.key} Icon={tab.Icon} active={activeTab === tab.key} onClick={() => handleTabClick(tab.key)} label={tab.label} />
+                <NavItem key={tab.key} Icon={tab.Icon} active={activeTab === tab.key} onClick={() => handleTabClick(tab.key)} label={tab.label} dot={tabDot(tab.key)} accent={TAB_ACCENT[tab.key]} />
               ))}
 
               {/* Center + Create */}
@@ -717,7 +746,7 @@ export default function App() {
               </div>
 
               {NAV_TABS.slice(2, 4).map(tab => (
-                <NavItem key={tab.key} Icon={tab.Icon} active={activeTab === tab.key} onClick={() => handleTabClick(tab.key)} label={tab.label} />
+                <NavItem key={tab.key} Icon={tab.Icon} active={activeTab === tab.key} onClick={() => handleTabClick(tab.key)} label={tab.label} dot={tabDot(tab.key)} accent={TAB_ACCENT[tab.key]} />
               ))}
 
               {/* Settings = user avatar */}
@@ -769,16 +798,23 @@ export default function App() {
   );
 }
 
-function NavItem({ Icon, active, onClick, label }: { Icon: (p: { active: boolean }) => JSX.Element; active: boolean; onClick: () => void; label: string }) {
+const TAB_ACCENT: Record<string, string> = {
+  home: 'var(--sakura-deep)', feed: 'var(--sakura-deep)', stats: 'var(--mint-deep)', us: 'var(--lav-deep)', settings: 'var(--sakura-deep)',
+};
+
+function NavItem({ Icon, active, onClick, label, dot, accent }: { Icon: (p: { active: boolean }) => JSX.Element; active: boolean; onClick: () => void; label: string; dot?: boolean; accent: string }) {
   return (
-    <button onClick={onClick} aria-label={label} aria-current={active ? 'page' : undefined} style={{
+    <button onClick={onClick} aria-label={dot ? `${label}, new activity` : label} aria-current={active ? 'page' : undefined} style={{
       flex: 1, minHeight: 48, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
       background: 'none', border: 'none', cursor: 'pointer',
-      color: active ? 'var(--sakura-deep)' : 'var(--ink-2)',
+      color: active ? accent : 'var(--ink-2)',
       padding: '4px 0',
       transition: 'color 0.15s',
     }}>
-      <Icon active={active} />
+      <span style={{ position: 'relative', display: 'inline-flex' }}>
+        <Icon active={active} />
+        {dot && !active && <span aria-hidden="true" className="animate-heart-pop" style={{ position: 'absolute', top: -2, right: -4, width: 9, height: 9, borderRadius: '50%', background: 'var(--badge-bg)', border: '2px solid var(--bg)', boxSizing: 'content-box' }} />}
+      </span>
       <span style={{ fontSize: 12, fontWeight: active ? 700 : 500, lineHeight: 1 }}>{label}</span>
     </button>
   );
