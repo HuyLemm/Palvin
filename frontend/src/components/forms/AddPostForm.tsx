@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useDraft } from '../../hooks/useDraft';
 import { useApp } from '../../context';
 import { uploadPostImage } from '../../feed';
 import Avatar from '../Avatar';
@@ -14,7 +15,7 @@ interface PendingImage {
 
 export default function AddPostForm({ onClose }: { onClose: () => void }) {
   const { addPost, currentUser, myProfile } = useApp();
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption, clearCaptionDraft] = useDraft('post-caption');
   const [location, setLocation] = useState('');
   const [postDate, setPostDate] = useState('');
   const [images, setImages] = useState<PendingImage[]>([]);
@@ -57,6 +58,7 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
       location: location || undefined,
       likes: 0,
     });
+    clearCaptionDraft();
     onClose();
   };
 

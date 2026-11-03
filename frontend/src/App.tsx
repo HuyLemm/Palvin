@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState, type JSX } from 'react';
 import { useApp } from './context';
+import OfflineBanner from './components/OfflineBanner';
 import Toast from './components/Toast';
 import UpdateBanner from './components/UpdateBanner';
 import CreateModal from './components/CreateModal';
@@ -693,6 +694,7 @@ export default function App() {
               {/* Center + Create */}
               <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <button
+                  className="press"
                   aria-label={isLinked ? 'Create new' : 'Create new (link with your partner first)'}
                   onClick={() => {
                     if (!isLinked) { toast('Link with your partner first 💕', '🔒', { passive: true }); return; }
@@ -761,6 +763,7 @@ export default function App() {
       {/* Modals */}
       {createModal && <CreateModal />}
       <Toast />
+      <OfflineBanner />
       <UpdateBanner />
     </div>
   );

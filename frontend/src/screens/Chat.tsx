@@ -1,5 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { removeBackground, preload, type Config as BgRemovalConfig } from '@imgly/background-removal';
+import type { Config as BgRemovalConfig } from '@imgly/background-removal';
+// The ~400KB background-removal library is only needed when someone imports a
+// sticker, so it's loaded on demand instead of with the Chat screen.
+const loadBgRemoval = () => import('@imgly/background-removal');
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
@@ -410,6 +413,7 @@ export default function Chat({ onBack }: Props) {
     setImportStage('processing');
     setImportProgress(null);
     try {
+      const { removeBackground } = await loadBgRemoval();
       const cutout = await removeBackground(file, {
         ...BG_REMOVAL_CONFIG,
         progress: (_key, current, total) => setImportProgress(total > 0 ? Math.round((current / total) * 100) : null),
@@ -493,7 +497,7 @@ export default function Chat({ onBack }: Props) {
   useEffect(() => {
     if (stickerTab !== 'ours' || bgRemovalPreloadedRef.current) return;
     bgRemovalPreloadedRef.current = true;
-    preload(BG_REMOVAL_CONFIG).catch(() => { bgRemovalPreloadedRef.current = false; });
+    loadBgRemoval().then(m => m.preload(BG_REMOVAL_CONFIG)).catch(() => { bgRemovalPreloadedRef.current = false; });
   }, [stickerTab]);
 
   const handleFilePicked = async (e: React.ChangeEvent<HTMLInputElement>) => {

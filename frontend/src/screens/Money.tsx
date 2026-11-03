@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import EmptyState from '../components/EmptyState';
 import { useApp } from '../context';
 import AddExpenseForm from '../components/forms/AddExpenseForm';
 import AddIncomeForm from '../components/forms/AddIncomeForm';
@@ -1772,12 +1773,3 @@ function formatDate(dateStr: string) {
   return d.toLocaleDateString('en-US', { day: 'numeric', month: 'long' });
 }
 
-function EmptyState({ icon, title, sub }: { icon: string; title: string; sub: string }) {
-  return (
-    <div style={{ textAlign: 'center', padding: '48px 24px' }}>
-      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji={icon} size={40} /></div>
-      <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>{title}</p>
-      <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>{sub}</p>
-    </div>
-  );
-}

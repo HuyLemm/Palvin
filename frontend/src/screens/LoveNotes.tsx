@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import EmptyState from '../components/EmptyState';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
@@ -55,11 +56,7 @@ export default function LoveNotes() {
       {tab === 'notes' && (
         <div>
           {state.loveNotes.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-              <div style={{ marginBottom: 12 }}><Icon emoji="💌" size={40} /></div>
-              <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No love notes yet</p>
-              <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 20 }}>Write your first note.</p>
-            </div>
+            <EmptyState icon="💌" title="No love notes yet" sub="Write your first note — they'll love it." />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {state.loveNotes.map(note => {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import EmptyState from '../components/EmptyState';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
 import AmountInput from '../components/AmountInput';
@@ -129,11 +130,7 @@ export default function FutureUs() {
       )}
 
       {filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-          <div style={{ marginBottom: 12 }}><Icon emoji="✨" size={40} /></div>
-          <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No goals yet</p>
-          <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 20 }}>What do you dream of doing together?</p>
-        </div>
+        <EmptyState icon="✨" title="No goals yet" sub="What do you dream of doing together?" />
       )}
 
       {showAdd && <AddFutureGoalForm onClose={() => setShowAdd(false)} onAdd={addGoal} defaultOwner={filter} />}

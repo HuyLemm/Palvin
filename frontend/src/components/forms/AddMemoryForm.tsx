@@ -1,17 +1,18 @@
 import { useRef, useState } from 'react';
+import { useDraft } from '../../hooks/useDraft';
 import { useApp } from '../../context';
 import { uploadMemoryImage } from '../../memories';
 import Icon from '../Icon';
 
 export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
   const { addMemory, currentUser, myProfile, partnerProfile } = useApp();
-  const [title, setTitle] = useState('');
+  const [title, setTitle, clearTitleDraft] = useDraft('memory-title');
   const [date, setDate] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
   const [location, setLocation] = useState('');
-  const [description, setDescription] = useState('');
+  const [description, setDescription, clearDescDraft] = useDraft('memory-description');
   const [previewUrl, setPreviewUrl] = useState('');
   const [remoteUrl, setRemoteUrl] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -45,6 +46,7 @@ export default function AddMemoryForm({ onClose }: { onClose: () => void }) {
       location: location || 'Unknown', description, image: remoteUrl,
       people: partnerProfile ? [currentUser, partnerProfile.displayName] : [currentUser]
     });
+    clearTitleDraft(); clearDescDraft();
     onClose();
   };
 

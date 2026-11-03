@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { burstHearts, haptic } from '../lib/effects';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context';
 import { usePortalPanel } from '../hooks/usePortalPanel';
@@ -44,9 +45,13 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
   const totalReactions = Object.values(reactions).reduce((s, r) => s + r.count, 0);
   const topReactions = Object.entries(reactions).filter(([, r]) => r.count > 0).slice(0, 3);
 
-  const handleLike = () => {
+  const handleLike = (e?: React.SyntheticEvent<HTMLElement>) => {
     toggleLike(post.id);
-    if (!post.liked) { setLikedAnim(true); setTimeout(() => setLikedAnim(false), 400); }
+    if (!post.liked) {
+      setLikedAnim(true); setTimeout(() => setLikedAnim(false), 400);
+      haptic();
+      if (e?.currentTarget) burstHearts(e.currentTarget);
+    }
   };
 
   const handleComment = () => {
@@ -122,7 +127,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
       <div style={{ padding: '10px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8, position: 'relative' }}>
           {/* Like */}
-          <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: post.liked ? 'var(--sakura-accent)' : 'var(--ink-2)', transition: 'color 0.15s', padding: 0 }}>
+          <button onClick={handleLike} className="press" aria-label={post.liked ? 'Unlike' : 'Like'} aria-pressed={post.liked} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 600, color: post.liked ? 'var(--sakura-accent)' : 'var(--ink-2)', transition: 'color 0.15s', padding: 0 }}>
             <Icon emoji={post.liked ? '❤️' : '🤍'} size={20} style={{ transition: 'transform 0.15s', transform: post.liked ? 'scale(1.1)' : 'scale(1)' }} />
             {post.likes}
           </button>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import EmptyState from '../components/EmptyState';
 import { useApp } from '../context';
 import AddMemoryForm from '../components/forms/AddMemoryForm';
 import Icon from '../components/Icon';
@@ -36,12 +37,7 @@ export default function Memories() {
       </div>
 
       {memories.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-          <div style={{ marginBottom: 12 }}><Icon emoji="🌸" size={40} /></div>
-          <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No memories yet</p>
-          <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 20 }}>Let's create your first little memory.</p>
-          <button className="btn-primary" onClick={() => setShowAdd(true)}>Add Memory</button>
-        </div>
+        <EmptyState icon="🌸" title="No memories yet" sub="Let's create your first little memory." action={<button className="btn-primary" onClick={() => setShowAdd(true)}>Add Memory</button>} />
       ) : (
         <div className="memory-grid">
           {memories.map((m, i) => (

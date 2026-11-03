@@ -6,6 +6,7 @@ import FadeImage from '../components/FadeImage';
 import { getDaysTogether, getDuration } from '../data';
 import { nextOccurrence, toDateStr, oneMonthFrom } from '../calendarRecurrence';
 import { DEFAULT_QUICK_ACTIONS } from '../auth';
+import { burstHearts, haptic } from '../lib/effects';
 import type { FavCategory, FavPlace, StoryQuote } from '../types';
 
 // Picks a quote that looks random day to day (not a fixed 0,1,2... queue
@@ -50,6 +51,14 @@ const THINKING_MESSAGES = [
   '🥰 Are you thinking of me too?',
   '💙 Thinking of you all day~',
 ];
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 5) return 'Still up';
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
 
 const MOOD_SCORE: Record<string, number> = {
   '😍': 5, '🥰': 5, '😊': 4, '😐': 3, '🥺': 2, '😭': 2, '😴': 2, '😤': 1,
@@ -162,6 +171,14 @@ export default function Home() {
   // that actually have a photo.
   const recentMoments = state.posts.filter(p => p.images.length > 0).slice(0, 5);
 
+  const isMilestone = days > 0 && (days % 100 === 0 || days % 365 === 0);
+  const nextMilestone = days > 0 ? (Math.floor(days / 100) + 1) * 100 : 0;
+  const nextEv = upcoming[0];
+  const nextEvDays = nextEv
+    ? Math.round((new Date(nextEv.displayDate + 'T00:00:00').getTime() - new Date(todayStr + 'T00:00:00').getTime()) / 86400000)
+    : null;
+  const heroPhoto = recentMoments[0]?.images[0];
+
   const rollPick = (cat: FavCategory) => {
     const list = state.favPlaces[cat] ?? [];
     if (list.length === 0) return;
@@ -173,7 +190,9 @@ export default function Home() {
     }, 220);
   };
 
-  const handleHug = () => {
+  const handleHug = (e: React.MouseEvent<HTMLElement>) => {
+    burstHearts(e.currentTarget);
+    haptic(18);
     setHugAnim(true);
     // A custom message (separate from the button's own label, set in
     // Settings) always wins — falls back to the original rotating flavor
@@ -183,7 +202,9 @@ export default function Home() {
     setTimeout(() => setHugAnim(false), 800);
   };
 
-  const handleThinking = () => {
+  const handleThinking = (e: React.MouseEvent<HTMLElement>) => {
+    burstHearts(e.currentTarget, ['\u{1F4AD}', '\u2728', '\u{1F497}']);
+    haptic(18);
     setThinkAnim(true);
     // kind:'thinking' gets its own short headline server-side ("X đang nghĩ
     // đến bạn 💭") instead of the generic hug one — the random flavor text
@@ -221,15 +242,26 @@ export default function Home() {
 
   return (
     <div style={{ paddingBottom: 32 }}>
+      <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink-2)', margin: '0 2px 10px' }}>
+        {greeting()}, <span style={{ color: 'var(--sakura-deep)', fontWeight: 700 }}>{currentUser}</span> <Icon emoji="🌸" size={14} style={{ verticalAlign: '-2px', color: 'var(--sakura)' }} />
+      </p>
+
       {/* Hero Counter */}
       <div style={{
         background: 'linear-gradient(135deg, var(--pink-glow) 0%, var(--bg) 50%, var(--pink-glow) 100%)',
         borderRadius: 24, padding: '24px 20px', margin: '0 0 16px',
-        textAlign: 'center', position: 'relative', overflow: 'hidden',
+        textAlign: 'center', position: 'relative', overflow: 'hidden', isolation: 'isolate',
         border: '1px solid var(--border)',
       }}>
-        {['🌸', '🌸', '🌸'].map((p, i) => (
-          <Icon key={i} emoji={p} size={18} style={{ position: 'absolute', opacity: 0.2, top: `${20 + i * 30}%`, left: i % 2 === 0 ? '5%' : '88%', transform: `rotate(${i * 30}deg)` }} />
+        {heroPhoto && (
+          <img src={heroPhoto} alt="" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.16, filter: 'blur(2px)', zIndex: -1, pointerEvents: 'none' }} />
+        )}
+        {[8, 24, 46, 68, 86].map((left, i) => (
+          <span key={i} aria-hidden="true" style={{ position: 'absolute', top: 0, left: `${left}%`, height: '100%', width: 0, zIndex: -1, pointerEvents: 'none', ['--sway' as string]: `${i % 2 ? -18 : 18}px` }}>
+            <span style={{ position: 'absolute', top: 0, left: 0, display: 'block', animation: `petalFall ${7 + i * 1.3}s linear ${i * 1.4}s infinite`, opacity: 0 }}>
+              <Icon emoji="🌸" size={14 + (i % 3) * 3} style={{ color: 'var(--sakura)' }} />
+            </span>
+          </span>
         ))}
         <p style={{ fontSize: 13, color: 'var(--ink-2)', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Together for</p>
         <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 68, fontWeight: 700, color: 'var(--sakura-deep)', lineHeight: 1, marginBottom: 8 }}>
@@ -239,6 +271,16 @@ export default function Home() {
         <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 12 }}>
           {dur.years} Years · {dur.months} Months · {dur.days} Days
         </p>
+        {days > 0 && (
+          <p style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 99, padding: '5px 12px', marginBottom: 12 }}>
+            <Icon emoji={isMilestone ? '🎉' : '✨'} size={14} />
+            {isMilestone
+              ? `Day ${days.toLocaleString()} — a milestone!`
+              : nextEv && nextEvDays !== null && nextEvDays <= 30
+                ? (nextEvDays === 0 ? `${nextEv.event.title} is today!` : `${nextEvDays} day${nextEvDays === 1 ? '' : 's'} until ${nextEv.event.title}`)
+                : `${nextMilestone - days} days until day ${nextMilestone.toLocaleString()}`}
+          </p>
+        )}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
           {relationshipStart ? (
             <div style={{ background: 'var(--white)', borderRadius: 12, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)' }}>
@@ -258,10 +300,131 @@ export default function Home() {
           </div>
         </div>
         {quote && <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: 'var(--ink-2)', marginBottom: 14, fontSize: 15 }}>"{quote}"</p>}
+      </div>
 
-        {/* Spinning Vinyl Disk */}
+
+      {/* Hug + Thinking of you */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+        <button
+          onClick={handleHug}
+          className="press"
+          style={{
+            background: hugAnim ? hugConfig.color : `${hugConfig.color}14`,
+            border: `1.5px solid ${hugConfig.color}`, borderRadius: 18, padding: '16px 12px',
+            cursor: 'pointer', transition: 'all 0.3s',
+            transform: hugAnim ? 'scale(0.96)' : 'scale(1)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+          }}
+        >
+          <Icon emoji={hugConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: hugAnim ? 'scale(1.3)' : 'scale(1)' }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : hugConfig.color }}>{hugConfig.label}</span>
+          <span style={{ fontSize: 12, color: hugAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
+            to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
+          </span>
+        </button>
+
+        <button
+          onClick={handleThinking}
+          className="press"
+          style={{
+            background: thinkAnim ? thinkConfig.color : `${thinkConfig.color}14`,
+            border: `1.5px solid ${thinkConfig.color}`, borderRadius: 18, padding: '16px 12px',
+            cursor: 'pointer', transition: 'all 0.3s',
+            transform: thinkAnim ? 'scale(0.96)' : 'scale(1)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+          }}
+        >
+          <Icon emoji={thinkConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: thinkAnim ? 'scale(1.3)' : 'scale(1)' }} />
+          <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : thinkConfig.color }}>{thinkConfig.label}</span>
+          <span style={{ fontSize: 12, color: thinkAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
+            to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
+          </span>
+        </button>
+      </div>
+
+      {/* Today's Mood */}
+      <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Today</p>
+          <button onClick={() => setShowMoodPicker(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>Update</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          {[currentUser, ...(partnerName ? [partnerName] : [])].map(u => (
+            <div key={u} style={{ background: 'var(--bg)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar user={u} size={36} />
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{u}</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {state.moods[u] ? <><Icon emoji={state.moods[u]!.emoji} size={14} /> {state.moods[u]!.label}</> : '— not set yet'}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 7-day mood chart */}
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Mood over the last 7 days</p>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
+          {moodChartData.map(d => (
+            <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <div style={{ width: '100%', display: 'flex', gap: 1, alignItems: 'flex-end', height: 44 }}>
+                <div style={{ flex: 1, background: '#4A8AE8', borderRadius: '2px 2px 0 0', height: d.alvinScore ? `${(d.alvinScore / 5) * 100}%` : '8%', opacity: d.alvinScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
+                <div style={{ flex: 1, background: 'var(--sakura-accent)', borderRadius: '2px 2px 0 0', height: d.paoiScore ? `${(d.paoiScore / 5) * 100}%` : '8%', opacity: d.paoiScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--ink-2)', textAlign: 'center' }}>{d.label}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A8AE8' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{currentUser}</span></div>
+          {partnerName && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sakura-accent)' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{partnerName}</span></div>}
+        </div>
+      </div>
+
+      {/* To Do shortcut — prominent on purpose (per-user request), unlike the
+          small Couple Stats tiles below, since this is meant to nag a little
+          when something's still outstanding. */}
+      <div
+        onClick={() => navigate('todos')}
+        className="card"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', marginBottom: 16, cursor: 'pointer',
+          background: todosLeft > 0 ? 'var(--pink-glow)' : undefined, border: todosLeft > 0 ? '1px solid var(--sakura)' : undefined,
+        }}
+      >
+        <div style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon emoji="✅" size={22} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
+            {todosLeft > 0 ? `${todosLeft} task${todosLeft === 1 ? '' : 's'} left today` : 'All caught up! 🎉'}
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Tap to open your To Do list</p>
+        </div>
+        {todosLeft > 0 && <span style={{ minWidth: 24, height: 24, padding: '0 7px', borderRadius: 99, background: 'var(--badge-bg)', color: 'white', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{todosLeft}</span>}
+        <Icon emoji="→" size={18} style={{ color: 'var(--sakura-deep)', flexShrink: 0 }} />
+      </div>
+
+      {/* Couple Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+        {[
+          { emoji: '🗺️', value: state.places.length, label: 'Places', target: 'places' },
+          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes', target: 'capsule' },
+          { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist', target: 'wishlist' },
+          { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude', target: 'gratitude' },
+        ].map(s => (
+          <div key={s.label} onClick={() => navigate(s.target)} className="card" style={{ padding: '12px 6px', textAlign: 'center', cursor: 'pointer' }}>
+            <p style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={s.emoji} size={20} /></p>
+            <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--sakura-deep)', lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Our Playlist — its own card so the hero stays calm */}
+      {/* Spinning Vinyl Disk */}
         {state.playlist.length > 0 && (
-          <div>
+          <div className="card" style={{ padding: '14px 16px', marginBottom: 16 }}>
             {/* Mine / partner's / Tất cả — which pool of songs the widget draws from */}
             <div style={{ display: 'flex', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
               {[
@@ -326,83 +489,34 @@ export default function Home() {
             )}
           </div>
         )}
-      </div>
 
-      {/* To Do shortcut — prominent on purpose (per-user request), unlike the
-          small Couple Stats tiles below, since this is meant to nag a little
-          when something's still outstanding. */}
-      <div
-        onClick={() => navigate('todos')}
-        className="card"
-        style={{
-          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', marginBottom: 16, cursor: 'pointer',
-          background: todosLeft > 0 ? 'var(--btn-grad)' : undefined,
-        }}
-      >
-        <div style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0, background: todosLeft > 0 ? 'rgba(255,255,255,0.2)' : 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon emoji="✅" size={22} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 15, fontWeight: 700, color: todosLeft > 0 ? 'white' : 'var(--ink)' }}>
-            {todosLeft > 0 ? `${todosLeft} task${todosLeft === 1 ? '' : 's'} left today` : 'All caught up! 🎉'}
-          </p>
-          <p style={{ fontSize: 12, color: todosLeft > 0 ? 'rgba(255,255,255,0.85)' : 'var(--ink-2)' }}>Tap to open your To Do list</p>
-        </div>
-        <Icon emoji="→" size={18} style={{ color: todosLeft > 0 ? 'white' : 'var(--ink-2)', flexShrink: 0 }} />
-      </div>
-
-      {/* Couple Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
-        {[
-          { emoji: '🗺️', value: state.places.length, label: 'Places', target: 'places' },
-          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes', target: 'capsule' },
-          { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist', target: 'wishlist' },
-          { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude', target: 'gratitude' },
-        ].map(s => (
-          <div key={s.label} onClick={() => navigate(s.target)} className="card" style={{ padding: '12px 6px', textAlign: 'center', cursor: 'pointer' }}>
-            <p style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={s.emoji} size={20} /></p>
-            <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--sakura-deep)', lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{s.label}</p>
+      {/* Upcoming */}
+      {upcoming.length > 0 && (
+        <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12 }}>Upcoming</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {upcoming.map(({ event: ev, displayDate }) => {
+              const d = new Date(displayDate + 'T12:00:00');
+              const mon = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              return (
+                <div key={ev.id} onClick={() => navigate('calendar')} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 12px', background: 'var(--bg)', borderRadius: 12, transition: 'background 0.15s' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--sakura-light)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
+                >
+                  <div style={{ background: 'var(--sakura-light)', borderRadius: 10, padding: '6px 10px', textAlign: 'center', minWidth: 48 }}>
+                    <div style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700 }}>{mon.split(' ')[0].toUpperCase()}</div>
+                    <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--sakura-deep)', lineHeight: 1 }}>{mon.split(' ')[1]}</div>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{ev.title}</p>
+                    <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{ev.time}{ev.location ? ` · ${ev.location}` : ''}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
-
-      {/* Hug + Thinking of you */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-        <button
-          onClick={handleHug}
-          style={{
-            background: hugAnim ? hugConfig.color : `${hugConfig.color}14`,
-            border: `1.5px solid ${hugConfig.color}`, borderRadius: 18, padding: '16px 12px',
-            cursor: 'pointer', transition: 'all 0.3s',
-            transform: hugAnim ? 'scale(0.96)' : 'scale(1)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-          }}
-        >
-          <Icon emoji={hugConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: hugAnim ? 'scale(1.3)' : 'scale(1)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : hugConfig.color }}>{hugConfig.label}</span>
-          <span style={{ fontSize: 12, color: hugAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
-            to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
-          </span>
-        </button>
-
-        <button
-          onClick={handleThinking}
-          style={{
-            background: thinkAnim ? thinkConfig.color : `${thinkConfig.color}14`,
-            border: `1.5px solid ${thinkConfig.color}`, borderRadius: 18, padding: '16px 12px',
-            cursor: 'pointer', transition: 'all 0.3s',
-            transform: thinkAnim ? 'scale(0.96)' : 'scale(1)',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-          }}
-        >
-          <Icon emoji={thinkConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: thinkAnim ? 'scale(1.3)' : 'scale(1)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : thinkConfig.color }}>{thinkConfig.label}</span>
-          <span style={{ fontSize: 12, color: thinkAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
-            to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
-          </span>
-        </button>
-      </div>
+        </div>
+      )}
 
       {/* Today's question picker — from Our Favourites */}
       {state.favCategories.length > 0 && (() => {
@@ -477,73 +591,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
-      {/* Upcoming */}
-      {upcoming.length > 0 && (
-        <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12 }}>Upcoming</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {upcoming.map(({ event: ev, displayDate }) => {
-              const d = new Date(displayDate + 'T12:00:00');
-              const mon = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-              return (
-                <div key={ev.id} onClick={() => navigate('calendar')} style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: '10px 12px', background: 'var(--bg)', borderRadius: 12, transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--sakura-light)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg)'}
-                >
-                  <div style={{ background: 'var(--sakura-light)', borderRadius: 10, padding: '6px 10px', textAlign: 'center', minWidth: 48 }}>
-                    <div style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700 }}>{mon.split(' ')[0].toUpperCase()}</div>
-                    <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--sakura-deep)', lineHeight: 1 }}>{mon.split(' ')[1]}</div>
-                  </div>
-                  <div>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{ev.title}</p>
-                    <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{ev.time}{ev.location ? ` · ${ev.location}` : ''}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Today's Mood */}
-      <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Today</p>
-          <button onClick={() => setShowMoodPicker(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>Update</button>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-          {[currentUser, ...(partnerName ? [partnerName] : [])].map(u => (
-            <div key={u} style={{ background: 'var(--bg)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Avatar user={u} size={36} />
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{u}</p>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {state.moods[u] ? <><Icon emoji={state.moods[u]!.emoji} size={14} /> {state.moods[u]!.label}</> : '— not set yet'}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 7-day mood chart */}
-        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Mood over the last 7 days</p>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
-          {moodChartData.map(d => (
-            <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-              <div style={{ width: '100%', display: 'flex', gap: 1, alignItems: 'flex-end', height: 44 }}>
-                <div style={{ flex: 1, background: '#4A8AE8', borderRadius: '2px 2px 0 0', height: d.alvinScore ? `${(d.alvinScore / 5) * 100}%` : '8%', opacity: d.alvinScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
-                <div style={{ flex: 1, background: 'var(--sakura-accent)', borderRadius: '2px 2px 0 0', height: d.paoiScore ? `${(d.paoiScore / 5) * 100}%` : '8%', opacity: d.paoiScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
-              </div>
-              <p style={{ fontSize: 8, color: 'var(--ink-2)', textAlign: 'center' }}>{d.label}</p>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A8AE8' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{currentUser}</span></div>
-          {partnerName && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sakura-accent)' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{partnerName}</span></div>}
-        </div>
-      </div>
 
       {/* Recent Moments — cover photos from recent posts, same source Photo
           Collage (Us tab) draws from. */}
