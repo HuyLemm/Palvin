@@ -126,7 +126,7 @@ html, body {
 /* Real device: collapse the mockup into an actual edge-to-edge layout and
    let the app fill the real viewport instead of showing a tiny fake phone
    frame (with its own fake status bar) inside the real browser chrome. */
-@media (max-width: 480px) {
+@media (max-width: 480px), (pointer: coarse) and (max-height: 500px) {
   /* --app-vh is set once in App.tsx (window.innerHeight, snapshotted before
      any keyboard can open) and deliberately never updated for the keyboard's
      resize — only real device rotation changes it — so this height stays
@@ -562,3 +562,24 @@ html { font-variant-numeric: lining-nums; }
   box-shadow: 0 0 0 8px var(--white), 0 24px 0 0 var(--white);
 }
 .kb-modal-overlay > div > div:last-child > div:has(> button):last-child { background: var(--white); }
+
+/* iOS Safari zooms the page when a focused field's text is under 16px (and zoom is
+   deliberately allowed here), so touch devices get 16px fields. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea, select { font-size: 16px !important; }
+}
+
+/* App-like feel: long-press on buttons/nav shouldn't start a text selection or
+   show the iOS callout (real text content stays selectable). */
+button, nav, header, [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* A phone held sideways is wider than 480px: still a real device, so no fake
+   iPhone frame, and no extra top padding for a status bar that isn't there. */
+@media (pointer: coarse) and (max-height: 500px) and (min-width: 481px) {
+  .app-header, .auth-slide { padding-top: 10px !important; }
+}

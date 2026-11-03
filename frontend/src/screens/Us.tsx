@@ -125,11 +125,13 @@ export default function Us() {
     if (screen === 'places') return 'places';
     if (screen === 'capsule') return 'capsule';
     if (screen === 'todos') return 'todos';
+    if (screen === 'favorites') return 'favorites';
     if (screen === 'us' && lastNavWasPop) return lastUsSub;
     return 'main';
   });
   // Device Back closes the open sub-screen (only while Us is the visible screen).
   useBackButton(screen === 'us' && sub !== 'main', () => setSub('main'));
+  const [menuQuery, setMenuQuery] = useState('');
   // Captured once at mount. React 18 StrictMode double-invokes effects right
   // after mount (mount → cleanup → mount again) without changing navSeq in
   // between, so comparing against this snapshot — rather than a "first run"
@@ -149,6 +151,7 @@ export default function Us() {
     if (screen === 'places') setSub('places');
     if (screen === 'capsule') setSub('capsule');
     if (screen === 'todos') setSub('todos');
+    if (screen === 'favorites') setSub('favorites');
   }, [screen, selectedId]);
 
   // Re-tapping the Us tab while already sitting inside it doesn't remount
@@ -257,7 +260,19 @@ export default function Us() {
           extras, down to reflective/archival (memories, keepsakes) —
           instead of the old accretion order (newest feature tacked onto the
           bottom regardless of how it relates to the rest). */}
-      {([
+      <input
+        className="input-field"
+        type="search"
+        enterKeyHint="search"
+        autoComplete="off"
+        spellCheck={false}
+        aria-label="Search features"
+        placeholder="Search features…"
+        value={menuQuery}
+        onChange={e => setMenuQuery(e.target.value)}
+        style={{ marginBottom: 18 }}
+      />
+      {(() => { const allGroups = ([
         {
           title: 'Everyday',
           items: [
@@ -268,8 +283,8 @@ export default function Us() {
               })() },
             { label: 'Gratitude Journal', emoji: '🌸', key: 'gratitude' as SubScreen, sub: `${state.gratitude.length} things you're grateful for` },
             { label: 'Our Calendar', emoji: '📅', key: 'calendar' as SubScreen, sub: `${state.events.length} events` },
-            { label: 'Our Playlist', emoji: '🎵', key: 'playlist' as SubScreen, sub: `${state.playlist.length} ${plural(state.playlist.length, 'song')}` },
-            { label: 'Quote of the Day', emoji: '💬', key: 'quotes' as SubScreen, sub: `${state.storyQuotes.length} quotes — changes daily on the Dashboard` },
+            { label: 'Our Playlist', emoji: '🎵', key: 'playlist' as SubScreen, sub: 'Songs for the two of you' },
+            { label: 'Quote of the Day', emoji: '💬', key: 'quotes' as SubScreen, sub: `${state.storyQuotes.length} quotes — changes daily on Home` },
           ],
         },
         {
@@ -281,7 +296,7 @@ export default function Us() {
                 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon emoji="⚡" size={12} /> {state.dateRequests.filter(r => r.to === currentUser && r.status === 'pending').length} request(s) awaiting approval!</span>
                 : `${state.dateRequests.length} requests total`) },
             { label: 'Date Idea Jar', emoji: '🫙', key: 'dateidea' as SubScreen, sub: 'Draw a random date idea' },
-            { label: 'Trip Planner', labelIcon: '✈️', emoji: '🗺️', key: 'trips' as SubScreen, sub: `${state.trips.length} ${plural(state.trips.length, 'trip')}` },
+            { label: 'Trip Planner', labelIcon: '✈️', emoji: '🗺️', key: 'trips' as SubScreen, sub: 'Plan your next adventure' },
           ],
         },
         {
@@ -301,7 +316,14 @@ export default function Us() {
             { label: "Places We've Been", emoji: '🗺️', key: 'places' as SubScreen, sub: `${state.places.length} saved places` },
           ],
         },
-      ] as { title: string; items: { label: string; labelIcon?: string; emoji: string; key: SubScreen; sub: ReactNode }[] }[]).map(group => (
+      ] as { title: string; items: { label: string; labelIcon?: string; emoji: string; key: SubScreen; sub: ReactNode }[] }[]);
+      const q = menuQuery.trim().toLowerCase();
+      const groups = q
+        ? allGroups.map(g => ({ ...g, items: g.items.filter(it => `${it.label} ${typeof it.sub === 'string' ? it.sub : ''}`.toLowerCase().includes(q)) })).filter(g => g.items.length > 0)
+        : allGroups;
+      return (<>
+      {groups.length === 0 && <p style={{ textAlign: 'center', fontSize: 14, color: 'var(--ink-2)', padding: '24px 0' }}>No feature matches "{menuQuery.trim()}".</p>}
+      {groups.map(group => (
         <div key={group.title} style={{ marginBottom: 20 }}>
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8, padding: '0 4px' }}>{group.title}</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -321,6 +343,7 @@ export default function Us() {
           </div>
         </div>
       ))}
+      </>); })()}
     </div>
   );
   }
@@ -1647,7 +1670,7 @@ function PhotoCollage({ onBack }: { onBack: () => void }) {
   );
 }
 
-// The line under the couple hero on Dashboard used to be a hardcoded
+// The line under the couple hero on Home used to be a hardcoded
 // "Our little story continues." — now it's picked from this list, one per
 // day. Days-since-epoch mod the quote count keeps the choice stable for a
 // whole calendar day and identical for both partners, with no need to
@@ -1682,13 +1705,13 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Quote of the Day <Icon emoji="💬" size={20} /></p>
         <button onClick={openAdd} style={{ background: 'var(--btn-grad)', color: 'white', border: 'none', borderRadius: 10, padding: '8px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>+ Add quote</button>
       </div>
-      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>The Dashboard automatically switches to a different quote from this list each day.</p>
+      <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 20 }}>Home automatically switches to a different quote from this list each day.</p>
 
       {state.storyQuotes.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '50px 20px' }}>
           <div style={{ marginBottom: 12 }}><Icon emoji="💬" size={44} /></div>
           <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No quotes yet</p>
-          <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Add a few quotes so the Dashboard changes daily, instead of always showing the same one.</p>
+          <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Add a few quotes so Home changes daily, instead of always showing the same one.</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

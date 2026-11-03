@@ -489,8 +489,8 @@ export default function AuthScreen() {
             </div>
           </Card>
 
-          <p style={{ textAlign: 'center', fontSize: 12, color: '#B09AA0', lineHeight: 1.6, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <Icon emoji="🔒" size={11} /> Signing up requires email confirmation before you can log in
+          <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink-2)', lineHeight: 1.6 }}>
+            <span style={{ display: 'inline-block', verticalAlign: '-2px', marginRight: 6 }}><Icon emoji="🔒" size={12} /></span>Signing up requires email confirmation before you can log in
           </p>
         </div>
       </div>

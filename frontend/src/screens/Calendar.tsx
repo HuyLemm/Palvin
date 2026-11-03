@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { downloadFile, eventToICS } from '../lib/exportData';
 import { plural } from '../lib/plural';
 import { useApp } from '../context';
 import AddEventForm from '../components/forms/AddEventForm';
@@ -174,6 +175,7 @@ function EventCard({ event: ev, displayDate, onEdit, onDelete }: { event: Calend
       </div>
       {!confirm
         ? <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+            <button aria-label="Add to phone calendar" title="Add to phone calendar" onClick={() => downloadFile(`${ev.title.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[đĐ]/g, 'd').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'event'}.ics`, 'text/calendar', eventToICS(ev))} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="⬇️" size={13} /></button>
             <button aria-label="Edit" onClick={() => onEdit(ev)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
             <button aria-label="Delete" onClick={() => setConfirm(true)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
           </div>

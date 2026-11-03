@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { downloadFile, toCSV } from '../lib/exportData';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
@@ -504,6 +505,29 @@ export default function Settings() {
         <SettingRow emoji="🔒" label="Password" value="••••••••" onEdit={openPasswordModal} />
       </Section>
 
+      <Section title="Your data">
+        <ExportRow
+          emoji="🧾"
+          label="Export expenses & income (CSV)"
+          hint="Opens in Excel or Google Sheets"
+          onClick={() => {
+            const rows = state.expenses.map(e => ({ date: e.date, type: e.type ?? 'expense', title: e.title, category: e.category, paidBy: e.paidBy, amount: e.amount, note: e.note }));
+            downloadFile(`palvin-expenses-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv', toCSV(rows, ['date', 'type', 'title', 'category', 'paidBy', 'amount', 'note']));
+            toast('Expenses exported', '🧾');
+          }}
+        />
+        <ExportRow
+          emoji="📦"
+          label="Export everything (JSON)"
+          hint="Expenses, events, memories, notes, goals, trips and more. Photos stay online; your Private Stash is never included."
+          onClick={() => {
+            const pick = { expenses: state.expenses, events: state.events, memories: state.memories.map(m => ({ ...m, image: undefined })), loveNotes: state.loveNotes, gratitude: state.gratitude.map(g => ({ ...g, image: undefined })), todos: state.todos, goals: state.goals, trips: state.trips, wishes: state.wishes, places: state.places };
+            downloadFile(`palvin-backup-${new Date().toISOString().slice(0, 10)}.json`, 'application/json', JSON.stringify({ exportedAt: new Date().toISOString(), ...pick }, null, 2));
+            toast('Backup exported', '📦');
+          }}
+        />
+      </Section>
+
       {/* Private — only visible on this specific account */}
       {isAdmin && partnerProfile && (
         <>
@@ -815,5 +839,18 @@ function ToggleRow({ emoji, label, value, onToggle }: { emoji: string; label: st
         <div style={{ position: 'absolute', top: 3, left: value ? 24 : 3, width: 21, height: 21, borderRadius: '50%', background: 'var(--white)', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }} />
       </button>
     </div>
+  );
+}
+
+function ExportRow({ emoji, label, hint, onClick }: { emoji: string; label: string; hint: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="settings-row" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'none', border: 'none', borderBottom: '1px solid var(--border)', cursor: 'pointer', textAlign: 'left', font: 'inherit' }}>
+      <Icon emoji={emoji} size={20} style={{ flexShrink: 0 }} />
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{label}</span>
+        <span style={{ display: 'block', fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{hint}</span>
+      </span>
+      <Icon emoji="⬇️" size={16} style={{ color: 'var(--ink-2)', flexShrink: 0 }} />
+    </button>
   );
 }

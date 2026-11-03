@@ -1,5 +1,5 @@
 import {
-  AlertTriangle, Flower2, Heart, X, Sparkles, Mail, Wallet, Gift, MapPin,
+  AlertTriangle, Download, Flower2, Heart, X, Sparkles, Mail, Wallet, Gift, MapPin,
   ArrowLeft, ArrowRight, Calendar, Plane, PartyPopper, Pencil, Music, Frown,
   Receipt, Lock, Trash2, CheckCircle2, Car, Clapperboard, Home, Container,
   Utensils, Coffee, Smile, LockKeyhole, MessageCircle, Check, Package,
@@ -81,6 +81,7 @@ export const EMOJI_ICON_MAP: Record<string, LucideIcon> = {
   '🎲': Dices,
   '😐': Meh,
   '🔍': Search,
+  '⬇️': Download, '⬇': Download,
   '🌅': Sunrise,
   '🛁': Bath,
   '🎨': Palette,

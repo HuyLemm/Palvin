@@ -243,7 +243,7 @@ function PrivateLedgerTab() {
                   <p style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.title}</p>
                   <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{e.category}</p>
                 </div>
-                <p style={{ fontSize: 15, fontWeight: 700, flexShrink: 0, color: e.type === 'income' ? 'var(--green)' : 'var(--sakura-deep)' }}>{e.type === 'income' ? '+' : '-'}{VND(e.amount)}</p>
+                <p style={{ fontSize: 15, fontWeight: 700, flexShrink: 0, color: e.type === 'income' ? 'var(--green)' : 'var(--ink)' }}>{e.type === 'income' ? '+' : '-'}{VND(e.amount)}</p>
               </div>
             ))}
           </div>
@@ -723,24 +723,23 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
         <div style={{ position: 'absolute', top: -20, right: -20, width: 90, height: 90, background: 'rgba(255,255,255,0.08)', borderRadius: '50%' }} />
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Remaining</p>
         <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 31, color: 'white', lineHeight: 1.1 }}>{VND(net)}</p>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 6 }}>Income {VND(totalIncome)} · Spent {VND(totalExpense)}</p>
       </div>
 
       {/* Summary strip */}
-      <div key={`sum-${filter}-${month}`} className="money-in" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16, animationDelay: '0.04s' }}>
+      <div key={`sum-${filter}-${month}`} className="money-in" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 10, marginBottom: 16, animationDelay: '0.04s' }}>
         <div style={{ background: 'var(--green-grad)', borderRadius: 16, padding: '14px 16px' }}>
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Income</p>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'white', lineHeight: 1, whiteSpace: 'nowrap' }}>{VND(totalIncome)}</p>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 'min(18px, calc((100vw - 102px) / 15.4))', color: 'white', lineHeight: 1, whiteSpace: 'nowrap' }}>{VND(totalIncome)}</p>
         </div>
         <div style={{ background: 'var(--btn-grad)', borderRadius: 16, padding: '14px 16px' }}>
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Expenses</p>
-          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'white', lineHeight: 1, whiteSpace: 'nowrap' }}>{VND(totalExpense)}</p>
+          <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 'min(18px, calc((100vw - 102px) / 15.4))', color: 'white', lineHeight: 1, whiteSpace: 'nowrap' }}>{VND(totalExpense)}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-        <div style={{ display: 'flex', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', flex: 1 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+        <div style={{ display: 'flex', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', flex: '1 1 210px' }}>
           {(['all', 'income', 'expense'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)} style={{
               flex: 1, padding: '7px 4px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
@@ -755,11 +754,12 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
           ))}
         </div>
         <select
+          aria-label="Filter by month"
           value={month}
           onChange={e => setMonth(e.target.value)}
           style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '7px 10px', fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', cursor: 'pointer' }}
         >
-          <option value="all">All</option>
+          <option value="all">All months</option>
           {MONTHS.map(m => <option key={m} value={m}>{monthLabel(m)}</option>)}
         </select>
       </div>
@@ -814,7 +814,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
                   </div>
                   <p style={{
                     fontSize: 15, fontWeight: 700, flexShrink: 0,
-                    color: e.type === 'income' ? 'var(--green)' : 'var(--sakura-deep)',
+                    color: e.type === 'income' ? 'var(--green)' : 'var(--ink)',
                   }}>{e.type === 'income' ? '+' : '-'}{VND(e.amount)}</p>
                 </div>
               ))}
@@ -1387,7 +1387,7 @@ function BillCard({ bill: b, onTogglePaid, onEdit, getDueStatus }: {
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 16, whiteSpace: 'nowrap', color: b.paid ? 'var(--ink-2)' : 'var(--lavender)' }}>{VND(b.amount)}</p>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(13px, 4.1vw, 16px)', whiteSpace: 'nowrap', color: b.paid ? 'var(--ink-2)' : 'var(--lavender)' }}>{VND(b.amount)}</p>
             <button aria-label="Edit"
               onClick={() => onEdit(b)}
               style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, flexShrink: 0, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

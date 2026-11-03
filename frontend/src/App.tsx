@@ -207,7 +207,7 @@ function ScreenRouter() {
   // live `screen`/`selectedId` to land on the right sub-screen and highlight
   // the specific wish a notification pointed at).
   const normalizedScreen = (screen === 'stats' || screen === 'bills' || screen === 'goals' || screen === 'debts') ? 'money'
-    : (screen === 'wishlist' || screen === 'gratitude' || screen === 'places' || screen === 'capsule' || screen === 'todos') ? 'us'
+    : (screen === 'wishlist' || screen === 'gratitude' || screen === 'places' || screen === 'capsule' || screen === 'todos' || screen === 'favorites') ? 'us'
     : screen;
   const key = screen === 'chat' ? null : (selectedId ? `${normalizedScreen}:${selectedId}` : normalizedScreen);
 
@@ -639,7 +639,7 @@ export default function App() {
             )}
 
             {/* App Header */}
-            <header className="app-header" style={{
+            <header className="app-header" inert={!authed} style={{
               background: 'var(--header-bg)',
               backdropFilter: 'blur(12px)',
               borderBottom: '2px solid var(--area-line, var(--border))',
@@ -696,7 +696,7 @@ export default function App() {
             </header>
 
             {/* Scroll area */}
-            <main ref={mainRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 96px' }}>
+            <main ref={mainRef} inert={!authed} style={{ flex: 1, overflowY: 'auto', padding: '12px 14px 96px' }}>
               {/* ScreenRouter keeps every visited screen mounted (just
                   hidden) internally — see its own per-key .screen-transition
                   wrapper — so this can't have a key={screen} of its own
@@ -707,7 +707,7 @@ export default function App() {
             </main>
 
             {/* Bottom Nav */}
-            <nav aria-label="Main" className="app-bottom-nav" style={{
+            <nav aria-label="Main" inert={!authed} className="app-bottom-nav" style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
               background: 'var(--navbar-bg)',
               backdropFilter: 'blur(16px)',

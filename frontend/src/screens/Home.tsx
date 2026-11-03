@@ -192,6 +192,11 @@ export default function Home() {
     }, 220);
   };
 
+  const cycleFilter = () => {
+    const order = ['all', currentUser, ...(partnerName ? [partnerName] : [])];
+    setPlaylistFilter(order[(order.indexOf(playlistFilter) + 1) % order.length]);
+  };
+
   const handleHug = (e: React.MouseEvent<HTMLElement>) => {
     burstHearts(e.currentTarget);
     haptic(18);
@@ -239,6 +244,7 @@ export default function Home() {
     return { date, alvinScore, paoiScore, label };
   });
 
+  const hasMoodData = moodChartData.some(d => d.alvinScore || d.paoiScore);
   const currentSong = playlistPool[vinylIdx % Math.max(playlistPool.length, 1)];
   const todosLeft = state.todos.filter(t => !t.completed && (t.owner === currentUser || t.owner === 'Both')).length;
 
@@ -306,17 +312,6 @@ export default function Home() {
         {/* Spinning Vinyl Disk */}
         {state.playlist.length > 0 && (
           <div>
-            {/* Mine / partner's / Tất cả — which pool of songs the widget draws from */}
-            <div style={{ display: 'flex', gap: 5, marginBottom: 8, justifyContent: 'center' }}>
-              {[
-                { k: 'all', label: 'All' },
-                { k: currentUser, label: currentUser },
-                ...(partnerName ? [{ k: partnerName, label: partnerName }] : []),
-              ].map(f => (
-                <button key={f.k} onClick={() => setPlaylistFilter(f.k)} style={{ padding: '3px 10px', borderRadius: 99, border: 'none', background: playlistFilter === f.k ? 'var(--sakura-accent)' : 'var(--glass)', color: playlistFilter === f.k ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>{f.label}</button>
-              ))}
-            </div>
-
             {currentSong ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--glass)', backdropFilter: 'blur(8px)', borderRadius: 16, padding: '10px 20px', border: isPlaying ? '1px solid rgba(201,95,124,0.5)' : '1px solid rgba(243,166,185,0.3)', boxShadow: isPlaying ? '0 0 0 4px rgba(243,166,185,0.18)' : 'none', transition: 'box-shadow 0.3s, border-color 0.3s' }}>
                 <style>{`
@@ -344,6 +339,7 @@ export default function Home() {
                         <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-3 0.9s ease-in-out infinite' }} />
                       </span>
                     )}
+                    <button onClick={cycleFilter} aria-label={`Showing ${playlistFilter === 'all' ? 'everyone' : playlistFilter}'s songs. Tap to change.`} style={{ marginLeft: 'auto', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: 99, padding: '2px 10px', color: 'var(--ink-2)', fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'none', letterSpacing: 0 }}>{playlistFilter === 'all' ? 'All' : playlistFilter}</button>
                   </p>
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.title}</p>
                   <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentSong.artist}</p>
@@ -372,6 +368,30 @@ export default function Home() {
         )}
       </div>
 
+
+      {/* To Do shortcut — prominent on purpose (per-user request), unlike the
+          small Couple Stats tiles below, since this is meant to nag a little
+          when something's still outstanding. */}
+      <div
+        onClick={() => navigate('todos')}
+        className="card"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', marginBottom: 16, cursor: 'pointer',
+          background: todosLeft > 0 ? 'var(--pink-glow)' : undefined, border: todosLeft > 0 ? '1px solid var(--sakura)' : undefined,
+        }}
+      >
+        <div style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon emoji="✅" size={22} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
+            {todosLeft > 0 ? `${todosLeft} task${todosLeft === 1 ? '' : 's'} left today` : 'All caught up! 🎉'}
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Tap to open your To Do list</p>
+        </div>
+        {todosLeft > 0 && <span style={{ minWidth: 24, height: 24, padding: '0 7px', borderRadius: 99, background: 'var(--badge-bg)', color: 'white', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{todosLeft}</span>}
+        <Icon emoji="→" size={18} style={{ color: 'var(--sakura-deep)', flexShrink: 0 }} />
+      </div>
 
       {/* Hug + Thinking of you */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
@@ -410,88 +430,6 @@ export default function Home() {
             to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
           </span>
         </button>
-      </div>
-
-      {/* Today's Mood */}
-      <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Today</p>
-          <button onClick={() => setShowMoodPicker(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>Update</button>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-          {[currentUser, ...(partnerName ? [partnerName] : [])].map(u => (
-            <div key={u} style={{ background: 'var(--bg)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Avatar user={u} size={36} />
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{u}</p>
-                <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                  {state.moods[u] ? <><Icon emoji={state.moods[u]!.emoji} size={14} /> {state.moods[u]!.label}</> : '— not set yet'}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* 7-day mood chart */}
-        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Mood over the last 7 days</p>
-        {moodChartData.every(d => !d.alvinScore && !d.paoiScore) && (
-          <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 8px' }}>No moods yet — tap Update above to start your chart.</p>
-        )}
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
-          {moodChartData.map(d => (
-            <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-              <div style={{ width: '100%', display: 'flex', gap: 1, alignItems: 'flex-end', height: 44 }}>
-                <div style={{ flex: 1, background: '#4A8AE8', borderRadius: '2px 2px 0 0', height: d.alvinScore ? `${(d.alvinScore / 5) * 100}%` : '8%', opacity: d.alvinScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
-                <div style={{ flex: 1, background: 'var(--sakura-accent)', borderRadius: '2px 2px 0 0', height: d.paoiScore ? `${(d.paoiScore / 5) * 100}%` : '8%', opacity: d.paoiScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
-              </div>
-              <p style={{ fontSize: 11, color: 'var(--ink-2)', textAlign: 'center' }}>{d.label}</p>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A8AE8' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{currentUser}</span></div>
-          {partnerName && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sakura-accent)' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{partnerName}</span></div>}
-        </div>
-      </div>
-
-      {/* To Do shortcut — prominent on purpose (per-user request), unlike the
-          small Couple Stats tiles below, since this is meant to nag a little
-          when something's still outstanding. */}
-      <div
-        onClick={() => navigate('todos')}
-        className="card"
-        style={{
-          display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', marginBottom: 16, cursor: 'pointer',
-          background: todosLeft > 0 ? 'var(--pink-glow)' : undefined, border: todosLeft > 0 ? '1px solid var(--sakura)' : undefined,
-        }}
-      >
-        <div style={{ width: 44, height: 44, borderRadius: 14, flexShrink: 0, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon emoji="✅" size={22} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>
-            {todosLeft > 0 ? `${todosLeft} task${todosLeft === 1 ? '' : 's'} left today` : 'All caught up! 🎉'}
-          </p>
-          <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Tap to open your To Do list</p>
-        </div>
-        {todosLeft > 0 && <span style={{ minWidth: 24, height: 24, padding: '0 7px', borderRadius: 99, background: 'var(--badge-bg)', color: 'white', fontSize: 13, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{todosLeft}</span>}
-        <Icon emoji="→" size={18} style={{ color: 'var(--sakura-deep)', flexShrink: 0 }} />
-      </div>
-
-      {/* Couple Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
-        {[
-          { emoji: '🗺️', value: state.places.length, label: 'Places', target: 'places' },
-          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes', target: 'capsule' },
-          { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist', target: 'wishlist' },
-          { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude', target: 'gratitude' },
-        ].map(s => (
-          <div key={s.label} onClick={() => navigate(s.target)} className="card" style={{ padding: '12px 6px', textAlign: 'center', cursor: 'pointer' }}>
-            <p style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={s.emoji} size={20} /></p>
-            <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--sakura-deep)', lineHeight: 1 }}>{s.value}</p>
-            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{s.label}</p>
-          </div>
-        ))}
       </div>
 
       {/* Upcoming */}
@@ -549,6 +487,9 @@ export default function Home() {
                       {list.length === 0 && (
                         <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>No spots added yet</p>
                       )}
+                      {list.length === 0 && (
+                        <button onClick={() => navigate('favorites')} style={{ marginTop: 6, background: 'none', border: 'none', padding: 0, color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Add a spot</button>
+                      )}
                     </div>
                   </div>
                   {list.length > 0 && (
@@ -595,6 +536,77 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Couple Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+        {[
+          { emoji: '🗺️', value: state.places.length, label: 'Places', target: 'places' },
+          { emoji: '💌', value: state.loveNotes.length + state.loveLetters.length + state.capsules.length, label: 'Love notes', target: 'capsule' },
+          { emoji: '🎁', value: state.wishes.filter(w => !w.drawn).length, label: 'Wishlist', target: 'wishlist' },
+          { emoji: '🌿', value: state.gratitude.length, label: 'Gratitude', target: 'gratitude' },
+        ].map(s => (
+          <div key={s.label} onClick={() => navigate(s.target)} className="card" style={{ padding: '12px 6px', textAlign: 'center', cursor: 'pointer' }}>
+            <p style={{ marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={s.emoji} size={20} /></p>
+            <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--sakura-deep)', lineHeight: 1 }}>{s.value}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Today's Mood */}
+      <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)' }}>Today</p>
+          <button onClick={() => setShowMoodPicker(true)} style={{ fontSize: 12, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', border: 'none', borderRadius: 99, padding: '4px 10px', cursor: 'pointer', fontWeight: 600 }}>Update</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          {[currentUser, ...(partnerName ? [partnerName] : [])].map(u => (
+            <div key={u} style={{ background: 'var(--bg)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Avatar user={u} size={36} />
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{u}</p>
+                <p style={{ fontSize: 13, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  {state.moods[u] ? <><Icon emoji={state.moods[u]!.emoji} size={14} /> {state.moods[u]!.label}</> : '— not set yet'}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* One-tap mood for me while it's still unset today */}
+        {!state.moods[currentUser] && (
+          <div role="group" aria-label="How are you feeling today?" style={{ display: 'flex', gap: 6, marginBottom: 14, overflowX: 'auto', paddingBottom: 2 }}>
+            {MOODS_LIST.map(m => (
+              <button key={m.emoji} onClick={() => setMood(currentUser, m)} aria-label={m.label} title={m.label}
+                style={{ flex: '0 0 auto', width: 44, height: 44, borderRadius: 14, border: '1px solid var(--border)', background: 'var(--bg)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon emoji={m.emoji} size={22} />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {hasMoodData ? (<>
+        {/* 7-day mood chart */}
+        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Mood over the last 7 days</p>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
+          {moodChartData.map(d => (
+            <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+              <div style={{ width: '100%', display: 'flex', gap: 1, alignItems: 'flex-end', height: 44 }}>
+                <div style={{ flex: 1, background: '#4A8AE8', borderRadius: '2px 2px 0 0', height: d.alvinScore ? `${(d.alvinScore / 5) * 100}%` : '8%', opacity: d.alvinScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
+                <div style={{ flex: 1, background: 'var(--sakura-accent)', borderRadius: '2px 2px 0 0', height: d.paoiScore ? `${(d.paoiScore / 5) * 100}%` : '8%', opacity: d.paoiScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--ink-2)', textAlign: 'center' }}>{d.label}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A8AE8' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{currentUser}</span></div>
+          {partnerName && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sakura-accent)' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{partnerName}</span></div>}
+        </div>
+        </>) : (state.moods[currentUser] && (
+          <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Your 7-day mood chart will appear after a couple of days of check-ins.</p>
+        ))}
+      </div>
 
       {/* Recent Moments — cover photos from recent posts, same source Photo
           Collage (Us tab) draws from. */}
