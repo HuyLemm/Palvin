@@ -12,6 +12,8 @@ import { nextOccurrence, toDateStr, oneMonthFrom } from '../calendarRecurrence';
 import { DEFAULT_QUICK_ACTIONS } from '../auth';
 import { burstHearts, haptic } from '../lib/effects';
 import type { FavCategory, FavPlace, StoryQuote } from '../types';
+import SectionHeading from '../components/SectionHeading';
+import { useCollapsed } from '../hooks/useCollapsed';
 
 // Picks a quote that looks random day to day (not a fixed 0,1,2... queue
 // order) while staying identical for both partners on the same calendar
@@ -69,6 +71,8 @@ const MOOD_SCORE: Record<string, number> = {
 };
 
 export default function Home() {
+  const [upcomingFolded, toggleUpcoming] = useCollapsed('home-upcoming');
+  const [chartFolded, toggleChart] = useCollapsed('home-mood-chart');
   const { state, screen, navigate, setMood, currentUser, myProfile, partnerProfile, sendHug } = useApp();
   const partnerName = partnerProfile?.displayName;
   const hugConfig = myProfile?.quickActions.hug ?? DEFAULT_QUICK_ACTIONS.hug;
@@ -442,8 +446,8 @@ export default function Home() {
       {/* Upcoming */}
       {upcoming.length > 0 && (
         <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
-          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12 }}>Upcoming</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <SectionHeading title="Upcoming" collapsed={upcomingFolded} onToggle={toggleUpcoming} style={{ marginBottom: upcomingFolded ? 0 : 12 }} />
+          {!upcomingFolded && <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {upcoming.map(({ event: ev, displayDate }) => {
               const d = new Date(displayDate + 'T12:00:00');
               const mon = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -464,7 +468,7 @@ export default function Home() {
                 </div>
               );
             })}
-          </div>
+          </div>}
         </div>
       )}
 
@@ -595,7 +599,8 @@ export default function Home() {
 
         {hasMoodData ? (<>
         {/* 7-day mood chart */}
-        <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Mood over the last 7 days</p>
+        <SectionHeading title="Mood over the last 7 days" collapsed={chartFolded} onToggle={toggleChart} style={{ marginBottom: chartFolded ? 0 : 8 }} />
+        {!chartFolded && <>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
           {moodChartData.map(d => (
             <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
@@ -603,7 +608,7 @@ export default function Home() {
                 <div style={{ flex: 1, background: '#4A8AE8', borderRadius: '2px 2px 0 0', height: d.alvinScore ? `${(d.alvinScore / 5) * 100}%` : '8%', opacity: d.alvinScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
                 <div style={{ flex: 1, background: 'var(--sakura-accent)', borderRadius: '2px 2px 0 0', height: d.paoiScore ? `${(d.paoiScore / 5) * 100}%` : '8%', opacity: d.paoiScore ? 1 : 0.2, transition: 'height 0.4s', minHeight: 2 }} />
               </div>
-              <p style={{ fontSize: 11, color: 'var(--ink-2)', textAlign: 'center' }}>{d.label}</p>
+              <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center' }}>{d.label}</p>
             </div>
           ))}
         </div>
@@ -611,6 +616,7 @@ export default function Home() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4A8AE8' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{currentUser}</span></div>
           {partnerName && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--sakura-accent)' }} /><span style={{ fontSize: 12, color: 'var(--ink-2)' }}>{partnerName}</span></div>}
         </div>
+        </>}
         </>) : (state.moods[currentUser] && (
           <p style={{ fontSize: 13, color: 'var(--ink-2)' }}>Your 7-day mood chart will appear after a couple of days of check-ins.</p>
         ))}

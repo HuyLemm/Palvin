@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import EmptyState from '../components/EmptyState';
 import CalendarFeedLink from '../components/CalendarFeedLink';
 import MapLink from '../components/MapLink';
 import { downloadFile, eventToICS } from '../lib/exportData';
@@ -284,11 +285,7 @@ function CycleTrackerTab() {
       </div>
 
       {logs.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', padding: '50px 20px' }}>
-          <div style={{ marginBottom: 12 }}><Icon emoji="🌸" size={44} /></div>
-          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', marginBottom: 6 }}>No entries logged yet</p>
-          <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6 }}>Log the start date of your most recent period to begin predictions — the more entries logged, the more accurate they get.</p>
-        </div>
+        <div className="card"><EmptyState icon="🌸" title="No entries logged yet" sub="Log the start date of your most recent period to begin predictions — the more entries, the more accurate they get." /></div>
       ) : (
         <>
           {/* Predictions — hero */}

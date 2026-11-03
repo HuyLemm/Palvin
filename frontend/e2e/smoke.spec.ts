@@ -27,8 +27,11 @@ async function login(page: Page) {
   await page.getByPlaceholder('Your username').fill(USER!)
   await page.getByPlaceholder('Password').fill(PASS!)
   await page.getByRole('button', { name: /^log in$/i }).click()
+  // the shell is in the DOM (inert) even while logged out, so wait for the form to go away
+  await expect(page.getByPlaceholder('Password')).toHaveCount(0, { timeout: 30_000 })
   await expect(page.locator('nav[aria-label="Main"]')).toBeVisible({ timeout: 30_000 })
   await expect(page.locator('[role=status][aria-label=Loading]')).toHaveCount(0, { timeout: 30_000 })
+  await expect(page.getByRole('button', { name: /^Create new$/ })).toBeVisible({ timeout: 30_000 })
 }
 
 const tab = (page: Page, name: string) => page.locator('nav[aria-label="Main"]').getByRole('button', { name: new RegExp('^' + name) })
@@ -100,6 +103,33 @@ test.describe('logged in (test account)', () => {
     const chunks: Buffer[] = []
     for await (const c of stream) chunks.push(c as Buffer)
     expect(Buffer.concat(chunks).toString('utf8')).toContain('date,type,title,category,paidBy,amount,note')
+  })
+
+  test('an expense added offline is kept on the phone and sent once when the connection returns', async ({ page, context }) => {
+    await blockWrites(page)
+    const sent: { title?: string; amount?: number }[] = []
+    await page.route('**/rest/v1/expenses*', route => {
+      if (route.request().method() !== 'POST') return route.fallback()
+      sent.push(JSON.parse(route.request().postData() || '{}'))
+      return route.fulfill({ status: 201, contentType: 'application/json', body: '' })
+    })
+    await login(page)
+
+    await context.setOffline(true)
+    await page.evaluate(() => window.dispatchEvent(new Event('offline')))
+    await page.getByRole('button', { name: /^Create new/ }).click()
+    await page.locator('[role=dialog], .bottom-sheet').getByText('Expense', { exact: true }).first().click()
+    await page.getByPlaceholder('What was it for?').fill('E2E offline coffee')
+    await page.getByPlaceholder('Amount (VND)').fill('45000')
+    await page.getByRole('button', { name: /^Save/ }).last().click()
+    await expect(page.getByText(/Offline · 1 waiting to sync/)).toBeVisible()
+    expect(sent).toHaveLength(0)
+
+    await context.setOffline(false)
+    await page.evaluate(() => window.dispatchEvent(new Event('online')))
+    await expect.poll(() => sent.length, { timeout: 10_000 }).toBe(1)
+    expect(sent[0]).toMatchObject({ title: 'E2E offline coffee', amount: 45000 })
+    await expect(page.getByText(/Offline · 1 waiting to sync/)).toHaveCount(0)
   })
 
   test('deleting a notification offers Undo and does not delete until the window ends', async ({ page }) => {

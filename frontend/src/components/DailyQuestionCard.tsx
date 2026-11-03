@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../context';
+import SectionHeading from './SectionHeading';
+import { useCollapsed } from '../hooks/useCollapsed';
 import { fetchDaily, submitDailyAnswer, type DailyState } from '../lib/serverFeatures';
 
 const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -11,6 +13,7 @@ export default function DailyQuestionCard() {
   const [daily, setDaily] = useState<DailyState | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [folded, toggleFolded] = useCollapsed('home-question');
   const partner = partnerProfile?.displayName ?? 'your partner';
   const date = localDate();
 
@@ -42,10 +45,10 @@ export default function DailyQuestionCard() {
 
   return (
     <div className="card" style={{ padding: '16px 18px', marginBottom: 16 }}>
-      <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Question of the day</p>
-      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--ink)', lineHeight: 1.4, marginBottom: 12 }}>{daily.question.body}</p>
+      <SectionHeading title="Question of the day" collapsed={folded} onToggle={toggleFolded} style={{ marginBottom: 8 }} />
+      <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'var(--ink)', lineHeight: 1.4, marginBottom: folded ? 0 : 12 }}>{daily.question.body}</p>
 
-      {daily.mine === null ? (
+      {folded ? null : daily.mine === null ? (
         <div>
           <textarea className="input-field" aria-label="Your answer" rows={2} maxLength={1000} placeholder="Your answer…" value={draft} onChange={e => setDraft(e.target.value)} style={{ marginBottom: 8 }} />
           <button className="btn-primary" onClick={() => void send()} disabled={busy || !draft.trim()} style={{ width: '100%', padding: '10px', opacity: !draft.trim() ? 0.6 : 1 }}>Send answer</button>

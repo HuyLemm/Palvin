@@ -1,5 +1,5 @@
 import {
-  AlertTriangle, CloudSun, Download, Upload, Share2, Flower2, Heart, X, Sparkles, Mail, Wallet, Gift, MapPin,
+  AlertTriangle, ChevronDown, CloudSun, Download, Upload, Share2, Flower2, Heart, X, Sparkles, Mail, Wallet, Gift, MapPin,
   ArrowLeft, ArrowRight, Calendar, Plane, PartyPopper, Pencil, Music, Frown,
   Receipt, Lock, Trash2, CheckCircle2, Car, Clapperboard, Home, Container,
   Utensils, Coffee, Smile, LockKeyhole, MessageCircle, Check, Package,
@@ -21,6 +21,7 @@ import {
 // Lucide icon here — this is the single place to add a new mapping instead
 // of introducing another literal emoji character.
 export const EMOJI_ICON_MAP: Record<string, LucideIcon> = {
+  '⌄': ChevronDown,
   '⚠️': AlertTriangle, '⚠': AlertTriangle,
   '🌸': Flower2, '🌹': Flower2,
   '💕': Heart, '❤️': Heart, '❤': Heart, '💗': Heart, '🤍': Heart, '💖': Heart, '💙': Heart,

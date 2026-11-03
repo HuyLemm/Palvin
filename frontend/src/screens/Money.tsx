@@ -1208,8 +1208,8 @@ function StatsTab({ expenses }: { expenses: any[] }) {
           <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)', marginBottom: 10 }}>Worth noting</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {insights.map((ins, i) => (
-              <p key={i} style={{ fontSize: 12.5, color: 'var(--ink)', lineHeight: 1.5, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Icon emoji={ins.icon} size={14} /><span>{ins.text}</span>
+              <p key={i} style={{ fontSize: 12.5, color: 'var(--ink)', lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+                <Icon emoji={ins.icon} size={14} style={{ flexShrink: 0, marginTop: 3 }} /><span>{ins.text}</span>
               </p>
             ))}
           </div>

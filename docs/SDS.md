@@ -697,6 +697,13 @@ Vì `backend/` hiện rỗng, phần này phác thảo cách mapping `AppState` 
 
 Migration `0093`–`0096` và function `calendar-feed` đã được áp dụng lên production (11/2026). Lưu ý: production không lưu lịch sử migration (các bản cũ được dán tay), nên **không dùng `supabase db push`** — áp dụng từng file bằng `supabase db query --remote -f <file>` hoặc SQL editor. Nếu máy chủ thiếu một phần, giao diện tự ẩn mục đó (`lib/serverFeatures.ts`, `isMissing`).
 
+### 12.3c Offline, trạng thái trống, chuyển màn, thu gọn
+- **Ghi khi offline** (`lib/offlineQueue.ts`): thêm chi tiêu và to-do lúc mất mạng được lưu trên máy (`localStorage`, theo từng tài khoản), hiện ngay trong danh sách (id `temp-…`) và tự gửi khi có mạng (`online` hoặc khi mở app). Lỗi mạng giữ lại để thử tiếp; lỗi khác thử tối đa 3 lần rồi bỏ để không chặn các mục sau. Các thao tác khác vẫn cần mạng. `OfflineBanner` hiện số mục đang chờ. `refreshMoney/refreshTodos` bỏ qua khi offline để không xoá danh sách đang hiển thị.
+- **Ngân sách gợi ý** (`lib/budgetSuggest.ts`): trung bình chi của danh mục trong ≤3 tháng trước, làm tròn lên 50.000.
+- **Trạng thái trống**: dùng chung `EmptyState` (Gratitude, Time Capsule, Places, Wishlist, Playlist, Collage, Our Story, Calendar); thẻ Budgets có khung `skeleton` khi đang tải.
+- **Chuyển màn**: màn gốc (Home/Feed/Money/Us/Settings) mờ dần vào; màn mở từ đó trượt vào từ phải (`.screen-push`); tôn trọng giảm chuyển động.
+- **Thu gọn trên Home** (`hooks/useCollapsed.ts`, `SectionHeading`): Upcoming, biểu đồ mood 7 ngày, Question of the day; trạng thái nhớ theo thiết bị.
+
 ### 12.4 Kiểm thử & CI
 - `pnpm test` (Vitest + jsdom): logic điều hướng, plural, màu chữ, ICS/CSV, nhập chi tiêu, gợi ý danh mục, thời tiết.
 - `pnpm test:e2e` (Playwright, Chrome hệ thống): smoke test dùng tài khoản thử qua `PALVIN_E2E_USER/PASS`; **chặn mọi request ghi tới Supabase**.

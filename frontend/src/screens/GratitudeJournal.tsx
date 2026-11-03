@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import EmptyState from '../components/EmptyState';
 import { useApp } from '../context';
 import { uploadGratitudeImage } from '../gratitude';
 import Avatar from '../components/Avatar';
@@ -182,10 +183,7 @@ export default function GratitudeJournal({ onBack }: Props) {
 
       {/* Entries */}
       {filtered.length === 0 ? (
-        <div className="card" style={{ padding: '40px 20px', textAlign: 'center' }}>
-          <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}><Icon emoji="🌸" size={32} /></div>
-          <p style={{ fontSize: 15, color: 'var(--ink-2)' }}>No entries yet</p>
-        </div>
+        <div className="card"><EmptyState icon="🌸" title="No entries yet" sub="Write one small thing you are grateful for today." /></div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filtered.map((g, i) => (

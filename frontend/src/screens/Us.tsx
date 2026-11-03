@@ -1,4 +1,5 @@
 import { useState, useEffect, useLayoutEffect, useRef, Suspense, lazy } from 'react';
+import EmptyState from '../components/EmptyState';
 import { spotifyUrl, youtubeMusicUrl } from '../lib/links';
 import MapLink from '../components/MapLink';
 import { plural } from '../lib/plural';
@@ -506,16 +507,10 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
           </div>
         ))}
         {cfg && list.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
-            <Icon emoji={cfg.emoji} size={36} style={{ display: 'block', margin: '0 auto 8px' }} />
-            No places here yet. Add one!
-          </div>
+          <EmptyState icon={cfg.emoji} title="No places here yet" sub="Add the first one with the + button." />
         )}
         {!cfg && (
-          <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
-            <Icon emoji="💕" size={36} style={{ display: 'block', marginBottom: 8 }} />
-            No categories yet. Tap "+ New" to create one!
-          </div>
+          <EmptyState icon="💕" title="No categories yet" sub={'Tap "+ New" to create your first one.'} />
         )}
       </div>
 
@@ -1028,10 +1023,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
       <div key={filter} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {filtered.map((w, i) => renderWishCard(w, i))}
         {filtered.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
-            <Icon emoji="🎁" size={36} style={{ display: 'block', marginBottom: 8 }} />
-            Nothing in this wishlist yet!
-          </div>
+          <EmptyState icon="🎁" title="Nothing in this wishlist yet" sub="Add something you would love to have or give." />
         )}
       </div>
 
@@ -1534,7 +1526,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
             </div>
           </div>
         ))}
-        {filtered.length === 0 && <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>No songs yet. Add the first one!</div>}
+        {filtered.length === 0 && <EmptyState icon="🎵" title="No songs yet" sub="Add the first song to your playlist." />}
       </div>
 
       {/* Add modal */}
@@ -1671,10 +1663,7 @@ function PhotoCollage({ onBack }: { onBack: () => void }) {
       })}
 
       {months.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <Icon emoji="🖼️" size={48} style={{ marginBottom: 12 }} />
-          <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>No photos yet. Post something with photos to build a collage!</p>
-        </div>
+        <EmptyState icon="🖼️" title="No photos yet" sub="Post something with photos to build your collage." />
       )}
     </div>
   );

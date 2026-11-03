@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../context';
 import AmountInput from './AmountInput';
 import Icon from './Icon';
+import { suggestBudget } from '../lib/budgetSuggest';
 import { budgetRatio, deleteBudget, fetchBudgets, saveBudget, type Budget } from '../lib/serverFeatures';
 
 const VND = (n: number) => `${Math.round(n).toLocaleString('en-US')} VND`;
 
 // Monthly budgets per category (Money > Stats). Hidden entirely until the budgets table exists.
-export default function BudgetsSection({ spentByCategory }: { month: string; spentByCategory: Record<string, number> }) {
+export default function BudgetsSection({ month, spentByCategory }: { month: string; spentByCategory: Record<string, number> }) {
   const { state, toast } = useApp();
   const [budgets, setBudgets] = useState<Budget[] | null>(null);
   const [missing, setMissing] = useState(false);
@@ -23,9 +24,18 @@ export default function BudgetsSection({ spentByCategory }: { month: string; spe
   }, []);
   useEffect(() => { void load(); }, [load]);
 
-  if (missing || budgets === null) return null;
+  if (missing) return null;
+  if (budgets === null) {
+    return (
+      <div className="card" aria-hidden="true" style={{ padding: '14px 16px', marginBottom: 12 }}>
+        <div className="skeleton" style={{ height: 12, width: '40%', marginBottom: 14 }} />
+        <div className="skeleton" style={{ height: 8, width: '100%' }} />
+      </div>
+    );
+  }
 
   const free = state.moneyCategories.expense.filter(c => !budgets.some(b => b.category.toLowerCase() === c.label.toLowerCase()));
+  const suggestion = category ? suggestBudget(state.expenses, category, month) : null;
   const emoji = (name: string) => state.moneyCategories.expense.find(c => c.label.toLowerCase() === name.toLowerCase())?.emoji ?? '💰';
 
   const add = async () => {
@@ -45,7 +55,7 @@ export default function BudgetsSection({ spentByCategory }: { month: string; spe
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>Budgets this month</p>
         {!adding && free.length > 0 && (
-          <button onClick={() => { setAdding(true); setCategory(free[0].label); }} style={{ background: 'var(--area-light)', border: 'none', borderRadius: 99, padding: '5px 12px', color: 'var(--area-deep)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Add</button>
+          <button onClick={() => { setAdding(true); setCategory(free[0].label); }} style={{ background: 'var(--area-light)', border: 'none', borderRadius: 99, padding: '5px 12px', color: 'color-mix(in srgb, var(--area-deep) 85%, #000)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Add</button>
         )}
       </div>
 
@@ -86,6 +96,11 @@ export default function BudgetsSection({ spentByCategory }: { month: string; spe
             {free.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
           </select>
           <AmountInput placeholder="Monthly limit (VND)" value={limit} onChange={setLimit} />
+          {suggestion !== null && Number(limit) !== suggestion && (
+            <button onClick={() => setLimit(String(suggestion))} style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: '4px 0', color: 'var(--area-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+              You usually spend about {VND(suggestion)} — use this
+            </button>
+          )}
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn-ghost" onClick={() => setAdding(false)} style={{ flex: 1, padding: '10px' }}>Cancel</button>
             <button className="btn-primary" onClick={() => void add()} disabled={busy} style={{ flex: 2, padding: '10px' }}>Save budget</button>

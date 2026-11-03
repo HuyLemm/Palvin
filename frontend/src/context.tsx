@@ -11,6 +11,7 @@ import { fetchCustomStickers, createCustomSticker, deleteCustomStickerRow, uploa
 import type { NewChatMessage } from './chat';
 import { readBootCache, writeBootCache, clearBootCache } from './bootCache';
 import { supabase } from './lib/supabaseClient';
+import { enqueue, flushQueue, pendingCount, shouldQueue } from './lib/offlineQueue';
 import {
   updatePhoto as authUpdatePhoto, uploadAvatarImage, updateNotifyPrefs as authUpdateNotifyPrefs, getCurrentProfile, getPartnerProfile, logout as authLogout,
   sendInvite as apiSendInvite, respondInvite as apiRespondInvite, cancelInvite as apiCancelInvite, getMyInvites,
@@ -611,9 +612,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addExpense = async (e: Omit<Expense, 'id'>) => {
-    const { error } = await createExpense(resolveProfileId(e.paidBy), {
-      title: e.title, category: e.category, categoryEmoji: e.categoryEmoji, amount: e.amount, date: e.date, note: e.note, type: e.type,
-    });
+    const body = { title: e.title, category: e.category, categoryEmoji: e.categoryEmoji, amount: e.amount, date: e.date, note: e.note, type: e.type };
+    const paidBy = resolveProfileId(e.paidBy);
+    const keepForLater = () => {
+      if (!myProfile) return false;
+      enqueue('expense', myProfile.id, { paidBy, body });
+      setState(s => ({ ...s, expenses: [{ ...e, id: `temp-${uid()}` }, ...s.expenses] }));
+      toast("Saved offline — will sync later", '📴');
+      return true;
+    };
+    if (shouldQueue() && keepForLater()) return;
+    const { error } = await createExpense(paidBy, body);
+    if (error && shouldQueue(error) && keepForLater()) return;
     if (error) { toast('Something went wrong', '⚠️'); return; }
     await refreshMoney();
     toast('Expense saved.', '💰');
@@ -961,7 +971,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addTodo = async (t: Omit<Todo, 'id' | 'completed' | 'createdBy'>) => {
     setState(s => ({ ...s, todos: [...s.todos, { ...t, id: `temp-${uid()}`, completed: false, createdBy: currentUser }] }));
     markActive();
+    if (shouldQueue() && myProfile) {
+      enqueue('todo', myProfile.id, t);
+      toast("Saved offline — will sync later", '📴', { passive: true });
+      return;
+    }
     const { error } = await createTodo(t);
+    if (error && shouldQueue(error) && myProfile) {
+      enqueue('todo', myProfile.id, t);
+      toast("Saved offline — will sync later", '📴', { passive: true });
+      return;
+    }
     if (error) { toast('Something went wrong', '⚠️'); }
     await refreshTodos();
   };
@@ -1741,7 +1761,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [isLinked, myProfile, refreshDebts]);
 
   const refreshTodos = useCallback(async () => {
-    if (!myProfile) return;
+    if (!myProfile || navigator.onLine === false) return;
     const names: Record<string, User> = {};
     names[myProfile.id] = myProfile.displayName;
     if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
@@ -1755,7 +1775,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [isLinked, myProfile, refreshTodos]);
 
   const refreshMoney = useCallback(async () => {
-    if (!myProfile) return;
+    if (!myProfile || navigator.onLine === false) return;
     const names: Record<string, User> = {};
     names[myProfile.id] = myProfile.displayName;
     if (partnerProfile) names[partnerProfile.id] = partnerProfile.displayName;
@@ -1768,6 +1788,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLinked && myProfile && partnerProfile) refreshMoney();
   }, [isLinked, myProfile, partnerProfile, refreshMoney]);
+
+  // Sends whatever was saved while offline (see lib/offlineQueue.ts): on start-up and whenever
+  // the connection comes back.
+  useEffect(() => {
+    if (!isLinked || !myProfile) return;
+    const userId = myProfile.id;
+    const run = async () => {
+      if (!pendingCount(userId) || navigator.onLine === false) return;
+      const { sent, dropped } = await flushQueue(userId, async item => {
+        const p = item.payload as { paidBy?: string | null; body?: Parameters<typeof createExpense>[1] } & Parameters<typeof createTodo>[0];
+        const { error } = item.kind === 'expense' ? await createExpense(p.paidBy ?? null, p.body!) : await createTodo(p);
+        return error;
+      });
+      if (sent) { await Promise.all([refreshMoney(), refreshTodos()]); toast(sent === 1 ? 'Synced 1 change' : `Synced ${sent} changes`, '✅', { passive: true }); }
+      if (dropped) toast(`${dropped} offline change${dropped === 1 ? '' : 's'} could not be saved`, '⚠️');
+    };
+    void run();
+    window.addEventListener('online', run);
+    return () => window.removeEventListener('online', run);
+  }, [isLinked, myProfile, refreshMoney, refreshTodos, toast]);
 
   // Private Stash — only Alvinne's account ever surfaces this (Money.tsx
   // gates the tab on isAdmin), so there's no point fetching it for the other

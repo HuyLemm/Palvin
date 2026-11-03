@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import EmptyState from '../components/EmptyState';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
 import { getDaysTogether } from '../data';
@@ -60,7 +61,7 @@ export default function OurStory({ onBack, onOpenTrips }: { onBack: () => void; 
         {days > 0 ? `Day ${days.toLocaleString()} and counting — every milestone, memory and trip in one place.` : 'Set your anniversary in Settings to start your timeline.'}
       </p>
 
-      {items.length === 0 && <p style={{ textAlign: 'center', color: 'var(--ink-2)', padding: '32px 0' }}>Nothing here yet.</p>}
+      {items.length === 0 && <EmptyState icon="📖" title="Your story starts here" sub="Add memories, trips and events and they will appear on this timeline." />}
 
       {years.map(y => (
         <section key={y} aria-label={String(y)} style={{ marginBottom: 8 }}>

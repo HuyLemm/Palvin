@@ -255,6 +255,13 @@ html, body {
    instead of the real viewport. Letting the animation clear naturally keeps
    transform at "none" once it's done. */
 .screen-transition { animation: screenTransitionIn 0.22s ease; }
+/* Opened from a root screen: slide in from the side, like a native push. Opacity-only
+   under reduced motion (the global rule shortens it to nothing). */
+.screen-push { animation: screenPushIn 0.26s cubic-bezier(0.32, 0.72, 0, 1); }
+@keyframes screenPushIn {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
 @keyframes popIn {
   from { opacity: 0; transform: scale(0.92); }
   to { opacity: 1; transform: scale(1); }
@@ -583,3 +590,12 @@ button, nav, header, [role="button"] {
 @media (pointer: coarse) and (max-height: 500px) and (min-width: 481px) {
   .app-header, .auth-slide { padding-top: 10px !important; }
 }
+
+/* Placeholder block while a card's data loads */
+.skeleton {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--fill-soft, rgba(128,128,128,0.12)) 25%, rgba(128,128,128,0.22) 50%, var(--fill-soft, rgba(128,128,128,0.12)) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }

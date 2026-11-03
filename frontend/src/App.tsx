@@ -189,6 +189,9 @@ function renderScreen(screen: string, id: string | undefined): JSX.Element {
   }
 }
 
+// Root screens fade in; anything opened from them slides in from the right (see .screen-push).
+const ROOT_SCREENS = new Set(['home', 'feed', 'money', 'us', 'settings']);
+
 function ScreenRouter() {
   const { screen, selectedId, isLinked } = useApp();
   // Chat is its own always-mounted overlay in App.tsx, entirely separate
@@ -244,7 +247,7 @@ function ScreenRouter() {
         // it just doesn't replay on later revisits — same tradeoff a native
         // tab bar makes.
         return (
-          <div key={k} className="screen-transition" style={{ display: k === key ? 'block' : 'none' }}>
+          <div key={k} className={ROOT_SCREENS.has(scr) ? 'screen-transition' : 'screen-transition screen-push'} style={{ display: k === key ? 'block' : 'none' }}>
             <Suspense fallback={<ScreenLoadingFallback />}>{renderScreen(scr, id)}</Suspense>
           </div>
         );
@@ -681,7 +684,7 @@ export default function App() {
                       background: 'var(--badge-bg)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: '1.5px solid var(--white)',
                     }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: 'white', lineHeight: 1 }}>{unreadNotifs > 99 ? '99+' : unreadNotifs}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: 'white', lineHeight: 1 }}>{unreadNotifs > 99 ? '99+' : unreadNotifs}</span>
                     </div>
                   )}
                 </button>
@@ -693,7 +696,7 @@ export default function App() {
                       background: 'var(--badge-bg)', borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       border: '1.5px solid var(--white)',
                     }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: 'white', lineHeight: 1 }}>{state.unreadChatCount > 99 ? '99+' : state.unreadChatCount}</span>
+                      <span style={{ fontSize: 12, fontWeight: 800, color: 'white', lineHeight: 1 }}>{state.unreadChatCount > 99 ? '99+' : state.unreadChatCount}</span>
                     </div>
                   )}
                 </button>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import EmptyState from '../components/EmptyState';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
 import FilterCountBadge from '../components/FilterCountBadge';
@@ -172,9 +173,7 @@ export default function TimeCapsule() {
       )}
 
       {filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
-          No letters here yet.
-        </div>
+        <EmptyState icon="💌" title="No letters here yet" sub="Write one to your future selves and seal it until a date you choose." />
       )}
 
       {showAdd && (
