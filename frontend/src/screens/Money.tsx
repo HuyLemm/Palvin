@@ -105,7 +105,7 @@ export default function Money() {
             background: tab === t.key ? 'var(--white)' : 'transparent',
             color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)',
             boxShadow: tab === t.key ? '0 1px 4px rgba(51,42,45,0.10)' : 'none',
-            transition: 'all 0.15s',
+            transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
           }}>
             <Icon emoji={t.icon} size={16} />
@@ -254,7 +254,7 @@ function PrivateLedgerTab() {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>{type === 'income' ? 'Add income' : 'Add expense'}</p>
-              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <input className="input-field" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
@@ -283,7 +283,7 @@ function PrivateLedgerTab() {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>{editType === 'income' ? 'Edit income' : 'Edit expense'}</p>
-              <button onClick={closeEdit} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeEdit} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <input className="input-field" placeholder="Title" value={editTitle} onChange={e => setEditTitle(e.target.value)} autoFocus />
@@ -394,7 +394,7 @@ function PrivateJarsTab() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {pct != null && <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: pct >= 100 ? '#5AC26A' : 'var(--sakura-deep)' }}>{pct}%</p>}
                 <button onClick={() => openEdit(j)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
-                <button onClick={() => setConfirmDeleteId(j.id)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
+                <button aria-label="Close" onClick={() => setConfirmDeleteId(j.id)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
               </div>
             </div>
             {pct != null && (
@@ -452,7 +452,7 @@ function PrivateJarsTab() {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>{editing ? 'Edit jar' : 'New jar'}</p>
-              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <input className="input-field" placeholder="Jar name" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
@@ -562,7 +562,7 @@ function PrivateStatsTab() {
             padding: '6px 16px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
             background: mode === m ? 'var(--sakura-accent)' : 'transparent',
             color: mode === m ? 'white' : 'var(--ink-2)',
-            transition: 'all 0.2s ease',
+            transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
           }}>{m === 'month' ? 'By month' : 'By year'}</button>
         ))}
       </div>
@@ -745,7 +745,7 @@ function ExpensesTab({ expenses, onAdd, onAddIncome }: { expenses: Expense[]; on
               flex: 1, padding: '7px 4px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
               background: filter === f ? 'var(--sakura-accent)' : 'transparent',
               color: filter === f ? 'white' : 'var(--ink-2)',
-              transition: 'all 0.2s ease',
+              transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
             }}>
               {f === 'all' ? 'All' : f === 'income' ? 'Income' : 'Expense'}
@@ -1067,7 +1067,7 @@ function StatsTab({ expenses }: { expenses: any[] }) {
             padding: '6px 16px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
             background: mode === m ? 'var(--sakura-accent)' : 'transparent',
             color: mode === m ? 'white' : 'var(--ink-2)',
-            transition: 'all 0.2s ease',
+            transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease',
           }}>{m === 'month' ? 'By month' : 'By year'}</button>
         ))}
       </div>
@@ -1437,7 +1437,7 @@ function AddBillForm({ onClose, onAdd }: { onClose: () => void; onAdd: (b: Omit<
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)' }}>Add bill</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         </div>
 
         {/* Emoji picker */}
@@ -1612,7 +1612,7 @@ function DebtsTab() {
             <p style={{ fontSize: 15, fontWeight: 700, color: d.paid ? 'var(--ink-2)' : 'var(--sakura-deep)' }}>{VND(d.paid ? d.amount : remaining)}</p>
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={() => openEdit(d)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-              <button onClick={() => setConfirmDeleteId(d.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+              <button aria-label="Close" onClick={() => setConfirmDeleteId(d.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
             </div>
           </div>
         </div>
@@ -1684,7 +1684,7 @@ function DebtsTab() {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="📒" size={18} /> {editing ? 'Edit debt' : 'Log a new debt'}</p>
-              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'flex', gap: 8 }}>

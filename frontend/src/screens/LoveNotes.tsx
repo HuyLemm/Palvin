@@ -47,7 +47,7 @@ export default function LoveNotes() {
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 4, background: 'var(--bg)', borderRadius: 14, padding: 4, marginBottom: 20, border: '1px solid var(--border)' }}>
         {[{ key: 'notes' as Tab, emoji: '💌', label: 'Notes' }, { key: 'letters' as Tab, emoji: '✉️', label: 'Letters' }, { key: 'secret' as Tab, emoji: '🔐', label: 'Secret' }].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: tab === t.key ? 'var(--white)' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', boxShadow: tab === t.key ? '0 1px 4px rgba(51,42,45,0.08)' : 'none', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Icon emoji={t.emoji} size={13} /> {t.label}</button>
+          <button key={t.key} onClick={() => setTab(t.key)} style={{ flex: 1, padding: '9px 0', borderRadius: 10, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: tab === t.key ? 'var(--white)' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', boxShadow: tab === t.key ? '0 1px 4px rgba(51,42,45,0.08)' : 'none', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}><Icon emoji={t.emoji} size={13} /> {t.label}</button>
         ))}
       </div>
 
@@ -305,7 +305,7 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <button onClick={onClose} disabled={sending} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 600, cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✕" size={14} /> Cancel</button>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: 'white', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="✉️" size={18} /> Write Letter</p>
-          <button onClick={handleSend} disabled={sending} style={{ background: 'var(--btn-grad)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14, opacity: (title && body && !sending) ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>{sending ? 'Sending...' : <>Send <Icon emoji="💌" size={14} /></>}</button>
+          <button onClick={handleSend} disabled={sending} style={{ background: 'var(--btn-grad)', border: 'none', borderRadius: 10, padding: '8px 14px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: 14, opacity: (title && body && !sending) ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: 6 }}>{sending ? 'Sending…' : <>Send <Icon emoji="💌" size={14} /></>}</button>
         </div>
 
         {/* Stationery picker */}
@@ -340,7 +340,7 @@ function LetterComposer({ onClose }: { onClose: () => void }) {
             <input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="Letter title..."
+              placeholder="Letter title…"
               style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontFamily: FONTS[font], fontSize: 21, fontWeight: 700, color: isDark ? '#F0E8FF' : 'var(--ink)', marginBottom: 18, padding: 0, fontStyle: font !== 'sans' ? 'italic' : 'normal' }}
             />
             <textarea
@@ -378,7 +378,7 @@ function SecretNoteComposer({ onClose }: { onClose: () => void }) {
       <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🔐" size={14} /> New secret note</p>
       <textarea
         className="input-field"
-        placeholder="Write something to unlock later..."
+        placeholder="Write something to unlock later…"
         value={message}
         onChange={e => { setMessage(e.target.value); setError(''); }}
         rows={3}
@@ -394,7 +394,7 @@ function SecretNoteComposer({ onClose }: { onClose: () => void }) {
       {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 12, marginBottom: 10 }}>{error}</p>}
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
-        <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>{saving ? 'Sealing...' : <>Seal it <Icon emoji="🔒" size={14} /></>}</button>
+        <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>{saving ? 'Sealing…' : <>Seal it <Icon emoji="🔒" size={14} /></>}</button>
       </div>
     </div>
   );

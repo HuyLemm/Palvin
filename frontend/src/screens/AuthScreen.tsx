@@ -349,7 +349,7 @@ export default function AuthScreen() {
 
             <div style={{ marginTop: 20 }}>
               <button className="btn-sakura" onClick={handleForgotPassword} disabled={loading}>
-                {loading ? 'Sending...' : 'Send reset link'}
+                {loading ? 'Sending…' : 'Send reset link'}
               </button>
             </div>
           </div>
@@ -384,7 +384,7 @@ export default function AuthScreen() {
 
             <div style={{ marginTop: 20 }}>
               <button className="btn-sakura" onClick={handleRegister} disabled={loading}>
-                {loading ? 'Processing...' : 'Sign up'}
+                {loading ? 'Processing…' : 'Sign up'}
               </button>
             </div>
           </div>
@@ -427,7 +427,7 @@ export default function AuthScreen() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 20 }}>
               <button className="btn-sakura" onClick={handleLogin} disabled={loading}>
-                {loading ? 'Processing...' : 'Log in'}
+                {loading ? 'Processing…' : 'Log in'}
               </button>
               <button className="btn-ghost" onClick={() => { changeFlow('register'); }}>
                 Don't have an account? Sign up
@@ -534,7 +534,7 @@ export function ResetPasswordScreen() {
 
         <div style={{ marginTop: 20 }}>
           <button className="btn-sakura" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Saving...' : 'Save new password'}
+            {loading ? 'Saving…' : 'Save new password'}
           </button>
         </div>
       </div>

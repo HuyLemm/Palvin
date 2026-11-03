@@ -30,7 +30,7 @@ export default function AddLoveNoteForm({ onClose }: { onClose: () => void }) {
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Write a Love Note <Icon emoji="💌" size={18} /></p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ background: 'var(--sakura-light)', borderRadius: 12, padding: '10px 14px', fontSize: 14, color: 'var(--sakura-deep)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -41,14 +41,14 @@ export default function AddLoveNoteForm({ onClose }: { onClose: () => void }) {
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Mood</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {MOODS.map(m => (
-                <button key={m} onClick={() => setMood(m)} style={{ background: mood === m ? 'var(--sakura-light)' : 'transparent', border: mood === m ? '2px solid var(--sakura)' : '2px solid transparent', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={m} size={22} /></button>
+                <button key={m} onClick={() => setMood(m)} style={{ background: mood === m ? 'var(--sakura-light)' : 'transparent', border: mood === m ? '2px solid var(--sakura)' : '2px solid transparent', borderRadius: 10, width: 44, height: 44, cursor: 'pointer', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji={m} size={22} /></button>
               ))}
             </div>
           </div>
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>{error} <Icon emoji="✨" size={14} /></p>}
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
-            <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>{saving ? 'Sending...' : <>Send Note <Icon emoji="💌" size={16} /></>}</button>
+            <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ flex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: saving ? 0.7 : 1 }}>{saving ? 'Sending…' : <>Send Note <Icon emoji="💌" size={16} /></>}</button>
           </div>
         </div>
       </div>

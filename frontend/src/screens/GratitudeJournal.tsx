@@ -6,11 +6,11 @@ import Icon from '../components/Icon';
 import FilterCountBadge from '../components/FilterCountBadge';
 
 const PROMPTS = [
-  "Today I'm grateful for...",
-  "What made me love you more today is...",
-  "A small memorable moment today was...",
-  "You made me smile when...",
-  "I appreciate you because...",
+  "Today I'm grateful for…",
+  "What made me love you more today is…",
+  "A small memorable moment today was…",
+  "You made me smile when…",
+  "I appreciate you because…",
 ];
 
 interface Props { onBack: () => void; }
@@ -122,7 +122,7 @@ export default function GratitudeJournal({ onBack }: Props) {
             <textarea
               value={text}
               onChange={e => setText(e.target.value)}
-              placeholder="Write what you're grateful for today..."
+              placeholder="Write what you're grateful for today…"
               rows={4}
               style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 14, background: 'var(--white)', fontFamily: "'Nunito', sans-serif", fontSize: 14, color: 'var(--ink)', resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.6, transition: 'border-color 0.2s' }}
               onFocus={e => (e.target.style.borderColor = 'var(--sakura-accent)')}
@@ -148,8 +148,8 @@ export default function GratitudeJournal({ onBack }: Props) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 }}>
               <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{text.length} characters</p>
-              <button onClick={handleSubmit} disabled={!text.trim() || saving || uploading} style={{ padding: '10px 20px', background: (text.trim() && !saving && !uploading) ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 12, color: (text.trim() && !saving && !uploading) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: (text.trim() && !saving && !uploading) ? 'pointer' : 'default', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                {uploading ? 'Uploading...' : saving ? 'Saving...' : 'Save'} <Icon emoji="🌸" size={14} />
+              <button onClick={handleSubmit} disabled={!text.trim() || saving || uploading} style={{ padding: '10px 20px', background: (text.trim() && !saving && !uploading) ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 12, color: (text.trim() && !saving && !uploading) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 14, cursor: (text.trim() && !saving && !uploading) ? 'pointer' : 'default', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {uploading ? 'Uploading…' : saving ? 'Saving…' : 'Save'} <Icon emoji="🌸" size={14} />
               </button>
             </div>
           </>
@@ -173,7 +173,7 @@ export default function GratitudeJournal({ onBack }: Props) {
       {/* Filter */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
         {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: filter === f ? 'var(--sakura-deep)' : 'var(--sakura-light)', color: filter === f ? 'white' : 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <button key={f} onClick={() => setFilter(f)} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: filter === f ? 'var(--sakura-deep)' : 'var(--sakura-light)', color: filter === f ? 'white' : 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {f === 'all' ? 'All' : f}
             <FilterCountBadge count={f === 'all' ? state.gratitude.length : state.gratitude.filter(g => g.from === f).length} />
           </button>
@@ -224,7 +224,7 @@ export default function GratitudeJournal({ onBack }: Props) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Edit entry <Icon emoji="✏️" size={15} /></p>
-              <button onClick={() => setEditingId(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+              <button aria-label="Close" onClick={() => setEditingId(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
             </div>
             <textarea
               value={editText}
@@ -261,7 +261,7 @@ export default function GratitudeJournal({ onBack }: Props) {
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setEditingId(null)} className="btn-ghost" style={{ flex: 1 }}>Cancel</button>
-              <button onClick={() => saveEdit(editingId)} disabled={!editText.trim() || editUploading} style={{ flex: 2, padding: '13px', background: (editText.trim() && !editUploading) ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 14, color: (editText.trim() && !editUploading) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, cursor: (editText.trim() && !editUploading) ? 'pointer' : 'default' }}>{editUploading ? 'Uploading...' : 'Save changes'}</button>
+              <button onClick={() => saveEdit(editingId)} disabled={!editText.trim() || editUploading} style={{ flex: 2, padding: '13px', background: (editText.trim() && !editUploading) ? 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))' : 'var(--border)', border: 'none', borderRadius: 14, color: (editText.trim() && !editUploading) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15, cursor: (editText.trim() && !editUploading) ? 'pointer' : 'default' }}>{editUploading ? 'Uploading…' : 'Save changes'}</button>
             </div>
           </div>
         </div>

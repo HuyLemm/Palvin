@@ -28,7 +28,7 @@ export default function Memories() {
             background: filter === f ? 'var(--sakura-deep)' : 'var(--white)',
             color: filter === f ? 'white' : 'var(--ink-2)',
             outline: filter === f ? 'none' : '1.5px solid var(--border)',
-            transition: 'all 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6,
+            transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6,
           } as any}>
             {f}
             <FilterCountBadge count={f === 'All' ? state.memories.length : state.memories.filter(m => m.year === +f).length} />

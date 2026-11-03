@@ -210,7 +210,7 @@ function ItineraryDayCard({ day, onAddPlace, onRemovePlace, onRemoveDay, locked 
                   <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', marginTop: 3 }}>{VNDRange(p.costMin ?? p.costMax ?? 0, p.costMax ?? p.costMin ?? 0)}</p>
                 )}
               </div>
-              {!locked && <button onClick={() => onRemovePlace(day.id, p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex' }}><Icon emoji="✕" size={11} /></button>}
+              {!locked && <button aria-label="Close" onClick={() => onRemovePlace(day.id, p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex' }}><Icon emoji="✕" size={11} /></button>}
             </div>
           ))}
         </div>
@@ -428,7 +428,7 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
                   {(l.checkIn || l.checkOut) && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{l.checkIn ?? '?'} <Icon emoji="→" size={10} /> {l.checkOut ?? '?'}</p>}
                   {l.note && <p style={{ fontSize: 12, color: 'var(--ink)', marginTop: 4 }}>{l.note}</p>}
                 </div>
-                {!locked && <button onClick={() => removeLodging(l.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0 }}><Icon emoji="✕" size={13} /></button>}
+                {!locked && <button aria-label="Close" onClick={() => removeLodging(l.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0 }}><Icon emoji="✕" size={13} /></button>}
               </div>
             ))}
           </div>
@@ -452,7 +452,7 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
         </div>
         {!locked && (
           <div style={{ display: 'flex', gap: 8, background: 'var(--bg)', borderRadius: 10, padding: 6 }}>
-            <input className="input-field" placeholder="Add item..." value={addItem} onChange={e => setAddItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddItem()} style={{ flex: 1, padding: '8px 12px', background: 'var(--white)' }} />
+            <input className="input-field" placeholder="Add item…" value={addItem} onChange={e => setAddItem(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddItem()} style={{ flex: 1, padding: '8px 12px', background: 'var(--white)' }} />
             <button onClick={handleAddItem} style={{ background: 'var(--sakura-accent)', color: 'white', border: 'none', borderRadius: 8, padding: '8px 14px', fontWeight: 700, cursor: 'pointer' }}>+</button>
           </div>
         )}

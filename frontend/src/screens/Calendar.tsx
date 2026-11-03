@@ -174,7 +174,7 @@ function EventCard({ event: ev, displayDate, onEdit, onDelete }: { event: Calend
       {!confirm
         ? <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             <button onClick={() => onEdit(ev)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-            <button onClick={() => setConfirm(true)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            <button aria-label="Close" onClick={() => setConfirm(true)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
           </div>
         : <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
             <button onClick={() => onDelete(ev.id)} style={{ background: 'var(--sakura-deep)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Delete</button>
@@ -347,7 +347,7 @@ function CycleTrackerTab() {
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                     <button onClick={() => setEditing(l)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-                    <button onClick={() => setConfirmDeleteId(l.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+                    <button aria-label="Close" onClick={() => setConfirmDeleteId(l.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
                   </div>
                 </div>
                 {!l.endDate && (
@@ -397,7 +397,7 @@ function CycleLogForm({ onClose, onSave, existing }: {
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="🌸" size={18} /> {existing ? 'Edit entry' : 'Log period'}</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>

@@ -212,7 +212,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
             <Avatar user={currentUser} size={28} />
             <input
               className="input-field"
-              placeholder="Write a comment..."
+              placeholder="Write a comment…"
               value={commentText}
               onChange={e => setCommentText(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleComment(); }}
@@ -220,7 +220,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
               style={{ flex: 1, padding: '8px 12px', fontSize: 13 }}
             />
             <button onClick={handleComment} style={{ background: 'var(--sakura-accent)', color: 'white', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 13, cursor: 'pointer', flexShrink: 0 }}>Post</button>
-            <button onClick={() => closeComment(200)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 }}><Icon emoji="✕" size={16} /></button>
+            <button aria-label="Close" onClick={() => closeComment(200)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 }}><Icon emoji="✕" size={16} /></button>
           </div>,
           document.body
         )}

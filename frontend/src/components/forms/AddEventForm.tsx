@@ -66,10 +66,10 @@ export default function AddEventForm({ onClose, existing }: { onClose: () => voi
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 400, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="📅" size={20} /> {isEdit ? 'Edit Event' : 'New Event'}</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <input className="input-field" placeholder="Event title..." value={title} onChange={e => setTitle(e.target.value)} />
+          <input className="input-field" placeholder="Event title…" value={title} onChange={e => setTitle(e.target.value)} />
           {recurrence === 'yearly' ? (
             <div style={{ display: 'flex', gap: 8 }}>
               <select className="input-field" value={dMonth} onChange={e => setMonthDay(+e.target.value, dDay)} style={{ width: 'auto' }}>
@@ -86,7 +86,7 @@ export default function AddEventForm({ onClose, existing }: { onClose: () => voi
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Category</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {CATEGORIES.map(cat => (
-                <button key={cat} onClick={() => setCategory(cat)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', background: category === cat ? 'var(--sakura-light)' : 'var(--bg)', border: category === cat ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: category === cat ? 'var(--sakura-deep)' : 'var(--ink-2)', transition: 'all 0.15s', textTransform: 'capitalize' }}>
+                <button key={cat} onClick={() => setCategory(cat)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', background: category === cat ? 'var(--sakura-light)' : 'var(--bg)', border: category === cat ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: category === cat ? 'var(--sakura-deep)' : 'var(--ink-2)', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', textTransform: 'capitalize' }}>
                   <Icon emoji={CAT_EMOJIS[cat]} size={14} /> {cat}
                 </button>
               ))}
@@ -96,7 +96,7 @@ export default function AddEventForm({ onClose, existing }: { onClose: () => voi
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Repeat</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {RECURRENCE_OPTIONS.map(opt => (
-                <button key={opt.key} onClick={() => setRecurrence(opt.key)} style={{ padding: '7px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', background: recurrence === opt.key ? 'var(--sakura-light)' : 'var(--bg)', border: recurrence === opt.key ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: recurrence === opt.key ? 'var(--sakura-deep)' : 'var(--ink-2)', transition: 'all 0.15s' }}>
+                <button key={opt.key} onClick={() => setRecurrence(opt.key)} style={{ padding: '7px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', background: recurrence === opt.key ? 'var(--sakura-light)' : 'var(--bg)', border: recurrence === opt.key ? '1.5px solid var(--sakura-accent)' : '1.5px solid var(--border)', color: recurrence === opt.key ? 'var(--sakura-deep)' : 'var(--ink-2)', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s' }}>
                   {opt.label}
                 </button>
               ))}
@@ -108,7 +108,7 @@ export default function AddEventForm({ onClose, existing }: { onClose: () => voi
           <input className="input-field" placeholder="Location (optional)" value={location} onChange={e => setLocation(e.target.value)} />
           <input className="input-field" placeholder="Notes (optional)" value={notes} onChange={e => setNotes(e.target.value)} />
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
-          <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ padding: '13px', fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Event'}</button>
+          <button className="btn-primary" onClick={handleSubmit} disabled={saving} style={{ padding: '13px', fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Event'}</button>
         </div>
       </div>
     </div>

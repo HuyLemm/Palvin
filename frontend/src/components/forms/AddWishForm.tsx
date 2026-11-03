@@ -52,10 +52,10 @@ export default function AddWishForm({ onClose }: { onClose: () => void }) {
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Gift Wishlist <Icon emoji="🎁" size={16} /></p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <input className="input-field" placeholder="Item you'd like to receive..." value={wish} onChange={e => setWish(e.target.value)} autoFocus />
+          <input className="input-field" placeholder="Item you'd like to receive…" value={wish} onChange={e => setWish(e.target.value)} autoFocus />
           <AmountInput placeholder="Estimated price (VND, optional)" value={price} onChange={setPrice} />
           <input className="input-field" placeholder="Product link (optional)" value={link} onChange={e => setLink(e.target.value)} />
           <div>
@@ -82,7 +82,7 @@ export default function AddWishForm({ onClose }: { onClose: () => void }) {
           {error && <p style={{ color: 'var(--sakura-deep)', fontSize: 13 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn-ghost" onClick={onClose} disabled={saving} style={{ flex: 1 }}>Cancel</button>
-            <button className="btn-primary" onClick={handleSubmit} disabled={uploading || saving} style={{ flex: 2, opacity: (uploading || saving) ? 0.6 : 1 }}>{uploading ? 'Uploading...' : saving ? 'Adding...' : 'Add to Wishlist'}</button>
+            <button className="btn-primary" onClick={handleSubmit} disabled={uploading || saving} style={{ flex: 2, opacity: (uploading || saving) ? 0.6 : 1 }}>{uploading ? 'Uploading…' : saving ? 'Adding…' : 'Add to Wishlist'}</button>
           </div>
         </div>
       </div>

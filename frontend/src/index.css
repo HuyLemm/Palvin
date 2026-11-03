@@ -5,8 +5,8 @@
   --bg: #FFF8FA;
   --sakura: #F3A6B9;
   --sakura-light: #FADCE4;
-  --sakura-accent: #E67F9A;
-  --sakura-deep: #C95F7C;
+  --sakura-accent: #C0506D;
+  --sakura-deep: #AE4565;
   --ink: #332A2D;
   --ink-2: #6F5F65;
   --btn-grad: linear-gradient(135deg, #C0506D, #A8405C);
@@ -65,8 +65,8 @@ body[data-theme="dark"] {
   --bg: #FFF8FA;
   --sakura: #F3A6B9;
   --sakura-light: #FADCE4;
-  --sakura-accent: #E67F9A;
-  --sakura-deep: #C95F7C;
+  --sakura-accent: #C0506D;
+  --sakura-deep: #AE4565;
   --ink: #332A2D;
   --ink-2: #6F5F65;
   --btn-grad: linear-gradient(135deg, #C0506D, #A8405C);
@@ -502,6 +502,26 @@ select.input-field { cursor: pointer; }
 [data-area="us"]    { --area: var(--lav);  --area-deep: var(--lav-deep);  --area-light: var(--lav-light); }
 [data-area] { --area-line: color-mix(in srgb, var(--area) 40%, var(--border)); }
 
-.tag { background: var(--area-light); color: var(--area-deep); }
+.tag { background: var(--area-light); color: color-mix(in srgb, var(--area-deep) 85%, #000); }
 .progress-fill { background: var(--area); background: linear-gradient(90deg, color-mix(in srgb, var(--area) 60%, white), var(--area)); }
 .progress-bar { background: var(--area-light); }
+
+/* Native UI (form controls, scrollbars, overscroll) follows the app theme. */
+:root { color-scheme: light; }
+[data-theme="dark"] { color-scheme: dark; }
+
+/* No 300ms tap delay / double-tap zoom on controls; tap flash matches the theme. */
+a, button, input, select, textarea, label, summary, [role="button"] { touch-action: manipulation; }
+html { -webkit-tap-highlight-color: rgba(201, 95, 124, 0.15); }
+
+/* Scrolling inside a sheet/modal must not scroll the page behind it. */
+.bottom-sheet, .kb-modal-overlay > div { overscroll-behavior: contain; }
+
+/* Text fields that hide the default outline inline still get a visible focus ring. */
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+  outline: 2px solid var(--sakura-deep) !important;
+  outline-offset: 0;
+}
+
+/* Money: numbers line up in columns. */
+[data-area="money"] { font-variant-numeric: tabular-nums; }

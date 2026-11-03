@@ -436,7 +436,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
       {/* Category tabs */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
         {state.favCategories.map(cat => (
-          <button key={cat.id} onClick={() => { setActiveTab(cat.id); setShowAdd(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 99, border: 'none', background: activeTab === cat.id ? cat.color : 'var(--white)', color: activeTab === cat.id ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: activeTab === cat.id ? `0 4px 12px ${cat.color}40` : '0 1px 4px rgba(0,0,0,0.06)', transition: 'all 0.2s' }}>
+          <button key={cat.id} onClick={() => { setActiveTab(cat.id); setShowAdd(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 99, border: 'none', background: activeTab === cat.id ? cat.color : 'var(--white)', color: activeTab === cat.id ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: activeTab === cat.id ? `0 4px 12px ${cat.color}40` : '0 1px 4px rgba(0,0,0,0.06)', transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s' }}>
             <Icon emoji={cat.emoji} size={14} />
             <span>{cat.label}</span>
           </button>
@@ -469,7 +469,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
               {pl.note && <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 3 }}>{pl.note}</p>}
             </div>
             <button onClick={() => openEditPlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-            <button onClick={() => setConfirmDeletePlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            <button aria-label="Close" onClick={() => setConfirmDeletePlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
           </div>
         ))}
         {cfg && list.length === 0 && (
@@ -499,10 +499,10 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Add a new <Icon emoji={cfg.emoji} size={18} /> {cfg.label}</p>
-              <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input className="input-field" placeholder="Place name..." value={inputName} onChange={e => setInputName(e.target.value)} autoFocus />
+              <input className="input-field" placeholder="Place name…" value={inputName} onChange={e => setInputName(e.target.value)} autoFocus />
               <input className="input-field" placeholder="Note (optional)" value={inputNote} onChange={e => setInputNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAdd()} />
               <div>
                 <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photo (optional)</p>
@@ -522,7 +522,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
                 </div>
                 <style>{`@keyframes palvin-spin { to { transform: rotate(360deg); } }`}</style>
               </div>
-              <button onClick={handleAdd} disabled={!inputName.trim() || addingPlace} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: (inputName.trim() && !addingPlace) ? 'pointer' : 'default', background: (inputName.trim() && !addingPlace) ? cfg.color : 'var(--border)', color: (inputName.trim() && !addingPlace) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>{addingPlace ? 'Adding...' : 'Add'}</button>
+              <button onClick={handleAdd} disabled={!inputName.trim() || addingPlace} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: (inputName.trim() && !addingPlace) ? 'pointer' : 'default', background: (inputName.trim() && !addingPlace) ? cfg.color : 'var(--border)', color: (inputName.trim() && !addingPlace) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>{addingPlace ? 'Adding…' : 'Add'}</button>
             </div>
           </div>
         </div>
@@ -534,10 +534,10 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Edit place <Icon emoji="✏️" size={18} /></p>
-              <button onClick={closeEditPlace} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeEditPlace} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input className="input-field" placeholder="Place name..." value={editPlaceName} onChange={e => setEditPlaceName(e.target.value)} autoFocus />
+              <input className="input-field" placeholder="Place name…" value={editPlaceName} onChange={e => setEditPlaceName(e.target.value)} autoFocus />
               <input className="input-field" placeholder="Note (optional)" value={editPlaceNote} onChange={e => setEditPlaceNote(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSavePlace()} />
               <div>
                 <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Photo (optional)</p>
@@ -582,7 +582,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>New category</p>
-              <button onClick={closeAddCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeAddCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <input className="input-field" placeholder="Category name (e.g. Books, Travel...)" value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} autoFocus />
@@ -602,7 +602,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>Edit category</p>
-              <button onClick={closeEditCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeEditCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <input className="input-field" value={editCatLabel} onChange={e => setEditCatLabel(e.target.value)} autoFocus />
@@ -729,7 +729,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
   // Microlink's own free-tier headless render (unreliable against it, and
   // separately capped at 25 requests/day shared across every wish either
   // partner adds). A real actor run can take ~10-60+ seconds, so the
-  // "Fetching info..." state in the form can sit for a while — the button
+  // "Fetching info…" state in the form can sit for a while — the button
   // to save doesn't wait on it either way, see the background-patch calls
   // below for the case where it resolves after the wish is already saved.
   //
@@ -1009,7 +1009,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
             <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', maxHeight: 'calc(var(--app-vh, 100vh) * 0.8 + 30px)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Add to wishlist<Icon emoji="🎁" size={18} /></p>
-                <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+                <button aria-label="Close" onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
               </div>
               <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 14 }}>Adding for <strong>{currentUser}</strong> — {other} will see it and can surprise you with it!</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1018,7 +1018,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                   <button onClick={() => setWishMode('manual')} className="wish-tab-btn" style={{ flex: 1, padding: '9px', borderRadius: 12, border: wishMode === 'manual' ? 'none' : '1.5px solid var(--border)', background: wishMode === 'manual' ? 'var(--sakura-accent)' : 'var(--bg)', color: wishMode === 'manual' ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Icon emoji="✏️" size={13} /> Enter manually</button>
                 </div>
 
-                <input className="input-field" placeholder="Item you'd like to receive..." value={wishText} onChange={e => setWishText(e.target.value)} />
+                <input className="input-field" placeholder="Item you'd like to receive…" value={wishText} onChange={e => setWishText(e.target.value)} />
                 <AmountInput placeholder="Estimated price (VND, optional)" value={wishPrice} onChange={setWishPrice} />
 
                 {wishMode === 'manual' && (
@@ -1044,7 +1044,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
 
                 <input className="input-field" placeholder="Product link (optional)" value={wishLink} onChange={e => setWishLink(e.target.value)} />
 
-                {wishMode === 'link' && previewLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
+                {wishMode === 'link' && previewLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Fetching info from the link…</p>}
                 {wishMode === 'link' && !previewLoading && previewFailed && (
                   <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still add the item without one, or switch to "Enter manually".</p>
                 )}
@@ -1106,7 +1106,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                   }}
                   disabled={addingWish}
                   style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, opacity: addingWish ? 0.7 : 1 }}
-                >{addingWish ? 'Adding...' : <>Add to wishlist<Icon emoji="🎁" size={15} /></>}</button>
+                >{addingWish ? 'Adding…' : <>Add to wishlist<Icon emoji="🎁" size={15} /></>}</button>
               </div>
             </div>
           </div>
@@ -1119,7 +1119,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8 + 30px)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Edit wish <Icon emoji="✏️" size={18} /></p>
-              <button onClick={closeEditWish} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeEditWish} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -1127,7 +1127,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
                 <button onClick={() => setEditMode('manual')} className="wish-tab-btn" style={{ flex: 1, padding: '9px', borderRadius: 12, border: editMode === 'manual' ? 'none' : '1.5px solid var(--border)', background: editMode === 'manual' ? 'var(--sakura-accent)' : 'var(--bg)', color: editMode === 'manual' ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Icon emoji="✏️" size={13} /> Enter manually</button>
               </div>
 
-              <input className="input-field" placeholder="Item you'd like to receive..." value={editText} onChange={e => setEditText(e.target.value)} />
+              <input className="input-field" placeholder="Item you'd like to receive…" value={editText} onChange={e => setEditText(e.target.value)} />
               <AmountInput placeholder="Estimated price (VND, optional)" value={editPrice} onChange={setEditPrice} />
 
               {editMode === 'manual' && (
@@ -1153,7 +1153,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
 
               <input className="input-field" placeholder="Product link (optional)" value={editLink} onChange={e => setEditLink(e.target.value)} />
 
-              {editMode === 'link' && editPreviewLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Fetching info from the link...</p>}
+              {editMode === 'link' && editPreviewLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Fetching info from the link…</p>}
               {editMode === 'link' && !editPreviewLoading && editPreviewFailed && (
                 <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>Couldn't fetch a preview — some sites (Shopee, Lazada, TikTok Shop...) block this automatically. You can still keep the link without one, or switch to "Enter manually".</p>
               )}
@@ -1353,7 +1353,7 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
             onKeyDown={e => e.key === 'Enter' && runSearch()}
             style={{ flex: 1 }}
           />
-          <button onClick={runSearch} style={{ width: 44, flexShrink: 0, borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🔍" size={16} /></button>
+          <button aria-label="Search" onClick={runSearch} style={{ width: 44, flexShrink: 0, borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🔍" size={16} /></button>
         </div>
         {/* Portaled to <body> with fixed positioning — the Add/Edit modal
             scrolls its own content (overflowY: auto), which clips any
@@ -1364,7 +1364,7 @@ function SongSearchField({ title, onTitleChange, artist, image, durationSeconds,
             own stopPropagation keeps working. */}
         {showResults && dropdownRect && (searching || results.length > 0 || hasSearched) && createPortal(
           <div style={{ position: 'fixed', top: dropdownRect.top, left: dropdownRect.left, width: dropdownRect.width, background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 12, boxShadow: '0 8px 24px rgba(0,0,0,0.18)', zIndex: 500, maxHeight: 400, overflowY: 'auto' }}>
-            {searching && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>Searching...</p>}
+            {searching && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>Searching…</p>}
             {!searching && hasSearched && searchError && <p style={{ fontSize: 12, color: '#E8524A', padding: '10px 12px' }}>Couldn't connect to the song search service — check your network/wifi and try again.</p>}
             {!searching && hasSearched && !searchError && results.length === 0 && <p style={{ fontSize: 12, color: 'var(--ink-2)', padding: '10px 12px' }}>No songs found, try a different title.</p>}
             {!searching && results.map((r, i) => (
@@ -1505,7 +1505,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>Add song</p>
-              <button onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeAdd} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <SongSearchField title={title} onTitleChange={setTitle} artist={artist} image={image} durationSeconds={duration} releaseDate={releaseDate} onPick={pickAddResult} />
@@ -1518,7 +1518,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
                   ))}
                 </div>
               </div>
-              <button onClick={handleAdd} disabled={!title.trim() || addingSong} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: (title.trim() && !addingSong) ? 'pointer' : 'default', background: (title.trim() && !addingSong) ? 'var(--btn-grad)' : 'var(--border)', color: (title.trim() && !addingSong) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>{addingSong ? 'Adding...' : 'Add to playlist'}</button>
+              <button onClick={handleAdd} disabled={!title.trim() || addingSong} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: (title.trim() && !addingSong) ? 'pointer' : 'default', background: (title.trim() && !addingSong) ? 'var(--btn-grad)' : 'var(--border)', color: (title.trim() && !addingSong) ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 15 }}>{addingSong ? 'Adding…' : 'Add to playlist'}</button>
             </div>
           </div>
         </div>
@@ -1530,7 +1530,7 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>Edit song <Icon emoji="✏️" size={18} /></p>
-              <button onClick={closeEditSong} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeEditSong} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <SongSearchField title={editTitle} onTitleChange={setEditTitle} artist={editArtist} image={editImage} durationSeconds={editDuration} releaseDate={editReleaseDate} onPick={pickEditResult} />
@@ -1693,7 +1693,7 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
               <p style={{ flex: 1, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: 15, color: 'var(--ink)', lineHeight: 1.5 }}>"{q.text}"</p>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                 <button onClick={() => openEdit(q)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-                <button onClick={() => setConfirmDeleteId(q.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+                <button aria-label="Close" onClick={() => setConfirmDeleteId(q.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
               </div>
             </div>
           ))}
@@ -1705,10 +1705,10 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="💬" size={18} /> {editing ? 'Edit quote' : 'Add a quote'}</p>
-              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <textarea className="input-field" placeholder="VD: Our little story continues." value={text} onChange={e => setText(e.target.value)} rows={3} style={{ resize: 'none', marginBottom: 14 }} autoFocus />
-            <button onClick={handleSubmit} disabled={saving} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving...' : (editing ? 'Save changes' : 'Add quote')}</button>
+            <button onClick={handleSubmit} disabled={saving} style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15, opacity: saving ? 0.7 : 1 }}>{saving ? 'Saving…' : (editing ? 'Save changes' : 'Add quote')}</button>
           </div>
         </div>
       )}
@@ -1815,7 +1815,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
             <button onClick={() => openEdit(t)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-            <button onClick={() => setConfirmDeleteId(t.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            <button aria-label="Close" onClick={() => setConfirmDeleteId(t.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
           </div>
         </div>
       </div>
@@ -1889,7 +1889,7 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="✅" size={18} /> {editing ? 'Edit task' : 'Add a new task'}</p>
-              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <input className="input-field" placeholder="Task title" value={title} onChange={e => setTitle(e.target.value)} autoFocus />
@@ -2029,7 +2029,7 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
                 )}
                 <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
                   <button onClick={e => { e.stopPropagation(); openEdit(p); }} title="Edit" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
-                  <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(p.id); }} title="Delete" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
+                  <button aria-label="Close" onClick={e => { e.stopPropagation(); setConfirmDeleteId(p.id); }} title="Delete" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
                 </div>
               </div>
               <div style={{ padding: '10px 12px' }}>
@@ -2047,7 +2047,7 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="🗺️" size={18} /> {editing ? 'Edit place' : "Add a place you've been"}</p>
-              <button onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={closeForm} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <input className="input-field" placeholder="Place name (e.g. Da Lat)" value={name} onChange={e => setName(e.target.value)} autoFocus />
@@ -2100,7 +2100,7 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 16, width: '100%', maxWidth: 420, maxHeight: '85vh', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}>{viewing.flag} {viewing.name}</p>
-              <button onClick={() => setViewing(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={() => setViewing(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="✕" size={16} /></button>
             </div>
             {viewing.visitedDate && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 12 }}>Visited on {formatShortDate(viewing.visitedDate)}</p>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>

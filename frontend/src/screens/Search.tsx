@@ -29,7 +29,11 @@ export default function Search() {
         <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-2)' }}><Icon emoji="🔍" size={18} /></span>
         <input
           className="input-field"
-          placeholder="Search posts, memories, notes, places..."
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="Search posts, memories, notes, places…"
           value={query}
           onChange={e => setQuery(e.target.value)}
           autoFocus

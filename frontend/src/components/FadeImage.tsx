@@ -41,6 +41,8 @@ export default function FadeImage({ src, alt = '', style, className, onClick }: 
         ref={imgRef}
         src={src}
         alt={alt}
+        loading="lazy"
+        decoding="async"
         onLoad={() => setLoaded(true)}
         style={{ width: '100%', height: '100%', objectFit: objectFit ?? 'cover', display: 'block', position: 'relative', opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
       />

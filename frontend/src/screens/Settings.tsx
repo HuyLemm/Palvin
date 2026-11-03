@@ -389,7 +389,7 @@ export default function Settings() {
             <p style={{ fontSize: 13, color: 'var(--ink)', marginBottom: 4 }}>
               Invite sent to <strong>{sentInvite.name}</strong>
             </p>
-            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 10 }}>Waiting for confirmation...</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 10 }}>Waiting for confirmation…</p>
             <button
               onClick={() => cancelSentInvite(sentInvite.id)}
               style={{ width: '100%', padding: '8px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
@@ -578,7 +578,7 @@ export default function Settings() {
             <div className="card" style={{ padding: '14px 16px' }}>
               <div style={{ display: 'flex', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden', marginBottom: 12 }}>
                 {MONEY_CATEGORY_KINDS.map(k => (
-                  <button key={k.key} onClick={() => setCatKind(k.key)} style={{ flex: 1, padding: '7px 4px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: catKind === k.key ? 'var(--sakura-accent)' : 'transparent', color: catKind === k.key ? 'white' : 'var(--ink-2)', transition: 'all 0.2s ease' }}>{k.label}</button>
+                  <button key={k.key} onClick={() => setCatKind(k.key)} style={{ flex: 1, padding: '7px 4px', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, background: catKind === k.key ? 'var(--sakura-accent)' : 'transparent', color: catKind === k.key ? 'white' : 'var(--ink-2)', transition: 'background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease' }}>{k.label}</button>
                 ))}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -601,7 +601,7 @@ export default function Settings() {
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', borderRadius: 20, padding: '16px 0 4px', width: '100%', maxWidth: 400, maxHeight: '75vh', display: 'flex', flexDirection: 'column', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 16px' }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>Daily Compliance Log</p>
-              <button onClick={() => setShowComplianceModal(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="✕" size={14} /></button>
+              <button aria-label="Close" onClick={() => setShowComplianceModal(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="✕" size={14} /></button>
             </div>
             <style>{`.activity-log-row:last-child { border-bottom: none !important; }`}</style>
             <div style={{ overflowY: 'auto' }}>
@@ -616,7 +616,7 @@ export default function Settings() {
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', borderRadius: 20, padding: '16px 0 4px', width: '100%', maxWidth: 400, maxHeight: '75vh', display: 'flex', flexDirection: 'column', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, padding: '0 16px' }}>
               <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>Edit & Delete Log</p>
-              <button onClick={() => setShowLogModal(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="✕" size={14} /></button>
+              <button aria-label="Close" onClick={() => setShowLogModal(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji="✕" size={14} /></button>
             </div>
             <style>{`.activity-log-row:last-child { border-bottom: none !important; }`}</style>
             <div style={{ overflowY: 'auto' }}>
@@ -632,7 +632,7 @@ export default function Settings() {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>New category</p>
-              <button onClick={closeAddCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+              <button aria-label="Close" onClick={closeAddCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <input className="input-field" placeholder="Category name" value={newCatLabel} onChange={e => setNewCatLabel(e.target.value)} autoFocus />
@@ -656,7 +656,7 @@ export default function Settings() {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Edit category</p>
-              <button onClick={closeEditMoneyCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+              <button aria-label="Close" onClick={closeEditMoneyCategory} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <input className="input-field" value={editCatLabel} onChange={e => setEditCatLabel(e.target.value)} autoFocus />
@@ -700,7 +700,7 @@ export default function Settings() {
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 21, color: 'var(--ink)' }}>{editingQuickAction === 'hug' ? 'Hug button' : 'Thinking-of-you button'}</p>
-              <button onClick={() => setEditingQuickAction(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+              <button aria-label="Close" onClick={() => setEditingQuickAction(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <input className="input-field" placeholder="Button label" value={qaLabel} onChange={e => setQaLabel(e.target.value)} autoFocus maxLength={24} />

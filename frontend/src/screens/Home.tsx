@@ -44,7 +44,7 @@ const HUG_MESSAGES = [
 ];
 
 const THINKING_MESSAGES = [
-  '💭 Thinking of you...',
+  '💭 Thinking of you…',
   '🌸 Miss you so much!',
   '💕 Where are you right now?',
   '✨ Just thought of you out of nowhere!',
@@ -311,7 +311,7 @@ export default function Home() {
           style={{
             background: hugAnim ? hugConfig.color : `${hugConfig.color}14`,
             border: `1.5px solid ${hugConfig.color}`, borderRadius: 18, padding: '16px 12px',
-            cursor: 'pointer', transition: 'all 0.3s',
+            cursor: 'pointer', transition: 'background-color 0.3s, border-color 0.3s, color 0.3s, opacity 0.3s, box-shadow 0.3s, transform 0.3s',
             transform: hugAnim ? 'scale(0.96)' : 'scale(1)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           }}
@@ -329,7 +329,7 @@ export default function Home() {
           style={{
             background: thinkAnim ? thinkConfig.color : `${thinkConfig.color}14`,
             border: `1.5px solid ${thinkConfig.color}`, borderRadius: 18, padding: '16px 12px',
-            cursor: 'pointer', transition: 'all 0.3s',
+            cursor: 'pointer', transition: 'background-color 0.3s, border-color 0.3s, color 0.3s, opacity 0.3s, box-shadow 0.3s, transform 0.3s',
             transform: thinkAnim ? 'scale(0.96)' : 'scale(1)',
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
           }}
@@ -529,7 +529,7 @@ export default function Home() {
             <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>Today's pick <Icon emoji="🎲" size={14} /></p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
               {state.favCategories.map(c => (
-                <button key={c.id} onClick={() => setSelectedFavCat(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 99, border: 'none', background: selectedFavCat === c.id ? c.color : 'var(--bg)', color: selectedFavCat === c.id ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'all 0.2s' }}>
+                <button key={c.id} onClick={() => setSelectedFavCat(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 99, border: 'none', background: selectedFavCat === c.id ? c.color : 'var(--bg)', color: selectedFavCat === c.id ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s' }}>
                   <Icon emoji={c.emoji} size={13} />
                   <span>{c.label}</span>
                 </button>
@@ -621,7 +621,7 @@ export default function Home() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
               {MOODS_LIST.map(m => (
                 <button key={m.emoji} onClick={() => { setMood(currentUser, m); setShowMoodPicker(false); }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '14px 8px', borderRadius: 14, background: state.moods[currentUser]?.emoji === m.emoji ? 'var(--sakura-light)' : 'var(--bg)', border: state.moods[currentUser]?.emoji === m.emoji ? '1.5px solid var(--sakura)' : '1.5px solid var(--border)', cursor: 'pointer', transition: 'all 0.15s' }}>
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '14px 8px', borderRadius: 14, background: state.moods[currentUser]?.emoji === m.emoji ? 'var(--sakura-light)' : 'var(--bg)', border: state.moods[currentUser]?.emoji === m.emoji ? '1.5px solid var(--sakura)' : '1.5px solid var(--border)', cursor: 'pointer', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s' }}>
                   <Icon emoji={m.emoji} size={28} />
                   <span style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', lineHeight: 1.2, fontWeight: 500 }}>{m.label}</span>
                 </button>

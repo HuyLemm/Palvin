@@ -175,7 +175,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
           { key: 'inbox', emoji: '📥', label: 'To Review', count: pendingForMe.length },
           { key: 'mine', emoji: '📁', label: 'My Requests', count: myRequests.length },
         ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{ flex: 1, padding: '9px 4px', borderRadius: 11, border: 'none', background: tab === t.key ? 'white' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: tab === t.key ? 700 : 500, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s', boxShadow: tab === t.key ? '0 1px 6px rgba(201,95,124,0.12)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{ flex: 1, padding: '9px 4px', borderRadius: 11, border: 'none', background: tab === t.key ? 'white' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: tab === t.key ? 700 : 500, fontSize: 12, cursor: 'pointer', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', boxShadow: tab === t.key ? '0 1px 6px rgba(201,95,124,0.12)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <Icon emoji={t.emoji} size={13} /> {t.label}
             {t.count != null && <FilterCountBadge count={t.count} />}
           </button>
@@ -210,7 +210,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                     {CATEGORIES.map(c => (
-                      <button key={c.label} onClick={() => { setCategory(c.label); setCategoryEmoji(c.emoji); setActivity(c.label); }} style={{ padding: '10px 4px', border: `2px solid ${category === c.label ? 'var(--sakura-accent)' : 'var(--border)'}`, borderRadius: 12, background: category === c.label ? 'var(--sakura-light)' : 'white', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'all 0.15s' }}>
+                      <button key={c.label} onClick={() => { setCategory(c.label); setCategoryEmoji(c.emoji); setActivity(c.label); }} style={{ padding: '10px 4px', border: `2px solid ${category === c.label ? 'var(--sakura-accent)' : 'var(--border)'}`, borderRadius: 12, background: category === c.label ? 'var(--sakura-light)' : 'white', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s' }}>
                         <Icon emoji={c.emoji} size={22} />
                         <span style={{ fontSize: 12, fontWeight: 600, color: category === c.label ? 'var(--sakura-deep)' : 'var(--ink-2)', lineHeight: 1.2, textAlign: 'center' }}>{c.label}</span>
                       </button>
@@ -221,13 +221,13 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
                 {/* Activity detail */}
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Specific Activity *</label>
-                  <input className="permit-input" placeholder="e.g. Pool with Minh, Tuan..." value={activity} onChange={e => setActivity(e.target.value)} />
+                  <input className="permit-input" placeholder="e.g. Pool with Minh, Tuan…" value={activity} onChange={e => setActivity(e.target.value)} />
                 </div>
 
                 {/* Location */}
                 <div style={{ marginBottom: 12 }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Location</label>
-                  <input className="permit-input" placeholder="e.g. Binh Thanh District, Saigon..." value={location} onChange={e => setLocation(e.target.value)} />
+                  <input className="permit-input" placeholder="e.g. Binh Thanh District, Saigon…" value={location} onChange={e => setLocation(e.target.value)} />
                 </div>
 
                 {/* Date + Time — stacked, not side-by-side: a native date

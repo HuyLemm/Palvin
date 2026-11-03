@@ -52,7 +52,7 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>{isIncome ? 'Edit Income' : 'Edit Expense'} <Icon emoji={isIncome ? '💵' : '💰'} size={16} /></p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -62,7 +62,7 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>Category</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {CATEGORIES.map(cat => (
-                <button key={cat.label} onClick={() => setCategory(cat)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', background: category.label === cat.label ? accentBg : 'var(--bg)', border: category.label === cat.label ? `1.5px solid ${accent}` : '1.5px solid var(--border)', color: category.label === cat.label ? accentDeep : 'var(--ink-2)', transition: 'all 0.15s' }}>
+                <button key={cat.label} onClick={() => setCategory(cat)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 99, fontSize: 13, fontWeight: 500, cursor: 'pointer', background: category.label === cat.label ? accentBg : 'var(--bg)', border: category.label === cat.label ? `1.5px solid ${accent}` : '1.5px solid var(--border)', color: category.label === cat.label ? accentDeep : 'var(--ink-2)', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s' }}>
                   <Icon emoji={cat.emoji} size={14} /> {cat.label}
                 </button>
               ))}
@@ -72,7 +72,7 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 8, fontWeight: 500 }}>{isIncome ? 'Received by' : 'Paid by'}</p>
             <div style={{ display: 'flex', gap: 8 }}>
               {[currentUser, ...(partnerName ? [partnerName] : []), 'Both'].map(u => (
-                <button key={u} onClick={() => setPaidBy(u)} style={{ flex: 1, padding: '10px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', background: paidBy === u ? accentBg : 'var(--bg)', border: paidBy === u ? `1.5px solid ${accent}` : '1.5px solid var(--border)', color: paidBy === u ? accentDeep : 'var(--ink-2)', transition: 'all 0.15s' }}>{u}</button>
+                <button key={u} onClick={() => setPaidBy(u)} style={{ flex: 1, padding: '10px', borderRadius: 12, fontSize: 14, fontWeight: 600, cursor: 'pointer', background: paidBy === u ? accentBg : 'var(--bg)', border: paidBy === u ? `1.5px solid ${accent}` : '1.5px solid var(--border)', color: paidBy === u ? accentDeep : 'var(--ink-2)', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s' }}>{u}</button>
               ))}
             </div>
           </div>
@@ -94,7 +94,7 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This transaction's info will be updated.</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setConfirmSave(false)} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={confirmSubmit} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${accent}, ${accentDeep})`, color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Saving...' : 'Save'}</button>
+              <button onClick={confirmSubmit} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${accent}, ${accentDeep})`, color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Saving…' : 'Save'}</button>
             </div>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function EditExpenseForm({ expense, onClose }: { expense: Expense
             <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 16 }}>This can't be undone once deleted.</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setConfirmDelete(false)} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--white)', color: 'var(--ink-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
-              <button onClick={confirmDeleteNow} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Deleting...' : 'Delete'}</button>
+              <button onClick={confirmDeleteNow} disabled={busy} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#DC2626', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer', opacity: busy ? 0.7 : 1 }}>{busy ? 'Deleting…' : 'Delete'}</button>
             </div>
           </div>
         </div>

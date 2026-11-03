@@ -2263,7 +2263,7 @@ const refreshMoods = useCallback(async () => {
   }, []);
 
   // Optimistic send: the bubble appears the instant you hit send, marked
-  // "Sending..." — otherwise it only showed up once Realtime echoed the
+  // "Sending…" — otherwise it only showed up once Realtime echoed the
   // insert back (a second or more later), which read as "did that even
   // send?" until it suddenly popped in.
   const sendChatMessage = async (msg: NewChatMessage) => {

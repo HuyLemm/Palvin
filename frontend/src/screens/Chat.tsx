@@ -673,7 +673,7 @@ export default function Chat({ onBack }: Props) {
                 </div>
                 {showStatus && (
                   <p style={{ textAlign: 'right', fontSize: 12, color: m.failed ? '#DC2626' : 'var(--ink-2)', marginTop: 3, marginRight: 2 }}>
-                    {m.pending ? 'Sending...' : m.failed ? 'Failed to send' : m.mine && m.read ? 'Seen' : timeLabel(m.createdAt)}
+                    {m.pending ? 'Sending…' : m.failed ? 'Failed to send' : m.mine && m.read ? 'Seen' : timeLabel(m.createdAt)}
                   </p>
                 )}
               </div>
@@ -752,7 +752,7 @@ export default function Chat({ onBack }: Props) {
                   </div>
                 ) : (
                   <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', padding: '20px 10px' }}>
-                    {klipyCategoriesLoading ? 'Loading topics...' : 'Couldn’t load topics.'}
+                    {klipyCategoriesLoading ? 'Loading topics…' : 'Couldn’t load topics.'}
                   </p>
                 )}
                 </div>
@@ -766,7 +766,7 @@ export default function Chat({ onBack }: Props) {
                       <StickerTile key={r.id} src={r.thumbnail} onClick={() => handleSendStickerImage(r.url)} />
                     ))}
                   </div>
-                  {klipyLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>Searching...</p>}
+                  {klipyLoading && <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>Searching…</p>}
                   {!klipyLoading && klipyFailed && (
                     <p style={{ fontSize: 12, color: 'var(--ink-2)', textAlign: 'center', marginTop: 8 }}>No stickers found.</p>
                   )}
@@ -820,7 +820,7 @@ export default function Chat({ onBack }: Props) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 340, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🎨" size={17} /> Chat theme</p>
-              <button onClick={() => setShowThemePicker(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+              <button aria-label="Close" onClick={() => setShowThemePicker(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
             </div>
             <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 14 }}>Only changes how chat looks on this device.</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
@@ -859,7 +859,7 @@ export default function Chat({ onBack }: Props) {
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 20, background: 'var(--bg)', border: '1px solid var(--border)' }}>
               <div className="animate-heart-pop" style={{ width: 9, height: 9, borderRadius: '50%', background: '#DC2626', flexShrink: 0 }} />
               <span style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 600 }}>{formatDuration(recordSeconds)}</span>
-              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>Recording...</span>
+              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>Recording…</span>
             </div>
             <button className="chat-send-btn" onClick={() => stopRecording(true)} style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>

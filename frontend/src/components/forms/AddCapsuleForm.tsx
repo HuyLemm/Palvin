@@ -46,7 +46,7 @@ export function CapsuleForm({ onClose, onSubmit, currentUser, existing }: {
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 400, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="✍️" size={20} /> {isEdit ? 'Edit Letter' : 'Write a Letter'}</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
@@ -73,7 +73,7 @@ export function CapsuleForm({ onClose, onSubmit, currentUser, existing }: {
           </div>
           <div>
             <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', marginBottom: 6 }}>YOUR MESSAGE</p>
-            <textarea className="input-field" placeholder="Write what you want to say to the future..." value={message} onChange={e => setMessage(e.target.value)} rows={6} style={{ resize: 'none', lineHeight: 1.6 }} />
+            <textarea className="input-field" placeholder="Write what you want to say to the future…" value={message} onChange={e => setMessage(e.target.value)} rows={6} style={{ resize: 'none', lineHeight: 1.6 }} />
           </div>
           <button onClick={handleSubmit} style={{ padding: '13px', borderRadius: 14, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', fontWeight: 700, fontSize: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="💌" size={16} /> {isEdit ? 'Save Changes' : 'Seal the Letter'}</button>
         </div>

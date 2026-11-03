@@ -117,7 +117,7 @@ export default function TimeCapsule() {
                   <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', marginBottom: (unlockable && mine) ? 10 : 0 }}>
                     {unlockable ? (
                       mine ? (
-                        <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.6, whiteSpace: 'pre-line', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🔓" size={16} /> Open to read...</p>
+                        <p style={{ fontSize: 13, color: 'var(--ink)', lineHeight: 1.6, whiteSpace: 'pre-line', display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🔓" size={16} /> Open to read…</p>
                       ) : (
                         <p style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.6, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="🔒" size={16} /> Only {c.to === 'both' ? 'both of you' : c.to} can open this letter</p>
                       )
@@ -237,7 +237,7 @@ function CapsuleDetail({ capsule: c, onClose, formatDate, canEdit, onEdit, onDel
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {canEdit && <button onClick={onEdit} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={14} /></button>}
             <button onClick={onDelete} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={14} /></button>
-            <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+            <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
           </div>
         </div>
         <p style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>From {c.from} <Icon emoji="→" size={12} /> {c.to === 'both' ? 'both' : c.to}</p>

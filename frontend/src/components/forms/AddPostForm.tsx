@@ -67,7 +67,7 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <p style={{ fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>New Post</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -89,7 +89,7 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
                   {im.failed && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'white', textAlign: 'center', padding: 4 }}>Upload failed</div>
                   )}
-                  <button onClick={() => removeImage(im.id)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
+                  <button aria-label="Close" onClick={() => removeImage(im.id)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
                 </div>
               ))}
               <button
@@ -110,7 +110,7 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
 
           <textarea
             className="input-field"
-            placeholder="Write a caption..."
+            placeholder="Write a caption…"
             value={caption}
             onChange={e => setCaption(e.target.value)}
             rows={3}
@@ -138,7 +138,7 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
 
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn-ghost" onClick={onClose} disabled={posting} style={{ flex: 1 }}>Cancel</button>
-            <button className="btn-primary" onClick={handleSubmit} disabled={isUploading || posting} style={{ flex: 2, opacity: (isUploading || posting) ? 0.6 : 1 }}>{isUploading ? 'Uploading...' : posting ? 'Posting...' : 'Post'}</button>
+            <button className="btn-primary" onClick={handleSubmit} disabled={isUploading || posting} style={{ flex: 2, opacity: (isUploading || posting) ? 0.6 : 1 }}>{isUploading ? 'Uploading…' : posting ? 'Posting…' : 'Post'}</button>
           </div>
         </div>
       </div>

@@ -617,7 +617,7 @@ export default function App() {
                   </div>
                 </div>
                 <p style={{ marginTop: 10, fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', letterSpacing: '0.02em', position: 'relative', zIndex: 1 }}>{Math.round(loadProgress)}%</p>
-                <p style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-2)', position: 'relative', zIndex: 1 }}>Loading...</p>
+                <p style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-2)', position: 'relative', zIndex: 1 }}>Loading…</p>
                 <style>{`
                   @keyframes floatBob {
                     0%, 100% { transform: translate(-50%, -50%) translateY(0) scale(1); opacity: 0.5; }

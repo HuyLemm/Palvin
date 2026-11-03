@@ -23,7 +23,7 @@ export default function MemoryDetail({ id }: { id?: string } = {}) {
           <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>{memory.date}</p>
           {memory.location && <p style={{ fontSize: 14, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="📍" size={14} /> {memory.location}</p>}
         </div>
-        <button onClick={() => toggleFavorite(memory.id)} style={{ background: memory.favorite ? 'var(--sakura-light)' : 'var(--bg)', border: `1.5px solid ${memory.favorite ? 'var(--sakura)' : 'var(--border)'}`, borderRadius: 12, padding: '8px 14px', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={() => toggleFavorite(memory.id)} style={{ background: memory.favorite ? 'var(--sakura-light)' : 'var(--bg)', border: `1.5px solid ${memory.favorite ? 'var(--sakura)' : 'var(--border)'}`, borderRadius: 12, padding: '8px 14px', cursor: 'pointer', transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon emoji={memory.favorite ? '❤️' : '🤍'} size={18} />
         </button>
       </div>

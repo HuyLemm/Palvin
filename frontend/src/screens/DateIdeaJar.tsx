@@ -113,8 +113,8 @@ export default function DateIdeaJar({ onBack }: Props) {
           <p style={{ fontSize: 15, color: 'var(--ink-2)', marginBottom: 16 }}>Tap the jar to draw an idea!</p>
         )}
 
-        <button onClick={spin} disabled={spinning} style={{ margin: '0 auto', padding: '13px 28px', background: spinning ? 'var(--border)' : 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))', border: 'none', borderRadius: 16, color: spinning ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 15, cursor: spinning ? 'default' : 'pointer', boxShadow: spinning ? 'none' : '0 4px 16px rgba(201,95,124,0.3)', transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-          {spinning ? <><Icon emoji="🫙" size={16} /> Shaking...</> : picked ? <><Icon emoji="🔀" size={16} /> Draw again</> : <><Icon emoji="🫙" size={16} /> Shake the jar</>}
+        <button onClick={spin} disabled={spinning} style={{ margin: '0 auto', padding: '13px 28px', background: spinning ? 'var(--border)' : 'linear-gradient(135deg, var(--sakura), var(--sakura-deep))', border: 'none', borderRadius: 16, color: spinning ? 'var(--ink-2)' : 'white', fontWeight: 700, fontSize: 15, cursor: spinning ? 'default' : 'pointer', boxShadow: spinning ? 'none' : '0 4px 16px rgba(201,95,124,0.3)', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          {spinning ? <><Icon emoji="🫙" size={16} /> Shaking…</> : picked ? <><Icon emoji="🔀" size={16} /> Draw again</> : <><Icon emoji="🫙" size={16} /> Shake the jar</>}
         </button>
       </div>
 
@@ -130,7 +130,7 @@ export default function DateIdeaJar({ onBack }: Props) {
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               className="input-field"
-              placeholder="e.g. Visit an art exhibition..."
+              placeholder="e.g. Visit an art exhibition…"
               value={newIdea}
               onChange={e => setNewIdea(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addCustom()}
@@ -138,7 +138,7 @@ export default function DateIdeaJar({ onBack }: Props) {
               autoFocus
               disabled={adding}
             />
-            <button onClick={addCustom} disabled={adding} style={{ padding: '10px 16px', background: 'var(--sakura-deep)', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: adding ? 0.7 : 1 }}><Icon emoji={adding ? '…' : '✓'} size={16} /></button>
+            <button aria-label="Add idea" onClick={addCustom} disabled={adding} style={{ padding: '10px 16px', background: 'var(--sakura-deep)', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: adding ? 0.7 : 1 }}><Icon emoji={adding ? '…' : '✓'} size={16} /></button>
           </div>
         )}
       </div>
@@ -185,7 +185,7 @@ export default function DateIdeaJar({ onBack }: Props) {
           <div style={{ background: 'var(--white)', borderRadius: 20, padding: '20px', width: '100%', maxWidth: 380, animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 17, fontWeight: 700, color: 'var(--ink)' }}>Edit idea <Icon emoji="✏️" size={15} /></p>
-              <button onClick={() => setEditingIdea(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
+              <button aria-label="Close" onClick={() => setEditingIdea(null)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={15} /></button>
             </div>
             <input
               className="input-field"

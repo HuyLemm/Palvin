@@ -60,8 +60,15 @@ function scan(root: ParentNode) {
   root.querySelectorAll<HTMLElement>(DIALOG).forEach(markDialog);
 }
 
+function syncThemeColor() {
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', document.documentElement.getAttribute('data-theme') === 'dark' ? '#1E1417' : '#FFF8FA');
+}
+
 export function initA11y() {
   scan(document);
+  syncThemeColor();
+  new MutationObserver(syncThemeColor).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
   let opener: HTMLElement | null = null;
   let hadDialog = false;

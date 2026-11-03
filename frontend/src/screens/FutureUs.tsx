@@ -169,7 +169,7 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 16px', background: 'var(--white)', borderRadius: 14, border: '1px solid var(--border)', transition: 'box-shadow 0.15s' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => onToggle(g.id)} style={{ width: 24, height: 24, borderRadius: 8, border: `2px solid ${g.completed ? 'var(--sakura-accent)' : 'var(--border)'}`, background: g.completed ? 'var(--sakura-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'all 0.2s' }}>
+        <button onClick={() => onToggle(g.id)} style={{ width: 24, height: 24, borderRadius: 8, border: `2px solid ${g.completed ? 'var(--sakura-accent)' : 'var(--border)'}`, background: g.completed ? 'var(--sakura-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s' }}>
           {g.completed && <Icon emoji="✓" size={13} />}
         </button>
         <Icon emoji={g.emoji} size={20} />
@@ -180,7 +180,7 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button onClick={() => onEdit(g)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-          <button onClick={() => onDelete(g.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+          <button aria-label="Close" onClick={() => onDelete(g.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
         </div>
       </div>
 
@@ -245,7 +245,7 @@ function AddFutureGoalForm({ onClose, onAdd, defaultOwner, existing }: {
       <div style={{ background: 'var(--white)', borderRadius: 20, padding: 20, width: '100%', maxWidth: 400, maxHeight: 'calc(var(--app-vh, 100vh) * 0.8)', overflowY: 'auto', animation: 'popIn 0.2s cubic-bezier(0.32,0.72,0,1) both' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: 8 }}><Icon emoji="✨" size={20} /> {isEdit ? 'Edit Goal' : 'Add Goal'}</p>
-          <button onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
+          <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', gap: 8 }}>

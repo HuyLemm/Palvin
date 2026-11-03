@@ -52,6 +52,9 @@ export default function SwipeToDelete({ children, onDelete, borderRadius = 14 }:
     <div style={{ position: 'relative', overflow: 'hidden', borderRadius }}>
       <div style={{ position: 'absolute', inset: 0, display: 'flex', justifyContent: 'flex-end' }}>
         <button
+          aria-label="Delete"
+          onFocus={() => setDragX(-REVEAL)}
+          onBlur={() => setDragX(0)}
           onClick={() => { setRemoving(true); setTimeout(onDelete, 150); }}
           style={{
             // Tracks the drag distance directly (not a fixed reveal width) so
