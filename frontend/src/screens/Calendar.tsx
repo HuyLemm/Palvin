@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { plural } from '../lib/plural';
 import { useApp } from '../context';
 import AddEventForm from '../components/forms/AddEventForm';
 import Icon from '../components/Icon';
@@ -99,7 +100,7 @@ function SpecialDatesTab() {
             const isToday = dateStr === now.toISOString().split('T')[0];
             const isSelected = dateStr === selected;
             return (
-              <div key={d} onClick={() => setSelected(dateStr)} style={{ textAlign: 'center', padding: '6px 4px', borderRadius: 10, cursor: 'pointer', background: isSelected ? 'var(--sakura-deep)' : isToday ? 'var(--sakura-light)' : 'transparent', transition: 'background 0.15s', position: 'relative' }}>
+              <div key={d} onClick={() => setSelected(dateStr)} style={{ textAlign: 'center', padding: '6px 4px', borderRadius: 10, cursor: 'pointer', background: isSelected ? 'var(--fill-strong)' : isToday ? 'var(--sakura-light)' : 'transparent', transition: 'background 0.15s', position: 'relative' }}>
                 <span style={{ fontSize: 14, fontWeight: isToday || isSelected ? 700 : 400, color: isSelected ? 'white' : isToday ? 'var(--sakura-deep)' : 'var(--ink)' }}>{d}</span>
                 {events.length > 0 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 2, marginTop: 3 }}>
@@ -173,11 +174,11 @@ function EventCard({ event: ev, displayDate, onEdit, onDelete }: { event: Calend
       </div>
       {!confirm
         ? <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            <button onClick={() => onEdit(ev)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-            <button aria-label="Close" onClick={() => setConfirm(true)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            <button aria-label="Edit" onClick={() => onEdit(ev)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+            <button aria-label="Delete" onClick={() => setConfirm(true)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
           </div>
         : <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-            <button onClick={() => onDelete(ev.id)} style={{ background: 'var(--sakura-deep)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Delete</button>
+            <button onClick={() => onDelete(ev.id)} style={{ background: 'var(--fill-strong)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>Delete</button>
             <button onClick={() => setConfirm(false)} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 8px', cursor: 'pointer', fontSize: 12, color: 'var(--ink-2)' }}>No</button>
           </div>
       }
@@ -294,7 +295,7 @@ function CycleTrackerTab() {
               <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 25, color: 'white' }}>{stats.nextStart && formatShortDate(stats.nextStart)}</p>
               {daysUntilNext !== null && (
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'white', background: 'rgba(255,255,255,0.22)', padding: '5px 12px', borderRadius: 99 }}>
-                  {daysUntilNext < 0 ? `${-daysUntilNext} days late` : daysUntilNext === 0 ? 'Today!' : `In ${daysUntilNext} days`}
+                  {daysUntilNext < 0 ? `${-daysUntilNext} ${plural(-daysUntilNext, 'day')} late` : daysUntilNext === 0 ? 'Today!' : `In ${daysUntilNext} ${plural(daysUntilNext, 'day')}`}
                 </span>
               )}
             </div>
@@ -346,8 +347,8 @@ function CycleTrackerTab() {
                     <p style={{ fontSize: 12, color: l.endDate ? 'var(--ink-2)' : '#5AC26A', fontWeight: l.endDate ? 400 : 700 }}>{l.endDate ? `${daysBetweenISO(l.startDate, l.endDate) + 1}-day period` : '● Ongoing'}</p>
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                    <button onClick={() => setEditing(l)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-                    <button aria-label="Close" onClick={() => setConfirmDeleteId(l.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+                    <button aria-label="Edit" onClick={() => setEditing(l)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+                    <button aria-label="Delete" onClick={() => setConfirmDeleteId(l.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
                   </div>
                 </div>
                 {!l.endDate && (

@@ -75,9 +75,9 @@ export default function Feed() {
       {/* Month filter */}
       {months.length > 1 && (
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 16 }}>
-          <button onClick={() => setMonthFilter('all')} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 99, border: monthFilter === 'all' ? 'none' : '1.5px solid var(--border)', background: monthFilter === 'all' ? 'var(--sakura-accent)' : 'var(--white)', color: monthFilter === 'all' ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>All</button>
+          <button onClick={() => setMonthFilter('all')} style={{ flexShrink: 0, padding: '10px 14px', borderRadius: 99, border: monthFilter === 'all' ? 'none' : '1.5px solid var(--border)', background: monthFilter === 'all' ? 'var(--sakura-accent)' : 'var(--white)', color: monthFilter === 'all' ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>All</button>
           {months.map(m => (
-            <button key={m} onClick={() => setMonthFilter(m)} style={{ flexShrink: 0, padding: '6px 14px', borderRadius: 99, border: monthFilter === m ? 'none' : '1.5px solid var(--border)', background: monthFilter === m ? 'var(--sakura-accent)' : 'var(--white)', color: monthFilter === m ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>{monthLabel(m)}</button>
+            <button key={m} onClick={() => setMonthFilter(m)} style={{ flexShrink: 0, padding: '10px 14px', borderRadius: 99, border: monthFilter === m ? 'none' : '1.5px solid var(--border)', background: monthFilter === m ? 'var(--sakura-accent)' : 'var(--white)', color: monthFilter === m ? 'white' : 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>{monthLabel(m)}</button>
           ))}
         </div>
       )}

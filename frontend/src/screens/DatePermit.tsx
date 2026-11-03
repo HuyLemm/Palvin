@@ -22,7 +22,7 @@ const CATEGORIES = [
 
 const STATUS_CONFIG = {
   pending:  { label: 'PENDING', bg: '#FEF9C3', border: '#FDE047', color: '#A16207', stamp: '#CA8A04' },
-  approved: { label: 'APPROVED',  bg: '#F0FDF4', border: '#86EFAC', color: '#166534', stamp: '#16A34A' },
+  approved: { label: 'APPROVED',  bg: '#F0FDF4', border: '#86EFAC', color: '#166534', stamp: '#15803D' },
   rejected: { label: 'REJECTED',  bg: '#FEF2F2', border: '#FCA5A5', color: '#7F1D1D', stamp: '#DC2626' },
 };
 
@@ -173,9 +173,9 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
         {[
           { key: 'submit', emoji: '📝', label: 'Submit', count: null as number | null },
           { key: 'inbox', emoji: '📥', label: 'To Review', count: pendingForMe.length },
-          { key: 'mine', emoji: '📁', label: 'My Requests', count: myRequests.length },
+          { key: 'mine', emoji: '📁', label: 'Sent', count: myRequests.length },
         ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{ flex: 1, padding: '9px 4px', borderRadius: 11, border: 'none', background: tab === t.key ? 'white' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: tab === t.key ? 700 : 500, fontSize: 12, cursor: 'pointer', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', boxShadow: tab === t.key ? '0 1px 6px rgba(201,95,124,0.12)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+          <button key={t.key} onClick={() => setTab(t.key as typeof tab)} style={{ flex: 1, padding: '9px 4px', borderRadius: 11, border: 'none', background: tab === t.key ? 'var(--white)' : 'transparent', color: tab === t.key ? 'var(--sakura-deep)' : 'var(--ink-2)', fontWeight: tab === t.key ? 700 : 500, fontSize: 12, cursor: 'pointer', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', boxShadow: tab === t.key ? '0 1px 6px rgba(201,95,124,0.12)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
             <Icon emoji={t.emoji} size={13} /> {t.label}
             {t.count != null && <FilterCountBadge count={t.count} />}
           </button>
@@ -210,7 +210,7 @@ export default function DatePermit({ onBack, initialRequestId }: Props) {
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                     {CATEGORIES.map(c => (
-                      <button key={c.label} onClick={() => { setCategory(c.label); setCategoryEmoji(c.emoji); setActivity(c.label); }} style={{ padding: '10px 4px', border: `2px solid ${category === c.label ? 'var(--sakura-accent)' : 'var(--border)'}`, borderRadius: 12, background: category === c.label ? 'var(--sakura-light)' : 'white', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s' }}>
+                      <button key={c.label} onClick={() => { setCategory(c.label); setCategoryEmoji(c.emoji); setActivity(c.label); }} style={{ padding: '10px 4px', border: `2px solid ${category === c.label ? 'var(--sakura-accent)' : 'var(--border)'}`, borderRadius: 12, background: category === c.label ? 'var(--sakura-light)' : 'var(--white)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s' }}>
                         <Icon emoji={c.emoji} size={22} />
                         <span style={{ fontSize: 12, fontWeight: 600, color: category === c.label ? 'var(--sakura-deep)' : 'var(--ink-2)', lineHeight: 1.2, textAlign: 'center' }}>{c.label}</span>
                       </button>
@@ -389,7 +389,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
             <p style={{ fontSize: 12, fontWeight: 900, color: cfg.stamp, letterSpacing: '0.06em', fontFamily: 'monospace' }}>{cfg.label}</p>
           </div>
           {onEdit && (
-            <button
+            <button aria-label="Edit"
               onClick={onEdit}
               style={{ background: 'var(--white)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
             ><Icon emoji="✏️" size={12} /></button>
@@ -420,7 +420,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {/* Response note */}
         {req.responseNote && (
           <div style={{ background: req.status === 'approved' ? '#F0FDF4' : '#FEF2F2', borderRadius: 12, padding: '10px 14px', marginBottom: 12, border: `1px solid ${req.status === 'approved' ? '#86EFAC' : '#FCA5A5'}` }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: req.status === 'approved' ? '#16A34A' : '#DC2626', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: req.status === 'approved' ? '#15803D' : '#DC2626', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
               <Icon emoji={req.status === 'approved' ? '✅' : '❌'} size={12} /> {req.status === 'approved' ? 'APPROVAL NOTE' : 'REJECTION REASON'}
             </p>
             <p style={{ fontSize: 13, color: 'var(--ink)', fontStyle: 'italic' }}>"{req.responseNote}"</p>
@@ -430,7 +430,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
         {/* Action buttons */}
         {showActions && !isResponding && (
           <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-            <button onClick={onApprove} style={{ flex: 1, padding: '11px', background: '#16A34A', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <button onClick={onApprove} style={{ flex: 1, padding: '11px', background: '#15803D', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               <Icon emoji="✅" size={14} /> Approve
             </button>
             <button onClick={onReject} style={{ flex: 1, padding: '11px', background: '#DC2626', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
@@ -452,7 +452,7 @@ function PermitCard({ req, showActions, formatDate, formatCreated, onApprove, on
               style={{ marginBottom: 10 }}
             />
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => handleRespond(req.id, 'approved')} style={{ flex: 1, padding: '10px', background: '#16A34A', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="✅" size={14} /> Approve</button>
+              <button onClick={() => handleRespond(req.id, 'approved')} style={{ flex: 1, padding: '10px', background: '#15803D', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="✅" size={14} /> Approve</button>
               <button onClick={() => handleRespond(req.id, 'rejected')} style={{ flex: 1, padding: '10px', background: '#DC2626', border: 'none', borderRadius: 11, color: 'white', fontWeight: 700, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}><Icon emoji="❌" size={14} /> Reject</button>
             </div>
           </div>

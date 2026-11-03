@@ -58,6 +58,7 @@ function AudioBubble({ src, duration, mine }: { src: string; duration: number | 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 150 }}>
       <button
+        aria-label={playing ? 'Pause voice message' : 'Play voice message'}
         onClick={e => { e.stopPropagation(); const el = audioRef.current; if (!el) return; if (playing) el.pause(); else el.play(); }}
         style={{
           width: 28, height: 28, borderRadius: '50%', border: 'none', flexShrink: 0, cursor: 'pointer',
@@ -119,7 +120,7 @@ function ChatImage({ src, pending }: { src: string; pending?: boolean }) {
 // ignore.
 function StickerTile({ src, onClick }: { src: string; onClick: () => void }) {
   return (
-    <button className="sticker-tile" onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
+    <button className="sticker-tile" aria-label="Send sticker" onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
       <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
         <img src={src} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
       </div>
@@ -131,7 +132,7 @@ function StickerTile({ src, onClick }: { src: string; onClick: () => void }) {
 // shape as StickerTile plus a caption naming the topic.
 function CategoryTile({ label, previewUrl, onClick }: { label: string; previewUrl: string; onClick: () => void }) {
   return (
-    <button className="sticker-tile" onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
+    <button aria-label="Back" className="sticker-tile" onClick={onClick} style={{ display: 'block', width: '100%', padding: 0, border: '1px solid var(--border)', borderRadius: 12, background: 'var(--bg)', cursor: 'pointer', overflow: 'hidden' }}>
       <div style={{ position: 'relative', width: '100%', paddingTop: '100%' }}>
         <img src={previewUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
         <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: '10px 6px 5px', background: 'linear-gradient(transparent, rgba(0,0,0,0.7))', color: 'white', fontSize: 12, fontWeight: 700, textTransform: 'capitalize', textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</div>
@@ -601,7 +602,7 @@ export default function Chat({ onBack }: Props) {
           <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{partnerName}</p>
           <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{formatPresence(partnerProfile?.lastActiveAt)}</p>
         </div>
-        <button onClick={() => setShowThemePicker(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--ink-2)', flexShrink: 0 }} title="Chat theme">
+        <button aria-label="Chat theme" onClick={() => setShowThemePicker(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'flex', color: 'var(--ink-2)', flexShrink: 0 }} title="Chat theme">
           <Icon emoji="🎨" size={19} />
         </button>
       </div>
@@ -853,7 +854,7 @@ export default function Chat({ onBack }: Props) {
 
         {isRecording ? (
           <>
-            <button className="chat-icon-btn" onClick={() => stopRecording(false)} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'var(--border)', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button aria-label="Close" className="chat-icon-btn" onClick={() => stopRecording(false)} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'var(--border)', color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon emoji="✕" size={15} />
             </button>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 20, background: 'var(--bg)', border: '1px solid var(--border)' }}>
@@ -867,13 +868,13 @@ export default function Chat({ onBack }: Props) {
           </>
         ) : (
           <>
-            <button className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={() => galleryInputRef.current?.click()} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button aria-label="Send a photo from gallery" className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={() => galleryInputRef.current?.click()} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon emoji="🖼️" size={20} />
             </button>
-            <button className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={() => cameraInputRef.current?.click()} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button aria-label="Take a photo" className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={() => cameraInputRef.current?.click()} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon emoji="📷" size={20} />
             </button>
-            <button className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={() => setShowStickers(v => !v)} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: showStickers ? 'var(--sakura-light)' : 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button aria-label="Stickers and GIFs" className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={() => setShowStickers(v => !v)} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: showStickers ? 'var(--sakura-light)' : 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Icon emoji="😊" size={20} />
             </button>
             <input
@@ -889,16 +890,16 @@ export default function Chat({ onBack }: Props) {
               style={{ flex: 1, minWidth: 0, padding: '9px 14px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontSize: 14, outline: 'none' }}
             />
             {text.trim() ? (
-              <button className="chat-send-btn" onMouseDown={e => e.preventDefault()} onClick={handleSend} style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button aria-label="Send message" className="chat-send-btn" onMouseDown={e => e.preventDefault()} onClick={handleSend} style={{ width: 38, height: 38, borderRadius: '50%', flexShrink: 0, border: 'none', cursor: 'pointer', background: 'var(--btn-grad)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
               </button>
             ) : (
-              <button className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={startRecording} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <button aria-label="Record a voice message" className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={startRecording} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', color: 'var(--sakura-deep)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Icon emoji="🎤" size={20} />
               </button>
             )}
             {!text.trim() && (
-              <button className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={sendHeart} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <button aria-label="Send a heart" className="chat-icon-btn" onMouseDown={e => e.preventDefault()} onClick={sendHeart} disabled={sendingMedia} style={{ width: 34, height: 34, borderRadius: '50%', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <Icon emoji="❤️" size={22} style={{ color: '#E8517A', fill: '#E8517A' }} />
               </button>
             )}

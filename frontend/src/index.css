@@ -6,7 +6,7 @@
   --sakura: #F3A6B9;
   --sakura-light: #FADCE4;
   --sakura-accent: #C0506D;
-  --sakura-deep: #AE4565;
+  --sakura-deep: #A83F5F;
   --ink: #332A2D;
   --ink-2: #6F5F65;
   --btn-grad: linear-gradient(135deg, #C0506D, #A8405C);
@@ -17,7 +17,7 @@
   --pink-glow: #FFF0F4;
   --lavender-glow: #F5F0FF;
   --lavender-light: #EDE6FF;
-  --lavender: #8B6FD4;
+  --lavender: #7A5CCB;
   --glass: rgba(255,255,255,0.7);
   --glass-strong: rgba(255,255,255,0.9);
   --header-bg: rgba(255,248,250,0.92);
@@ -29,7 +29,7 @@
   --bg: #1E1417;
   --sakura: #C95F7C;
   --sakura-light: #35232B;
-  --sakura-accent: #E67F9A;
+  --sakura-accent: #C0506D;
   --sakura-deep: #F3A6B9;
   --ink: #F5E8EC;
   --ink-2: #B49FAB;
@@ -66,7 +66,7 @@ body[data-theme="dark"] {
   --sakura: #F3A6B9;
   --sakura-light: #FADCE4;
   --sakura-accent: #C0506D;
-  --sakura-deep: #AE4565;
+  --sakura-deep: #A83F5F;
   --ink: #332A2D;
   --ink-2: #6F5F65;
   --btn-grad: linear-gradient(135deg, #C0506D, #A8405C);
@@ -77,7 +77,7 @@ body[data-theme="dark"] {
   --pink-glow: #FFF0F4;
   --lavender-glow: #F5F0FF;
   --lavender-light: #EDE6FF;
-  --lavender: #8B6FD4;
+  --lavender: #7A5CCB;
   --glass: rgba(255,255,255,0.7);
   --glass-strong: rgba(255,255,255,0.9);
 }
@@ -524,4 +524,41 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 
 /* Money: numbers line up in columns. */
-[data-area="money"] { font-variant-numeric: tabular-nums; }
+[data-area="money"] { font-variant-numeric: lining-nums tabular-nums; }
+
+/* Playfair Display defaults to old-style figures (a "0" reads as a letter "o",
+   "1" as a small "I") — force lining numerals for every number in the app. */
+html { font-variant-numeric: lining-nums; }
+
+/* Tokens: strong pink fill that carries white text, and an accessible green. */
+:root {
+  --fill-strong: #A83F5F;
+  --green: #24803C;
+  --green-grad: linear-gradient(135deg, #24803C, #1B6E32);
+}
+[data-theme="dark"] {
+  --fill-strong: #B04566;
+  --green: #5AC26A;
+}
+
+/* Small controls get a >=44px tap area without changing how they look: an
+   invisible, centred pseudo-element grows the hit box (position: relative does
+   not move anything, and elements that set their own position keep it). */
+:where(button, [role="button"], select) { position: relative; }
+:where(button, [role="button"]):not(.bottom-sheet-overlay)::after {
+  content: "";
+  position: absolute;
+  left: 50%; top: 50%;
+  width: max(100%, 44px); height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
+/* Long forms/modals: the action row (or lone Save button) stays visible while the
+   fields scroll. The 8px white spread masks content passing underneath. */
+.kb-modal-overlay > div > div:last-child > :is(button, div:has(> button)):last-child {
+  position: sticky;
+  bottom: 8px;
+  z-index: 2;
+  box-shadow: 0 0 0 8px var(--white), 0 24px 0 0 var(--white);
+}
+.kb-modal-overlay > div > div:last-child > div:has(> button):last-child { background: var(--white); }

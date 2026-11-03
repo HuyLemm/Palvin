@@ -97,6 +97,7 @@ import {
 } from './moods';
 import { createHug } from './hugs';
 import { fetchStreak, markActiveToday } from './streak';
+import { startNavHistory, syncScreenDepth } from './navHistory';
 
 interface ToastItem { id: string; message: string; emoji: string; leaving?: boolean; }
 
@@ -460,6 +461,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
     setLastNavWasPop(true);
   }, []);
+
+  // Device Back button / swipe-back: mirror the navigation stack into browser
+  // history (see navHistory.ts) so Back steps back inside the app.
+  useEffect(() => {
+    startNavHistory(() => {
+      setStack(prev => prev.length > 1 ? prev.slice(0, -1) : prev);
+      setLastNavWasPop(true);
+    });
+  }, []);
+  useEffect(() => { syncScreenDepth(stack.length); }, [stack.length]);
 
   // Fire-and-forget: logs "I did something today" for the streak. The RPC
   // itself only advances couples.streak_count once EVERY profile in the

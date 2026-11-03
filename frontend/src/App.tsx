@@ -516,7 +516,7 @@ export default function App() {
         </div>
 
         {/* Screen */}
-        <div className="phone-screen" style={{
+        <div className="phone-screen" data-area={area} style={{
           display: 'flex',
           flexDirection: 'column',
         }}>

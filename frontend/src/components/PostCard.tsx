@@ -84,7 +84,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
           {post.location && <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 3, marginTop: 1 }}><Icon emoji="📍" size={12} />{post.location}</p>}
         </div>
         {isMine && (
-          <button onClick={() => setShowOptions(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', padding: 4, display: 'flex' }}><MoreIcon /></button>
+          <button onClick={() => setShowOptions(true)} aria-label="Post options" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', padding: 10, margin: -6, display: 'flex' }}><MoreIcon /></button>
         )}
       </div>
 
@@ -112,7 +112,7 @@ export default function PostCard({ post, reactions }: { post: Post; reactions: R
         {post.images.length > 1 && (
           <div style={{ position: 'absolute', bottom: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4 }}>
             {post.images.map((_, i) => (
-              <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: i === imgIndex ? 'white' : 'rgba(255,255,255,0.5)' }} />
+              <div key={i} style={{ width: 5, height: 5, borderRadius: '50%', background: i === imgIndex ? 'var(--white)' : 'rgba(255,255,255,0.5)' }} />
             ))}
           </div>
         )}

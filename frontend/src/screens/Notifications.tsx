@@ -1,4 +1,5 @@
 import { useApp } from '../context';
+import { useUndoDelete } from '../hooks/useUndoDelete';
 import Avatar from '../components/Avatar';
 import SwipeToDelete from '../components/SwipeToDelete';
 import Icon from '../components/Icon';
@@ -32,8 +33,10 @@ function groupByDay(notifications: AppNotification[]): { label: string; items: A
 
 export default function Notifications() {
   const { state, markNotifRead, markAllRead, deleteNotification, navigate, pendingInvite, acceptInvite, rejectInvite } = useApp();
-  const unread = state.notifications.filter(n => !n.read).length;
-  const groups = groupByDay(state.notifications);
+  const undo = useUndoDelete();
+  const visible = state.notifications.filter(n => !undo.isHidden(n.id));
+  const unread = visible.filter(n => !n.read).length;
+  const groups = groupByDay(visible);
 
   const handleOpen = (n: AppNotification) => {
     markNotifRead(n.id);
@@ -86,7 +89,7 @@ export default function Notifications() {
               <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--ink-2)', marginBottom: 8, padding: '0 4px' }}>{group.label}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {group.items.map(n => (
-                  <SwipeToDelete key={n.id} onDelete={() => deleteNotification(n.id)}>
+                  <SwipeToDelete key={n.id} onDelete={() => undo.run(n.id, 'Notification deleted', () => deleteNotification(n.id))}>
                   <div
                     onClick={() => handleOpen(n)}
                     style={{
@@ -134,6 +137,7 @@ export default function Notifications() {
           ))}
         </div>
       )}
+      {undo.bar}
     </div>
   );
 }

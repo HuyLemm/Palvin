@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { plural } from '../lib/plural';
+import { readableText } from '../lib/color';
 import { useApp } from '../context';
 import Avatar from '../components/Avatar';
 import Icon from '../components/Icon';
@@ -243,7 +245,7 @@ export default function Home() {
   return (
     <div style={{ paddingBottom: 32 }}>
       <p style={{ fontSize: 15, fontWeight: 600, color: 'var(--ink-2)', margin: '0 2px 10px' }}>
-        {greeting()}, <span style={{ color: 'var(--sakura-deep)', fontWeight: 700 }}>{currentUser}</span> <Icon emoji="🌸" size={14} style={{ verticalAlign: '-2px', color: 'var(--sakura)' }} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{greeting()}, <span style={{ color: 'var(--sakura-deep)', fontWeight: 700 }}>{currentUser}</span> <Icon emoji="🌸" size={14} style={{ color: 'var(--sakura)' }} /></span>
       </p>
 
       {/* Hero Counter */}
@@ -278,15 +280,15 @@ export default function Home() {
               ? `Day ${days.toLocaleString()} — a milestone!`
               : nextEv && nextEvDays !== null && nextEvDays <= 30
                 ? (nextEvDays === 0 ? `${nextEv.event.title} is today!` : `${nextEvDays} day${nextEvDays === 1 ? '' : 's'} until ${nextEv.event.title}`)
-                : `${nextMilestone - days} days until day ${nextMilestone.toLocaleString()}`}
+                : `${nextMilestone - days} ${plural(nextMilestone - days, 'day')} until day ${nextMilestone.toLocaleString()}`}
           </p>
         )}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}>
           {relationshipStart ? (
             <div style={{ background: 'var(--white)', borderRadius: 12, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>Since</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sakura-deep)' }}>
-                {relationshipStart.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              <span style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap' }}>Since</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--sakura-deep)', whiteSpace: 'nowrap' }}>
+                {relationshipStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             </div>
           ) : (
@@ -296,10 +298,10 @@ export default function Home() {
           )}
           <div style={{ background: 'var(--white)', borderRadius: 12, padding: '6px 14px', display: 'inline-flex', alignItems: 'center', gap: 6, border: '1px solid var(--border)' }}>
             <Icon emoji="🔥" size={16} style={{ color: streakLitToday ? '#FF5A1F' : 'var(--ink-2)', fill: streakLitToday ? '#FF5A1F' : 'none', transition: 'color 0.3s, fill 0.3s' }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)' }}>{streak} day streak</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)', whiteSpace: 'nowrap' }}>{streak} day streak</span>
           </div>
         </div>
-        {quote && <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: 'var(--ink-2)', marginBottom: 14, fontSize: 15 }}>"{quote}"</p>}
+        {quote && <p style={{ fontFamily: "'Playfair Display', serif", fontStyle: 'italic', color: 'var(--ink)', marginBottom: 14, fontSize: 15 }}>"{quote}"</p>}
       </div>
 
 
@@ -317,7 +319,7 @@ export default function Home() {
           }}
         >
           <Icon emoji={hugConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: hugAnim ? 'scale(1.3)' : 'scale(1)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : hugConfig.color }}>{hugConfig.label}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: hugAnim ? 'white' : `color-mix(in srgb, ${hugConfig.color} 72%, var(--ink))` }}>{hugConfig.label}</span>
           <span style={{ fontSize: 12, color: hugAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
             to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
           </span>
@@ -335,7 +337,7 @@ export default function Home() {
           }}
         >
           <Icon emoji={thinkConfig.emoji} size={32} style={{ display: 'block', transition: 'transform 0.3s', transform: thinkAnim ? 'scale(1.3)' : 'scale(1)' }} />
-          <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : thinkConfig.color }}>{thinkConfig.label}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: thinkAnim ? 'white' : `color-mix(in srgb, ${thinkConfig.color} 72%, var(--ink))` }}>{thinkConfig.label}</span>
           <span style={{ fontSize: 12, color: thinkAnim ? 'rgba(255,255,255,0.8)' : 'var(--ink-2)', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 4 }}>
             to {partnerName ?? 'your partner'} <Icon emoji="💗" size={11} />
           </span>
@@ -364,6 +366,9 @@ export default function Home() {
 
         {/* 7-day mood chart */}
         <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Mood over the last 7 days</p>
+        {moodChartData.every(d => !d.alvinScore && !d.paoiScore) && (
+          <p style={{ fontSize: 13, color: 'var(--ink-2)', margin: '0 0 8px' }}>No moods yet — tap Update above to start your chart.</p>
+        )}
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 60 }}>
           {moodChartData.map(d => (
             <div key={d.date} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
@@ -458,9 +463,9 @@ export default function Home() {
                     <Icon emoji="♪" size={11} /> Our Playlist
                     {isPlaying && (
                       <span style={{ display: 'inline-flex', alignItems: 'flex-end', gap: 2, height: 15, marginLeft: 2 }}>
-                        <span style={{ width: 3, borderRadius: 2, background: 'var(--sakura-deep)', animation: 'eq-bar-1 0.9s ease-in-out infinite' }} />
-                        <span style={{ width: 3, borderRadius: 2, background: 'var(--sakura-deep)', animation: 'eq-bar-2 0.9s ease-in-out infinite' }} />
-                        <span style={{ width: 3, borderRadius: 2, background: 'var(--sakura-deep)', animation: 'eq-bar-3 0.9s ease-in-out infinite' }} />
+                        <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-1 0.9s ease-in-out infinite' }} />
+                        <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-2 0.9s ease-in-out infinite' }} />
+                        <span style={{ width: 3, borderRadius: 2, background: 'var(--fill-strong)', animation: 'eq-bar-3 0.9s ease-in-out infinite' }} />
                       </span>
                     )}
                   </p>
@@ -529,7 +534,7 @@ export default function Home() {
             <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>Today's pick <Icon emoji="🎲" size={14} /></p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
               {state.favCategories.map(c => (
-                <button key={c.id} onClick={() => setSelectedFavCat(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 99, border: 'none', background: selectedFavCat === c.id ? c.color : 'var(--bg)', color: selectedFavCat === c.id ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s' }}>
+                <button key={c.id} onClick={() => setSelectedFavCat(c.id)} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 99, border: 'none', background: selectedFavCat === c.id ? c.color : 'var(--bg)', color: selectedFavCat === c.id ? readableText(c.color) : 'var(--ink-2)', fontWeight: 700, fontSize: 12, cursor: 'pointer', transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s' }}>
                   <Icon emoji={c.emoji} size={13} />
                   <span>{c.label}</span>
                 </button>

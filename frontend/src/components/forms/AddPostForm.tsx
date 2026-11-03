@@ -89,7 +89,7 @@ export default function AddPostForm({ onClose }: { onClose: () => void }) {
                   {im.failed && (
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: 'white', textAlign: 'center', padding: 4 }}>Upload failed</div>
                   )}
-                  <button aria-label="Close" onClick={() => removeImage(im.id)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
+                  <button aria-label="Remove photo" onClick={() => removeImage(im.id)} style={{ position: 'absolute', top: 2, right: 2, width: 20, height: 20, borderRadius: '50%', background: 'rgba(0,0,0,0.55)', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
                 </div>
               ))}
               <button

@@ -100,7 +100,7 @@ export default function DateIdeaJar({ onBack }: Props) {
 
       {/* Jar + result */}
       <div className="card" style={{ padding: '32px 24px', textAlign: 'center', marginBottom: 20, background: 'linear-gradient(135deg, var(--pink-glow), var(--sakura-light))' }}>
-        <button onClick={spin} disabled={spinning} style={{ background: 'none', border: 'none', cursor: spinning ? 'default' : 'pointer', display: 'inline-block' }}>
+        <button onClick={spin} disabled={spinning} aria-label="Shake the jar" style={{ background: 'none', border: 'none', cursor: spinning ? 'default' : 'pointer', display: 'inline-block' }}>
           <div className={spinning ? 'jar-anim' : ''} style={{ lineHeight: 1, marginBottom: 16, display: 'inline-block' }}><Icon emoji="🫙" size={72} /></div>
         </button>
 
@@ -138,7 +138,7 @@ export default function DateIdeaJar({ onBack }: Props) {
               autoFocus
               disabled={adding}
             />
-            <button aria-label="Add idea" onClick={addCustom} disabled={adding} style={{ padding: '10px 16px', background: 'var(--sakura-deep)', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: adding ? 0.7 : 1 }}><Icon emoji={adding ? '…' : '✓'} size={16} /></button>
+            <button aria-label="Add idea" onClick={addCustom} disabled={adding} style={{ padding: '10px 16px', background: 'var(--fill-strong)', border: 'none', borderRadius: 12, color: 'white', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: adding ? 0.7 : 1 }}><Icon emoji={adding ? '…' : '✓'} size={16} /></button>
           </div>
         )}
       </div>
@@ -166,13 +166,13 @@ export default function DateIdeaJar({ onBack }: Props) {
             <div key={`${idea.source}-${idea.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--white)', borderRadius: 12, border: '1px solid var(--border)' }}>
               <Icon emoji={idea.emoji} size={20} />
               <p style={{ fontSize: 13, color: 'var(--ink)', flex: 1 }}>{idea.text}</p>
-              <button
+              <button aria-label="Edit"
                 onClick={() => { setEditingIdea(idea); setEditIdeaText(idea.text); }}
-                style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 24, height: 24, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               ><Icon emoji="✏️" size={11} /></button>
-              <button
+              <button aria-label="Delete"
                 onClick={() => setConfirmDelete({ id: idea.id, source: idea.source })}
-                style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 24, height: 24, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               ><Icon emoji="🗑️" size={11} /></button>
             </div>
           ))}

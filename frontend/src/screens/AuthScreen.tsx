@@ -212,7 +212,7 @@ function BackBtn({ onClick }: { onClick: () => void }) {
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div style={{ background: 'rgba(220,38,38,0.07)', borderRadius: 10, padding: '10px 14px', marginBottom: 6, marginTop: -4 }}>
+    <div role="alert" style={{ background: 'rgba(220,38,38,0.07)', borderRadius: 10, padding: '10px 14px', marginBottom: 6, marginTop: -4 }}>
       <p style={{ color: '#DC2626', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}><Icon emoji="⚠" size={13} /> {message}</p>
     </div>
   );

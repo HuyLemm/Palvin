@@ -333,7 +333,8 @@ export default function Settings() {
             <button
               onClick={() => fileRef.current?.click()}
               disabled={photoUploading}
-              style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--sakura-deep)', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              aria-label="Change profile photo"
+              style={{ position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: '50%', background: 'var(--fill-strong)', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
             >
               {photoUploading
                 ? <div style={{ width: 10, height: 10, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.35)', borderTopColor: 'white', animation: 'palvin-settings-spin 0.7s linear infinite' }} />
@@ -357,7 +358,7 @@ export default function Settings() {
               <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink)' }}>{partnerProfile.displayName}</p>
               <p style={{ fontSize: 12, color: 'var(--sakura-deep)', display: 'flex', alignItems: 'center', gap: 4 }}>Your other half <Icon emoji="💖" size={11} /></p>
             </div>
-            <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--ink-2)', textAlign: 'right' }}>
+            <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--ink-2)', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
               <p style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}><Icon emoji="🔒" size={11} /> Linked</p>
               <p>Forever</p>
             </div>
@@ -407,7 +408,7 @@ export default function Settings() {
                 placeholder="Your partner's username"
                 style={{ flex: 1, padding: '8px 12px', borderRadius: 10, border: '1.5px solid var(--border)', fontSize: 13 }}
               />
-              <button onClick={handleInvite} disabled={inviting} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', background: 'var(--sakura-deep)', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+              <button onClick={handleInvite} disabled={inviting} style={{ padding: '8px 14px', borderRadius: 10, border: 'none', background: 'var(--fill-strong)', color: 'white', fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
                 {inviting ? '...' : 'Invite'}
               </button>
             </div>
@@ -437,7 +438,7 @@ export default function Settings() {
               onChange={e => setAnniversaryDraft(e.target.value)}
               style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: 13 }}
             />
-            <button onClick={saveAnniversary} style={{ background: 'var(--sakura-deep)', border: 'none', borderRadius: 8, padding: '6px 12px', color: 'white', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Save</button>
+            <button onClick={saveAnniversary} style={{ background: 'var(--fill-strong)', border: 'none', borderRadius: 8, padding: '6px 12px', color: 'white', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Save</button>
             <button onClick={() => setEditingAnniversary(false)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, padding: '6px 10px', color: 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
           </div>
         ) : (
@@ -487,7 +488,7 @@ export default function Settings() {
                 onChange={e => { setUsernameDraft(e.target.value); setUsernameError(''); }}
                 style={{ flex: 1, padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--border)', fontSize: 13 }}
               />
-              <button onClick={saveUsername} disabled={savingUsername} style={{ background: 'var(--sakura-deep)', border: 'none', borderRadius: 8, padding: '6px 12px', color: 'white', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>{savingUsername ? '...' : 'Save'}</button>
+              <button onClick={saveUsername} disabled={savingUsername} style={{ background: 'var(--fill-strong)', border: 'none', borderRadius: 8, padding: '6px 12px', color: 'white', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>{savingUsername ? '...' : 'Save'}</button>
               <button onClick={() => { setEditingUsername(false); setUsernameError(''); }} style={{ background: 'var(--bg)', border: 'none', borderRadius: 8, padding: '6px 10px', color: 'var(--ink-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Cancel</button>
             </div>
             {usernameError && <p style={{ color: '#DC2626', fontSize: 12, marginTop: 6, marginLeft: 28 }}>{usernameError}</p>}
@@ -810,7 +811,7 @@ function ToggleRow({ emoji, label, value, onToggle }: { emoji: string; label: st
     <div className="settings-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
       <Icon emoji={emoji} size={20} style={{ flexShrink: 0 }} />
       <p style={{ flex: 1, fontSize: 14, fontWeight: 500, color: 'var(--ink)' }}>{label}</p>
-      <button onClick={onToggle} style={{ width: 48, height: 27, borderRadius: 99, border: 'none', background: value ? 'var(--sakura-accent)' : 'var(--border)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
+      <button role="switch" aria-checked={value} aria-label={label} onClick={onToggle} style={{ width: 48, height: 27, borderRadius: 99, border: 'none', background: value ? 'var(--sakura-accent)' : 'var(--border)', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
         <div style={{ position: 'absolute', top: 3, left: value ? 24 : 3, width: 21, height: 21, borderRadius: '50%', background: 'var(--white)', transition: 'left 0.2s', boxShadow: '0 1px 4px rgba(0,0,0,0.15)' }} />
       </button>
     </div>

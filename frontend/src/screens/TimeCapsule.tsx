@@ -108,8 +108,8 @@ export default function TimeCapsule() {
                         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', background: 'var(--sakura-light)', padding: '3px 8px', borderRadius: 99 }}>{days}d to go</span>
                       )}
                       <div style={{ display: 'flex', gap: 8 }}>
-                        {isSender(c) && <button onClick={() => setEditing(c)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>}
-                        <button onClick={() => setConfirmDeleteId(c.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
+                        {isSender(c) && <button aria-label="Edit" onClick={() => setEditing(c)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>}
+                        <button aria-label="Delete" onClick={() => setConfirmDeleteId(c.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
                       </div>
                     </div>
                   </div>
@@ -156,8 +156,8 @@ export default function TimeCapsule() {
                   <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{c.title}</p>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, color: '#5AC26A', background: 'rgba(90,194,106,0.1)', padding: '2px 8px', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 3 }}><Icon emoji="✓" size={10} /> Read</span>
-                    {isSender(c) && <button onClick={e => { e.stopPropagation(); setEditing(c); }} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>}
-                    <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(c.id); }} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
+                    {isSender(c) && <button aria-label="Edit" onClick={e => { e.stopPropagation(); setEditing(c); }} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>}
+                    <button aria-label="Delete" onClick={e => { e.stopPropagation(); setConfirmDeleteId(c.id); }} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
                   </div>
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--ink-2)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>From {c.from} <Icon emoji="→" size={11} /> {c.to === 'both' ? 'both' : c.to}{c.occasion && ` · ${c.occasion}`}</p>
@@ -235,8 +235,8 @@ function CapsuleDetail({ capsule: c, onClose, formatDate, canEdit, onEdit, onDel
             <Icon emoji={c.to === 'both' ? '💑' : c.to === currentUser ? '💙' : '💗'} size={20} style={{ flexShrink: 0 }} /> {c.title}
           </p>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            {canEdit && <button onClick={onEdit} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={14} /></button>}
-            <button onClick={onDelete} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={14} /></button>
+            {canEdit && <button aria-label="Edit" onClick={onEdit} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={14} /></button>}
+            <button aria-label="Delete" onClick={onDelete} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={14} /></button>
             <button aria-label="Close" onClick={onClose} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={16} /></button>
           </div>
         </div>

@@ -267,7 +267,7 @@ export async function getMyInvites(): Promise<{ sent: PendingInvite[]; received:
     received: { id: string; fromName: string; createdAt: string }[];
   };
   return {
-    sent: d.sent.map(s => ({ id: s.id, name: s.toName, createdAt: s.createdAt })),
-    received: d.received.map(r => ({ id: r.id, name: r.fromName, createdAt: r.createdAt })),
+    sent: (d?.sent ?? []).map(s => ({ id: s.id, name: s.toName, createdAt: s.createdAt })),
+    received: (d?.received ?? []).map(r => ({ id: r.id, name: r.fromName, createdAt: r.createdAt })),
   };
 }

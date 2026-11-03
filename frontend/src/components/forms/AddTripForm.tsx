@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react';
+import { plural } from '../../lib/plural';
 import Icon from '../Icon';
 import type { Trip, TripDay } from '../../types';
 
@@ -113,7 +114,7 @@ export default function AddTripForm({ onClose, onAdd }: { onClose: () => void; o
           )}
           {nDays > 0 && (
             <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, marginTop: 8 }}>
-              <Icon emoji="📅" size={12} /> {nDays} days {nDays - 1} nights — we'll set up {nDays} empty itinerary days for you to fill in
+              <Icon emoji="📅" size={12} /> {nDays} {plural(nDays, 'day')} {nDays - 1} {plural(nDays - 1, 'night')} — we'll set up {nDays} empty itinerary {plural(nDays, 'day')} for you to fill in
             </p>
           )}
         </div>

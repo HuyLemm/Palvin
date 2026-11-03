@@ -217,7 +217,7 @@ function LetterReader({ letter, onClose, onDelete }: { letter: LoveLetter; onClo
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', fontSize: 15 }}><Icon emoji="←" size={15} /> Letters</button>
-        <button onClick={() => setConfirmDelete(true)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', opacity: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={16} /></button>
+        <button aria-label="Delete" onClick={() => setConfirmDelete(true)} style={{ background: 'none', border: 'none', color: 'var(--ink-2)', cursor: 'pointer', opacity: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={16} /></button>
       </div>
 
       {/* Paper */}

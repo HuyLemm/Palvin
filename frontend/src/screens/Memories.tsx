@@ -25,7 +25,7 @@ export default function Memories() {
         {FILTERS.map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             flexShrink: 0, padding: '7px 16px', borderRadius: 99, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none',
-            background: filter === f ? 'var(--sakura-deep)' : 'var(--white)',
+            background: filter === f ? 'var(--fill-strong)' : 'var(--white)',
             color: filter === f ? 'white' : 'var(--ink-2)',
             outline: filter === f ? 'none' : '1.5px solid var(--border)',
             transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6,

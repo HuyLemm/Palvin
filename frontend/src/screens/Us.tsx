@@ -1,4 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, Suspense, lazy } from 'react';
+import { plural } from '../lib/plural';
+import { useBackButton } from '../hooks/useBackButton';
+import { readableText } from '../lib/color';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 import { useApp } from '../context';
@@ -125,6 +128,8 @@ export default function Us() {
     if (screen === 'us' && lastNavWasPop) return lastUsSub;
     return 'main';
   });
+  // Device Back closes the open sub-screen (only while Us is the visible screen).
+  useBackButton(screen === 'us' && sub !== 'main', () => setSub('main'));
   // Captured once at mount. React 18 StrictMode double-invokes effects right
   // after mount (mount → cleanup → mount again) without changing navSeq in
   // between, so comparing against this snapshot — rather than a "first run"
@@ -234,15 +239,15 @@ export default function Us() {
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 20 }}>
         {[
-          { val: state.memories.length.toString(), label: 'Memories' },
-          { val: state.trips.length.toString(), label: 'Trips' },
-          { val: state.loveNotes.length.toString(), label: 'Notes' },
-          { val: state.playlist.length.toString(), label: 'Songs' },
+          { val: state.memories.length.toString(), label: 'Memories', go: () => navigate('memories') },
+          { val: state.trips.length.toString(), label: 'Trips', go: () => setSub('trips') },
+          { val: state.loveNotes.length.toString(), label: 'Notes', go: () => navigate('love-notes') },
+          { val: state.playlist.length.toString(), label: 'Songs', go: () => setSub('playlist') },
         ].map(s => (
-          <div key={s.label} style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 8px', textAlign: 'center' }}>
+          <button key={s.label} onClick={s.go} aria-label={`${s.val} ${s.label}`} style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 8px', textAlign: 'center', cursor: 'pointer', font: 'inherit' }}>
             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 23, color: 'var(--sakura-deep)' }}>{s.val}</div>
             <div style={{ fontSize: 12, color: 'var(--ink-2)', fontWeight: 500, marginTop: 2 }}>{s.label}</div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -259,11 +264,11 @@ export default function Us() {
             { label: 'To Do List', emoji: '✅', key: 'todos' as SubScreen,
               sub: (() => {
                 const left = state.todos.filter(t => !t.completed).length;
-                return left > 0 ? `${left} task(s) left` : 'All caught up';
+                return left > 0 ? `${left} ${plural(left, 'task')} left` : 'All caught up';
               })() },
             { label: 'Gratitude Journal', emoji: '🌸', key: 'gratitude' as SubScreen, sub: `${state.gratitude.length} things you're grateful for` },
             { label: 'Our Calendar', emoji: '📅', key: 'calendar' as SubScreen, sub: `${state.events.length} events` },
-            { label: 'Our Playlist', emoji: '🎵', key: 'playlist' as SubScreen, sub: `${state.playlist.length} songs` },
+            { label: 'Our Playlist', emoji: '🎵', key: 'playlist' as SubScreen, sub: `${state.playlist.length} ${plural(state.playlist.length, 'song')}` },
             { label: 'Quote of the Day', emoji: '💬', key: 'quotes' as SubScreen, sub: `${state.storyQuotes.length} quotes — changes daily on the Dashboard` },
           ],
         },
@@ -276,14 +281,14 @@ export default function Us() {
                 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon emoji="⚡" size={12} /> {state.dateRequests.filter(r => r.to === currentUser && r.status === 'pending').length} request(s) awaiting approval!</span>
                 : `${state.dateRequests.length} requests total`) },
             { label: 'Date Idea Jar', emoji: '🫙', key: 'dateidea' as SubScreen, sub: 'Draw a random date idea' },
-            { label: 'Trip Planner', labelIcon: '✈️', emoji: '🗺️', key: 'trips' as SubScreen, sub: `${state.trips.length} trips` },
+            { label: 'Trip Planner', labelIcon: '✈️', emoji: '🗺️', key: 'trips' as SubScreen, sub: `${state.trips.length} ${plural(state.trips.length, 'trip')}` },
           ],
         },
         {
           title: 'Gifts & extras',
           items: [
             { label: 'Gift Wishlist', labelIcon: '🎁', emoji: '🎁', key: 'wishjar' as SubScreen,
-              sub: `${state.wishes.filter(w => !w.drawn).length} item(s) waiting to be bought` },
+              sub: `${state.wishes.filter(w => !w.drawn).length} ${plural(state.wishes.filter(w => !w.drawn).length, 'item')} waiting to be bought` },
             { label: 'Our Favourites', emoji: '💕', key: 'favorites' as SubScreen,
               sub: `${Object.values(state.favPlaces).flat().length} favourite spots` },
           ],
@@ -291,7 +296,7 @@ export default function Us() {
         {
           title: 'Memories & keepsakes',
           items: [
-            { label: 'Time Capsule', labelIcon: '💌', emoji: '⏳', key: 'capsule' as SubScreen, sub: `${state.capsules.length} letters` },
+            { label: 'Time Capsule', labelIcon: '💌', emoji: '⏳', key: 'capsule' as SubScreen, sub: `${state.capsules.length} ${plural(state.capsules.length, 'letter')}` },
             { label: 'Photo Collage', emoji: '🖼️', key: 'collage' as SubScreen, sub: 'A month-by-month recap from your memories' },
             { label: "Places We've Been", emoji: '🗺️', key: 'places' as SubScreen, sub: `${state.places.length} saved places` },
           ],
@@ -436,7 +441,7 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
       {/* Category tabs */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
         {state.favCategories.map(cat => (
-          <button key={cat.id} onClick={() => { setActiveTab(cat.id); setShowAdd(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 99, border: 'none', background: activeTab === cat.id ? cat.color : 'var(--white)', color: activeTab === cat.id ? 'white' : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: activeTab === cat.id ? `0 4px 12px ${cat.color}40` : '0 1px 4px rgba(0,0,0,0.06)', transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s' }}>
+          <button key={cat.id} onClick={() => { setActiveTab(cat.id); setShowAdd(false); }} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 99, border: 'none', background: activeTab === cat.id ? cat.color : 'var(--white)', color: activeTab === cat.id ? readableText(cat.color) : 'var(--ink-2)', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: activeTab === cat.id ? `0 4px 12px ${cat.color}40` : '0 1px 4px rgba(0,0,0,0.06)', transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s' }}>
             <Icon emoji={cat.emoji} size={14} />
             <span>{cat.label}</span>
           </button>
@@ -468,13 +473,13 @@ function OurFavouritesScreen({ onBack }: { onBack: () => void }) {
               <p style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>{pl.name}</p>
               {pl.note && <p style={{ fontSize: 13, color: 'var(--ink-2)', marginTop: 3 }}>{pl.note}</p>}
             </div>
-            <button onClick={() => openEditPlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-            <button aria-label="Close" onClick={() => setConfirmDeletePlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            <button aria-label="Edit" onClick={() => openEditPlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 30, height: 30, cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+            <button aria-label="Delete" onClick={() => setConfirmDeletePlace(pl)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 40, height: 40, cursor: 'pointer', color: '#E8524A', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
           </div>
         ))}
         {cfg && list.length === 0 && (
           <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--ink-2)', fontSize: 14 }}>
-            <Icon emoji={cfg.emoji} size={36} style={{ display: 'block', marginBottom: 8 }} />
+            <Icon emoji={cfg.emoji} size={36} style={{ display: 'block', margin: '0 auto 8px' }} />
             No places here yet. Add one!
           </div>
         )}
@@ -925,7 +930,7 @@ function GiftWishlistScreen({ onBack, initialWishId }: { onBack: () => void; ini
             {w.price && <p style={{ fontSize: 12, color: 'var(--sakura-deep)', fontWeight: 700, marginTop: 4, display: 'flex', alignItems: 'center', gap: 5 }}><Icon emoji="💰" size={12} /> {/^\d+$/.test(w.price) ? `${Number(w.price).toLocaleString('en-US')} VND` : w.price}</p>}
             {w.link && (
               <a href={w.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: '#4A8AE8', fontWeight: 600, marginTop: 3, display: 'inline-flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
-                <Icon emoji="🔗" size={10} /> View product
+                <Icon emoji="🔗" size={12} /> View product
               </a>
             )}
           </div>
@@ -1490,8 +1495,8 @@ function PlaylistScreen({ onBack }: { onBack: () => void }) {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
               <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>by {p.addedBy}</p>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => openEditSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-                <button onClick={() => setConfirmDeleteSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
+                <button aria-label="Edit" onClick={() => openEditSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+                <button aria-label="Delete" onClick={() => setConfirmDeleteSong(p)} style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="🗑️" size={13} /></button>
               </div>
             </div>
           </div>
@@ -1612,7 +1617,7 @@ function PhotoCollage({ onBack }: { onBack: () => void }) {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
               {grid4.map((post, i) => (
-                <button key={post.postId} onClick={() => navigate('post-detail', post.postId)} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '1', background: 'var(--sakura-light)', border: 'none', padding: 0, cursor: 'pointer' }}>
+                <button key={post.postId} aria-label="Open post" onClick={() => navigate('post-detail', post.postId)} style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', aspectRatio: '1', background: 'var(--sakura-light)', border: 'none', padding: 0, cursor: 'pointer' }}>
                   <FadeImage src={post.image} alt="" style={{ width: '100%', height: '100%' }} />
                   {post.count > 1 && (
                     <span style={{ position: 'absolute', top: 4, right: 4, fontSize: 11, fontWeight: 700, color: 'white', background: 'rgba(0,0,0,0.5)', padding: '1px 5px', borderRadius: 99 }}>1/{post.count}</span>
@@ -1692,8 +1697,8 @@ function StoryQuotesScreen({ onBack }: { onBack: () => void }) {
               <Icon emoji="🌸" size={16} style={{ flexShrink: 0, marginTop: 2 }} />
               <p style={{ flex: 1, fontFamily: "'Playfair Display', serif", fontStyle: 'italic', fontSize: 15, color: 'var(--ink)', lineHeight: 1.5 }}>"{q.text}"</p>
               <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button onClick={() => openEdit(q)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-                <button aria-label="Close" onClick={() => setConfirmDeleteId(q.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+                <button aria-label="Edit" onClick={() => openEdit(q)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+                <button aria-label="Delete" onClick={() => setConfirmDeleteId(q.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
               </div>
             </div>
           ))}
@@ -1814,8 +1819,8 @@ function TodoScreen({ onBack }: { onBack: () => void }) {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-            <button onClick={() => openEdit(t)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-            <button aria-label="Close" onClick={() => setConfirmDeleteId(t.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+            <button aria-label="Edit" onClick={() => openEdit(t)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+            <button aria-label="Delete" onClick={() => setConfirmDeleteId(t.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
           </div>
         </div>
       </div>
@@ -2028,8 +2033,8 @@ function OurPlacesScreen({ onBack }: { onBack: () => void }) {
                   <span style={{ position: 'absolute', bottom: 6, left: 6, background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: 12, fontWeight: 700, padding: '2px 7px', borderRadius: 99 }}>1/{p.images.length}</span>
                 )}
                 <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 6 }}>
-                  <button onClick={e => { e.stopPropagation(); openEdit(p); }} title="Edit" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
-                  <button aria-label="Close" onClick={e => { e.stopPropagation(); setConfirmDeleteId(p.id); }} title="Delete" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
+                  <button aria-label="Edit" onClick={e => { e.stopPropagation(); openEdit(p); }} title="Edit" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={12} /></button>
+                  <button aria-label="Delete" onClick={e => { e.stopPropagation(); setConfirmDeleteId(p.id); }} title="Delete" style={{ background: 'rgba(255,255,255,0.9)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={12} /></button>
                 </div>
               </div>
               <div style={{ padding: '10px 12px' }}>

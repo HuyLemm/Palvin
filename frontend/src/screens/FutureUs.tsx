@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useUndoDelete } from '../hooks/useUndoDelete';
 import EmptyState from '../components/EmptyState';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
@@ -58,7 +59,8 @@ export default function FutureUs() {
   const [editing, setEditing] = useState<Goal | null>(null);
   const [filter, setFilter] = useState<string>('both');
 
-  const filtered = state.goals.filter(g => g.owner === filter);
+  const undo = useUndoDelete();
+  const filtered = state.goals.filter(g => g.owner === filter && !undo.isHidden(g.id));
   const pending   = filtered.filter(g => !g.completed);
   const completed = filtered.filter(g => g.completed);
 
@@ -114,7 +116,7 @@ export default function FutureUs() {
         <div style={{ marginBottom: 24 }}>
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12 }}>Dreams to achieve</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {pending.map(g => <GoalItem key={g.id} goal={g} onToggle={toggleGoal} onDelete={deleteGoal} onContribute={contributeToGoal} onEdit={setEditing} />)}
+            {pending.map(g => <GoalItem key={g.id} goal={g} onToggle={toggleGoal} onDelete={id => undo.run(id, 'Goal deleted', () => deleteGoal(id))} onContribute={contributeToGoal} onEdit={setEditing} />)}
           </div>
         </div>
       )}
@@ -124,7 +126,7 @@ export default function FutureUs() {
         <div>
           <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}>Achieved <Icon emoji="✅" size={12} /></p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {completed.map(g => <GoalItem key={g.id} goal={g} onToggle={toggleGoal} onDelete={deleteGoal} onContribute={contributeToGoal} onEdit={setEditing} />)}
+            {completed.map(g => <GoalItem key={g.id} goal={g} onToggle={toggleGoal} onDelete={id => undo.run(id, 'Goal deleted', () => deleteGoal(id))} onContribute={contributeToGoal} onEdit={setEditing} />)}
           </div>
         </div>
       )}
@@ -133,6 +135,7 @@ export default function FutureUs() {
         <EmptyState icon="✨" title="No goals yet" sub="What do you dream of doing together?" />
       )}
 
+      {undo.bar}
       {showAdd && <AddFutureGoalForm onClose={() => setShowAdd(false)} onAdd={addGoal} defaultOwner={filter} />}
       {editing && (
         <AddFutureGoalForm
@@ -169,7 +172,7 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 16px', background: 'var(--white)', borderRadius: 14, border: '1px solid var(--border)', transition: 'box-shadow 0.15s' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => onToggle(g.id)} style={{ width: 24, height: 24, borderRadius: 8, border: `2px solid ${g.completed ? 'var(--sakura-accent)' : 'var(--border)'}`, background: g.completed ? 'var(--sakura-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s' }}>
+        <button onClick={() => onToggle(g.id)} style={{ width: 28, height: 28, borderRadius: 8, border: `2px solid ${g.completed ? 'var(--sakura-accent)' : 'var(--border)'}`, background: g.completed ? 'var(--sakura-accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, opacity 0.2s, box-shadow 0.2s, transform 0.2s' }}>
           {g.completed && <Icon emoji="✓" size={13} />}
         </button>
         <Icon emoji={g.emoji} size={20} />
@@ -179,8 +182,8 @@ function GoalItem({ goal: g, onToggle, onDelete, onContribute, onEdit }: {
           {!g.completed && hasTarget && g.deadline && <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{formatRemaining(g.deadline)}</p>}
         </div>
         <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button onClick={() => onEdit(g)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
-          <button aria-label="Close" onClick={() => onDelete(g.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
+          <button aria-label="Edit" onClick={() => onEdit(g)} title="Edit" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✏️" size={13} /></button>
+          <button aria-label="Delete" onClick={() => onDelete(g.id)} title="Delete" style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, color: 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon emoji="✕" size={13} /></button>
         </div>
       </div>
 

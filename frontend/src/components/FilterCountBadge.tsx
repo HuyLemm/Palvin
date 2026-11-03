@@ -13,7 +13,7 @@
 export default function FilterCountBadge({ count }: { count: number }) {
   return (
     <span style={{
-      minWidth: 20, height: 20, padding: '0 5px', borderRadius: 99, fontSize: 11.5, fontWeight: 800,
+      minWidth: 20, height: 20, padding: '0 5px', borderRadius: 99, fontSize: 12, fontWeight: 800,
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(0,0,0,0.12)', color: 'inherit',
     }}>{count}</span>

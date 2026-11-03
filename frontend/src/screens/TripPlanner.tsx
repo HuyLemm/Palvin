@@ -1,4 +1,7 @@
-import { useState, type CSSProperties } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
+import { plural } from '../lib/plural';
+import { useUndoDelete } from '../hooks/useUndoDelete';
+import { useBackButton } from '../hooks/useBackButton';
 import { useApp } from '../context';
 import Icon from '../components/Icon';
 import AddTripForm from '../components/forms/AddTripForm';
@@ -72,6 +75,7 @@ export default function TripPlanner({ onBack }: { onBack: () => void }) {
   const [showAdd, setShowAdd] = useState(false);
 
   const trip = state.trips.find(t => t.id === selected);
+  useBackButton(!!trip, () => setSelected(null));
 
   if (trip) return <TripDetail trip={trip} onBack={() => setSelected(null)} toggleCheck={toggleTripCheck} updateTrip={updateTrip} onDelete={(id) => { deleteTrip(id); setSelected(null); }} />;
 
@@ -118,17 +122,17 @@ export default function TripPlanner({ onBack }: { onBack: () => void }) {
                         <Icon emoji="📍" size={12} /> {t.destination}
                       </p>
                       <p style={{ fontSize: 12, color: 'var(--ink-2)', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                        <Icon emoji="📅" size={12} /> {t.startDate ? `${nDays} days ${nDays - 1} nights` : `~${nDays} days (dates not set yet)`}
+                        <Icon emoji="📅" size={12} /> {t.startDate ? `${nDays} ${plural(nDays, 'day')} ${nDays - 1} ${plural(nDays - 1, 'night')}` : `~${nDays} ${plural(nDays, 'day')} (dates not set yet)`}
                       </p>
                     </div>
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: STATUS_COLORS[t.status], background: `${STATUS_COLORS[t.status]}18`, padding: '4px 10px', borderRadius: 99 }}>{STATUS_LABELS[t.status]}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: `color-mix(in srgb, ${STATUS_COLORS[t.status]} 72%, var(--ink))`, background: `${STATUS_COLORS[t.status]}18`, padding: '4px 10px', borderRadius: 99 }}>{STATUS_LABELS[t.status]}</span>
                 </div>
 
                 {t.status !== 'completed' && d !== null && d > 0 && (
                   <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Icon emoji="⏳" size={16} />
-                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)' }}>{d} days to go</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--sakura-deep)' }}>{d} {plural(d, 'day')} to go</span>
                     <span style={{ fontSize: 12, color: 'var(--ink-2)' }}>· {t.startDate}</span>
                   </div>
                 )}
@@ -195,7 +199,7 @@ function ItineraryDayCard({ day, onAddPlace, onRemovePlace, onRemoveDay, locked 
           Day {day.day}
           {day.date && <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--ink-2)' }}>{day.date}</span>}
         </p>
-        {!locked && <button onClick={() => onRemoveDay(day.id)} title="Delete day" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', display: 'flex' }}><Icon emoji="🗑️" size={13} /></button>}
+        {!locked && <button aria-label="Delete" onClick={() => onRemoveDay(day.id)} title="Delete day" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', display: 'flex' }}><Icon emoji="🗑️" size={13} /></button>}
       </div>
 
       {day.places.length > 0 && (
@@ -210,7 +214,7 @@ function ItineraryDayCard({ day, onAddPlace, onRemovePlace, onRemoveDay, locked 
                   <p style={{ fontSize: 12, fontWeight: 700, color: 'var(--sakura-deep)', marginTop: 3 }}>{VNDRange(p.costMin ?? p.costMax ?? 0, p.costMax ?? p.costMin ?? 0)}</p>
                 )}
               </div>
-              {!locked && <button aria-label="Close" onClick={() => onRemovePlace(day.id, p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex' }}><Icon emoji="✕" size={11} /></button>}
+              {!locked && <button aria-label="Remove place" onClick={() => onRemovePlace(day.id, p.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0, display: 'flex' }}><Icon emoji="✕" size={11} /></button>}
             </div>
           ))}
         </div>
@@ -291,6 +295,9 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
 }) {
   const [addItem, setAddItem] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const undo = useUndoDelete();
+  const tRef = useRef(t);
+  tRef.current = t;
   const d = daysUntil(t.startDate);
   const done = t.checklist.filter(c => c.done).length;
   const nDays = t.itinerary.length || 1;
@@ -310,7 +317,16 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
     updateTrip({ ...t, itinerary: t.itinerary.map(day => day.id === dayId ? { ...day, places: [...day.places, { id: `pl${Date.now()}`, ...place }] } : day) });
   };
   const removePlace = (dayId: string, placeId: string) => {
+    const removedIdx = t.itinerary.find(d => d.id === dayId)?.places.findIndex(p => p.id === placeId) ?? -1;
+    const removed = removedIdx >= 0 ? t.itinerary.find(d => d.id === dayId)!.places[removedIdx] : null;
     updateTrip({ ...t, itinerary: t.itinerary.map(day => day.id === dayId ? { ...day, places: day.places.filter(p => p.id !== placeId) } : day) });
+    // Undo re-inserts just that place into the *current* trip, so edits made in
+    // the meantime are never overwritten.
+    if (removed) undo.offer('Place removed', () => {
+      const cur = tRef.current;
+      updateTrip({ ...cur, itinerary: cur.itinerary.map(day => day.id === dayId && !day.places.some(p => p.id === removed.id)
+        ? { ...day, places: [...day.places.slice(0, removedIdx), removed, ...day.places.slice(removedIdx)] } : day) });
+    });
   };
   const addDay = () => {
     const last = t.itinerary[t.itinerary.length - 1];
@@ -325,11 +341,19 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
     updateTrip({ ...t, lodging: [...t.lodging, { id: `lg${Date.now()}`, ...l }] });
   };
   const removeLodging = (id: string) => {
+    const idx = t.lodging.findIndex(l => l.id === id);
+    const removed = idx >= 0 ? t.lodging[idx] : null;
     updateTrip({ ...t, lodging: t.lodging.filter(l => l.id !== id) });
+    if (removed) undo.offer('Lodging removed', () => {
+      const cur = tRef.current;
+      if (cur.lodging.some(l => l.id === removed.id)) return;
+      updateTrip({ ...cur, lodging: [...cur.lodging.slice(0, idx), removed, ...cur.lodging.slice(idx)] });
+    });
   };
 
   return (
     <div style={{ paddingBottom: 32 }}>
+      {undo.bar}
       <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'var(--sakura-deep)', fontWeight: 600, cursor: 'pointer', padding: '0 0 16px', fontSize: 15 }}><Icon emoji="←" size={15} /> Back</button>
 
       {/* Hero */}
@@ -341,7 +365,7 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
           <Icon emoji="📍" size={13} /> {t.destination}
           {t.startDate && <> · {t.startDate} <Icon emoji="→" size={13} /> {t.endDate}</>}
         </p>
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginBottom: 8 }}>{t.startDate ? `${nDays} days ${nDays - 1} nights` : `~${nDays} days · dates not set yet`}</p>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginBottom: 8 }}>{t.startDate ? `${nDays} ${plural(nDays, 'day')} ${nDays - 1} ${plural(nDays - 1, 'night')}` : `~${nDays} days · dates not set yet`}</p>
         {t.status !== 'completed' && d !== null && d > 0 && (
           <div style={{ display: 'inline-flex', background: 'rgba(255,255,255,0.2)', borderRadius: 99, padding: '4px 12px' }}>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'white', display: 'flex', alignItems: 'center', gap: 4 }}><Icon emoji="⏳" size={13} /> {d} days to go!</span>
@@ -363,7 +387,7 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
               flex: 1, padding: '9px 4px', borderRadius: 10,
               border: t.status === s ? `2px solid ${STATUS_COLORS[s]}` : `1.5px solid ${STATUS_COLORS[s]}55`,
               background: t.status === s ? `${STATUS_COLORS[s]}28` : `${STATUS_COLORS[s]}0d`,
-              color: STATUS_COLORS[s],
+              color: `color-mix(in srgb, ${STATUS_COLORS[s]} 72%, var(--ink))`,
               opacity: t.status === s ? 1 : 0.7,
               fontWeight: 700, fontSize: 12, cursor: 'pointer',
             }}
@@ -428,7 +452,7 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
                   {(l.checkIn || l.checkOut) && <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{l.checkIn ?? '?'} <Icon emoji="→" size={10} /> {l.checkOut ?? '?'}</p>}
                   {l.note && <p style={{ fontSize: 12, color: 'var(--ink)', marginTop: 4 }}>{l.note}</p>}
                 </div>
-                {!locked && <button aria-label="Close" onClick={() => removeLodging(l.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0 }}><Icon emoji="✕" size={13} /></button>}
+                {!locked && <button aria-label="Remove lodging" onClick={() => removeLodging(l.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-2)', flexShrink: 0 }}><Icon emoji="✕" size={13} /></button>}
               </div>
             ))}
           </div>

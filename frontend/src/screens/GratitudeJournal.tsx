@@ -173,7 +173,7 @@ export default function GratitudeJournal({ onBack }: Props) {
       {/* Filter */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
         {['all', currentUser, ...(partnerName ? [partnerName] : [])].map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: filter === f ? 'var(--sakura-deep)' : 'var(--sakura-light)', color: filter === f ? 'white' : 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <button key={f} onClick={() => setFilter(f)} style={{ padding: '7px 14px', borderRadius: 20, border: 'none', background: filter === f ? 'var(--fill-strong)' : 'var(--sakura-light)', color: filter === f ? 'white' : 'var(--sakura-deep)', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'background-color 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s, box-shadow 0.15s, transform 0.15s', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             {f === 'all' ? 'All' : f}
             <FilterCountBadge count={f === 'all' ? state.gratitude.length : state.gratitude.filter(g => g.from === f).length} />
           </button>
@@ -198,11 +198,11 @@ export default function GratitudeJournal({ onBack }: Props) {
                 </div>
                 {(g.from === currentUser || isAdmin) ? (
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                    <button
+                    <button aria-label="Edit"
                       onClick={() => startEdit(g)}
                       style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: 'var(--ink-2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     ><Icon emoji="✏️" size={12} /></button>
-                    <button
+                    <button aria-label="Delete"
                       onClick={() => setConfirmDeleteId(g.id)}
                       style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 26, height: 26, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     ><Icon emoji="🗑️" size={12} /></button>
@@ -251,7 +251,7 @@ export default function GratitudeJournal({ onBack }: Props) {
                   style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, border: '1.5px dashed var(--sakura-accent)', background: 'var(--white)', color: 'var(--sakura-deep)', fontWeight: 600, fontSize: 12, cursor: 'pointer' }}
                 ><Icon emoji="📷" size={13} /> {editImagePreview ? 'Change' : 'Add photo'}</button>
                 {editImagePreview && (
-                  <button
+                  <button aria-label="Close"
                     onClick={() => { setEditImagePreview(''); setEditRemoteUrl(''); }}
                     style={{ background: 'var(--bg)', border: 'none', borderRadius: 99, width: 28, height: 28, cursor: 'pointer', color: '#E8524A', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                   ><Icon emoji="✕" size={12} /></button>
