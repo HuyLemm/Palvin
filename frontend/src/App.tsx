@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState, type JSX } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type JSX } from 'react';
+import { useSwipeBack } from './hooks/useSwipeBack';
 import { useAppLock } from './hooks/useAppLock';
 import LockScreen from './components/LockScreen';
 import { useApp } from './context';
@@ -485,9 +486,24 @@ export default function App() {
     else navigator.clearAppBadge?.().catch(() => {});
   }, [unreadNotifs, state.unreadChatCount]);
 
+  // Re-tapping the tab you are already on (like Facebook): jump back to the top of the page and
+  // reload its data. Inside a deeper page of the same tab it first returns to the tab's start page.
+  const lastRefresh = useRef(0);
   const handleTabClick = (key: string) => {
-    navigate(key);
+    const onThisTab = key === screen || (key === 'stats' && ['money', 'bills', 'goals', 'debts'].includes(screen));
+    if (!onThisTab || !['home', 'feed', 'stats', 'us'].includes(key)) { navigate(key); return; }
+    window.dispatchEvent(new CustomEvent('palvin:tab-retap', { detail: key }));
+    mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    if (Date.now() - lastRefresh.current > 3000) {
+      lastRefresh.current = Date.now();
+      void refreshAll().then(() => toast('Refreshed', '🔄', { passive: true }));
+    }
   };
+
+  // Swipe from the left edge to go back, like Facebook.
+  useSwipeBack(authed && !locked, useCallback(() => (
+    screen === 'chat' ? document.querySelector<HTMLElement>('[data-swipe-target="chat"]') : mainRef.current
+  ), [screen]));
 
   const title = SCREEN_TITLES[screen] || 'PALVIN';
   const isSubScreen = !MAIN_TABS.includes(screen as Tab) && screen !== 'home';
@@ -776,7 +792,7 @@ export default function App() {
               // Chat itself never unmounts either way, so this is purely
               // the entrance/exit motion, not what keeps images from
               // reloading (that's the persistent mount itself).
-              <div style={{
+              <div data-swipe-target="chat" style={{
                 position: 'absolute', inset: 0, zIndex: 50, background: 'var(--bg)',
                 transform: screen === 'chat' ? 'translateY(0)' : 'translateY(100%)',
                 opacity: screen === 'chat' ? 1 : 0,

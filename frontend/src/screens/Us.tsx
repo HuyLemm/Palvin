@@ -135,6 +135,12 @@ export default function Us() {
     if (screen === 'us' && lastNavWasPop) return lastUsSub;
     return 'main';
   });
+  // Re-tapping the Us tab while inside a sub-screen returns to the Us start page.
+  useEffect(() => {
+    const onRetap = (e: Event) => { if ((e as CustomEvent).detail === 'us') setSub('main'); };
+    window.addEventListener('palvin:tab-retap', onRetap);
+    return () => window.removeEventListener('palvin:tab-retap', onRetap);
+  }, []);
   // Device Back closes the open sub-screen (only while Us is the visible screen).
   useBackButton(screen === 'us' && sub !== 'main', () => setSub('main'));
   const [menuQuery, setMenuQuery] = useState('');

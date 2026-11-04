@@ -80,3 +80,8 @@ export function registerBack(fn: () => void): () => void {
     if (i >= 0) entries[i] = { kind: 'dead' };
   };
 }
+
+/** True when a Back press would step back inside the app (not leave it). */
+export function canGoBackInApp(): boolean {
+  return entries.some(e => e.kind !== 'dead');
+}
