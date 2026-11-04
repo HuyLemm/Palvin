@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
 import { useApp } from '../context';
 import { supabase } from '../lib/supabaseClient';
 import {
@@ -11,7 +11,20 @@ import {
 import { PLACES_CHANGED, VISITS_CHANGED, useRemember, useShareUntil } from '../hooks/useLocationSharing';
 import EmptyState from '../components/EmptyState';
 
+// OpenFreeMap: free vector tiles, no API key. "Positron" is a clean, soft light style; at night the
+// same style is inverted with a CSS filter on the map canvas only (markers stay untouched).
+const STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
+const DARK_FILTER = 'invert(0.9) hue-rotate(180deg) brightness(1.45) contrast(0.9) saturate(0.8)';
+
+type LL = { lat: number; lng: number };
 const esc = (s: string) => s.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+const el = (html: string, pointer = true) => {
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  const node = d.firstElementChild as HTMLElement;
+  if (!pointer) node.style.pointerEvents = 'none';
+  return node;
+};
 
 /** A round avatar (photo, or the initial when there is none) with a little pointer, like a chat head on the map. */
 const avatarPin = (name: string, photo: string | undefined, ring: string) => {
@@ -19,21 +32,20 @@ const avatarPin = (name: string, photo: string | undefined, ring: string) => {
   const face = url
     ? `background:#ddd url(${url}) center/cover`
     : `background:${ring};color:#fff;font:700 18px system-ui,sans-serif`;
-  return L.divIcon({
-    className: '', iconSize: [48, 58], iconAnchor: [24, 56],
-    html: `<div style="position:relative;width:48px;height:58px"><div style="width:48px;height:48px;border-radius:50%;border:3px solid ${ring};box-shadow:0 2px 8px rgba(0,0,0,.4);box-sizing:border-box;display:flex;align-items:center;justify-content:center;${face}">${url ? '' : esc(name[0]?.toUpperCase() ?? '?')}</div><div style="position:absolute;left:18px;top:44px;width:0;height:0;border:6px solid transparent;border-top:10px solid ${ring}"></div></div>`,
-  });
+  return el(`<div style="position:relative;width:48px;height:58px"><div style="width:48px;height:48px;border-radius:50%;border:3px solid ${ring};box-shadow:0 2px 8px rgba(0,0,0,.4);box-sizing:border-box;display:flex;align-items:center;justify-content:center;${face}">${url ? '' : esc(name[0]?.toUpperCase() ?? '?')}</div><div style="position:absolute;left:18px;top:44px;width:0;height:0;border:6px solid transparent;border-top:10px solid ${ring}"></div></div>`);
 };
+const placePin = (emoji: string) => el(`<div style="width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid #A83F5F;box-shadow:0 1px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1">${esc(emoji)}</div>`, false);
+const draftPin = () => el('<div style="width:34px;height:34px;border-radius:50%;background:rgba(168,63,95,.2);border:2px dashed #A83F5F"></div>', false);
 
-const placePin = (emoji: string) => L.divIcon({
-  className: '', iconSize: [34, 34], iconAnchor: [17, 17],
-  html: `<div style="width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid #A83F5F;box-shadow:0 1px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1">${esc(emoji)}</div>`,
-});
-
-const draftPin = L.divIcon({
-  className: '', iconSize: [34, 34], iconAnchor: [17, 17],
-  html: '<div style="width:34px;height:34px;border-radius:50%;background:rgba(168,63,95,.2);border:2px dashed #A83F5F"></div>',
-});
+/** A circle of `r` metres around a point, as a polygon ring for a map layer. */
+function circleRing(c: LL, r: number, n = 48): [number, number][] {
+  const out: [number, number][] = [];
+  for (let k = 0; k <= n; k++) {
+    const a = (k / n) * 2 * Math.PI;
+    out.push([c.lng + (r * Math.cos(a)) / (111_320 * Math.cos(c.lat * Math.PI / 180)), c.lat + (r * Math.sin(a)) / 110_540]);
+  }
+  return out;
+}
 
 const btn = (primary: boolean): React.CSSProperties => ({
   minHeight: 44, padding: '0 16px', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer',
@@ -50,12 +62,13 @@ export default function MapScreen() {
   const remember = useRemember();
 
   const elRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const meMarker = useRef<L.Marker | null>(null);
-  const themMarker = useRef<L.Marker | null>(null);
-  const placeLayer = useRef<L.LayerGroup | null>(null);
-  const draftMarker = useRef<L.Marker | null>(null);
-  const fitted = useRef(false);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const meMarker = useRef<{ m: maplibregl.Marker; key: string } | null>(null);
+  const themMarker = useRef<{ m: maplibregl.Marker; key: string } | null>(null);
+  const placeMarkers = useRef<maplibregl.Marker[]>([]);
+  const draftMarker = useRef<maplibregl.Marker | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const fitted = useRef<'none' | 'one' | 'both'>('none');
   const addingRef = useRef(false);
 
   const [partner, setPartner] = useState<Position | null>(null);
@@ -79,14 +92,28 @@ export default function MapScreen() {
   // Create the map the first time the screen is shown (it cannot measure itself while hidden).
   useEffect(() => {
     if (!active || mapRef.current || !elRef.current) return;
-    const map = L.map(elRef.current, { zoomControl: false, attributionControl: true }).setView([10.78, 106.7], 12);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
-    placeLayer.current = L.layerGroup().addTo(map);
-    map.on('click', (e: L.LeafletMouseEvent) => { if (addingRef.current) setDraft({ lat: e.latlng.lat, lng: e.latlng.lng }); });
+    const map = new maplibregl.Map({
+      container: elRef.current, style: STYLE_URL, center: [106.7, 10.78], zoom: 12,
+      attributionControl: { compact: true }, pitchWithRotate: false, dragRotate: false,
+    });
+    map.touchZoomRotate.disableRotation();
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+    map.on('click', e => { if (addingRef.current) setDraft({ lat: e.lngLat.lat, lng: e.lngLat.lng }); });
+    map.on('load', () => {
+      elRef.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+      elRef.current?.querySelector('.maplibregl-ctrl-attrib')?.removeAttribute('open');
+      map.addSource('place-radius', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({ id: 'place-radius-fill', type: 'fill', source: 'place-radius', paint: { 'fill-color': '#A83F5F', 'fill-opacity': 0.12 } });
+      map.addLayer({ id: 'place-radius-line', type: 'line', source: 'place-radius', paint: { 'line-color': '#A83F5F', 'line-width': 1.5, 'line-opacity': 0.7 } });
+      setMapReady(true);
+    });
     mapRef.current = map;
   }, [active]);
-  useEffect(() => { if (active) setTimeout(() => mapRef.current?.invalidateSize(), 60); }, [active]);
+  useEffect(() => { if (active) setTimeout(() => mapRef.current?.resize(), 60); }, [active]);
+  useEffect(() => {
+    const c = mapRef.current?.getCanvas();
+    if (c) c.style.filter = myProfile?.darkMode ? DARK_FILTER : '';
+  }, [myProfile?.darkMode, active, mapReady]);
   useEffect(() => () => { mapRef.current?.remove(); mapRef.current = null; }, []);
 
   // Partner + places: initial load, realtime, and a slow poll (a stopped share is hidden by the
@@ -116,62 +143,62 @@ export default function MapScreen() {
     return () => { void supabase.removeChannel(ch); window.clearInterval(poll); };
   }, [active, coupleId, loadPartner, loadPlaces]);
 
-  // My own pin: only while this screen is open, and only if location is already allowed or I am sharing.
+  // My own pin: while this screen is open. Opening the map is what asks for permission (the
+  // permissions API is not reliable on iOS, so we simply ask).
   useEffect(() => {
     if (!active || !('geolocation' in navigator)) return;
-    let id: number | null = null, cancelled = false;
-    const start = () => {
-      if (cancelled) return;
-      id = navigator.geolocation.watchPosition(
-        p => { setGeoError(null); setMe({ lat: p.coords.latitude, lng: p.coords.longitude }); },
-        e => setGeoError(e.code === e.PERMISSION_DENIED ? 'denied' : 'unavailable'),
-        { enableHighAccuracy: true, maximumAge: 10_000, timeout: 30_000 },
-      );
-    };
-    if (sharing) start();
-    else navigator.permissions?.query({ name: 'geolocation' }).then(s => { if (s.state === 'granted') start(); }).catch(() => {});
-    return () => { cancelled = true; if (id != null) navigator.geolocation.clearWatch(id); };
-  }, [active, sharing]);
+    const id = navigator.geolocation.watchPosition(
+      p => { setGeoError(null); setMe({ lat: p.coords.latitude, lng: p.coords.longitude }); },
+      e => setGeoError(e.code === e.PERMISSION_DENIED ? 'denied' : 'unavailable'),
+      { enableHighAccuracy: true, maximumAge: 10_000, timeout: 30_000 },
+    );
+    return () => navigator.geolocation.clearWatch(id);
+  }, [active]);
 
   const myPhoto = profilePhotos[myName];
   const partnerPhoto = profilePhotos[partnerName];
 
-  // Keep the markers in sync and frame both people once.
+  const fit = (a: LL, b: LL) => mapRef.current?.fitBounds(
+    [[Math.min(a.lng, b.lng), Math.min(a.lat, b.lat)], [Math.max(a.lng, b.lng), Math.max(a.lat, b.lat)]],
+    { padding: 70, maxZoom: 16, duration: 600 });
+  const fly = (c: LL, zoom: number) => mapRef.current?.flyTo({ center: [c.lng, c.lat], zoom, duration: 600 });
+
+  // Keep the two avatar pins in sync and frame both people once.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const place = (ref: React.RefObject<L.Marker | null>, p: { lat: number; lng: number } | null, icon: L.DivIcon, z: number) => {
-      if (!p) { ref.current?.remove(); ref.current = null; return; }
-      if (ref.current) { ref.current.setLatLng([p.lat, p.lng]); ref.current.setIcon(icon); }
-      else ref.current = L.marker([p.lat, p.lng], { icon, keyboard: false, zIndexOffset: z }).addTo(map);
+    const sync = (ref: React.RefObject<{ m: maplibregl.Marker; key: string } | null>, p: LL | null, key: string, build: () => HTMLElement) => {
+      if (!p) { ref.current?.m.remove(); ref.current = null; return; }
+      if (ref.current && ref.current.key === key) { ref.current.m.setLngLat([p.lng, p.lat]); return; }
+      ref.current?.m.remove();
+      ref.current = { m: new maplibregl.Marker({ element: build(), anchor: 'bottom' }).setLngLat([p.lng, p.lat]).addTo(map), key };
     };
-    place(meMarker, me, avatarPin(myName, myPhoto, '#A83F5F'), 1000);
-    place(themMarker, partner, avatarPin(partnerName, partnerPhoto, '#7A5CCB'), 1100);
-    if (!fitted.current && (me || partner)) {
-      const pts = [me, partner].filter(Boolean).map(p => [p!.lat, p!.lng] as [number, number]);
-      if (pts.length === 2) map.fitBounds(pts, { padding: [60, 60], maxZoom: 16 }); else map.setView(pts[0], 15);
-      fitted.current = true;
-    }
-  }, [me, partner, myName, partnerName, myPhoto, partnerPhoto, active]);
+    sync(meMarker, me, `${myName}|${myPhoto}`, () => avatarPin(myName, myPhoto, '#A83F5F'));
+    sync(themMarker, partner, `${partnerName}|${partnerPhoto}`, () => avatarPin(partnerName, partnerPhoto, '#7A5CCB'));
+    // Frame whoever we know first, then re-frame once when both are known.
+    if (me && partner && fitted.current !== 'both') { fit(me, partner); fitted.current = 'both'; }
+    else if ((me || partner) && fitted.current === 'none') { fly((me ?? partner)!, 15); fitted.current = 'one'; }
+  }, [me, partner, myName, partnerName, myPhoto, partnerPhoto, active, mapReady]);
 
   // Saved places as landmarks (with a soft circle showing the radius).
   useEffect(() => {
-    const layer = placeLayer.current;
-    if (!layer) return;
-    layer.clearLayers();
-    for (const p of places) {
-      L.circle([p.lat, p.lng], { radius: p.radiusM, color: '#A83F5F', weight: 1, fillOpacity: 0.08, interactive: false }).addTo(layer);
-      L.marker([p.lat, p.lng], { icon: placePin(p.emoji), keyboard: false, title: p.name }).addTo(layer);
-    }
-  }, [places, active]);
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    placeMarkers.current.forEach(m => m.remove());
+    placeMarkers.current = places.map(p => new maplibregl.Marker({ element: placePin(p.emoji), anchor: 'center' }).setLngLat([p.lng, p.lat]).addTo(map));
+    (map.getSource('place-radius') as maplibregl.GeoJSONSource | undefined)?.setData({
+      type: 'FeatureCollection',
+      features: places.map(p => ({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [circleRing(p, p.radiusM)] } })),
+    });
+  }, [places, mapReady]);
 
   // The spot being chosen for a new place.
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
     if (!adding || !draft) { draftMarker.current?.remove(); draftMarker.current = null; return; }
-    if (draftMarker.current) draftMarker.current.setLatLng([draft.lat, draft.lng]);
-    else draftMarker.current = L.marker([draft.lat, draft.lng], { icon: draftPin, keyboard: false, interactive: false }).addTo(map);
+    if (draftMarker.current) draftMarker.current.setLngLat([draft.lng, draft.lat]);
+    else draftMarker.current = new maplibregl.Marker({ element: draftPin(), anchor: 'center' }).setLngLat([draft.lng, draft.lat]).addTo(map);
   }, [adding, draft]);
 
   const startShare = (ms: number) => {
@@ -189,11 +216,11 @@ export default function MapScreen() {
     if (myProfile) void clearPosition(myProfile.id);
     toast('Stopped sharing', '📍');
   };
-  const recenter = () => {
-    const pts = [me, partner].filter(Boolean).map(p => [p!.lat, p!.lng] as [number, number]);
-    if (!pts.length) return;
-    if (pts.length === 2) mapRef.current?.fitBounds(pts, { padding: [60, 60], maxZoom: 16 }); else mapRef.current?.setView(pts[0], 15);
+  const goToMe = () => {
+    if (me) { fly(me, Math.max(mapRef.current?.getZoom() ?? 0, 16)); return; }
+    toast(geoError === 'denied' ? 'Location is blocked — allow it in your browser or phone settings' : 'Finding your location…', '📍');
   };
+  const recenter = () => { if (me && partner) fit(me, partner); else if (me ?? partner) fly((me ?? partner)!, 15); };
 
   const openAdd = () => { elRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }); setAdding(true); setDraft(null); setPName(PLACE_PRESETS[0].name); setPEmoji(PLACE_PRESETS[0].emoji); };
   const closeAdd = () => { setAdding(false); setDraft(null); };
@@ -214,7 +241,7 @@ export default function MapScreen() {
   const saveVisitAsPlace = (v: Visit) => {
     elRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     setAdding(true); setDraft({ lat: v.lat, lng: v.lng }); setPName((v.label ?? 'New place').slice(0, 40)); setPEmoji('📍');
-    mapRef.current?.setView([v.lat, v.lng], 17);
+    fly(v, 17);
   };
   const removeVisit = async (v: Visit) => {
     if (await deleteVisit(v.id)) setVisits(list => list.filter(x => x.id !== v.id));
@@ -233,10 +260,16 @@ export default function MapScreen() {
       <div style={{ position: 'relative' }}>
         <div ref={elRef} role="application" aria-label="Map showing you, your partner and your saved places"
           style={{ height: 'min(52dvh, 440px)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--pink-glow)', cursor: adding ? 'crosshair' : undefined }} />
-        <button onClick={recenter} aria-label="Show both of us" disabled={!me && !partner}
-          style={{ position: 'absolute', top: 10, right: 10, zIndex: 500, width: 44, height: 44, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--ink)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: !me && !partner ? 0.5 : 1 }}>
-          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
-        </button>
+        <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 500, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <button onClick={goToMe} aria-label="Show my location"
+            style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card)', color: me ? 'var(--sakura-deep)' : 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,.2)' }}>
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="7"/></svg>
+          </button>
+          <button onClick={recenter} aria-label="Show both of us" disabled={!me || !partner}
+            style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--ink)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: !me || !partner ? 0.5 : 1, boxShadow: '0 2px 8px rgba(0,0,0,.2)' }}>
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/></svg>
+          </button>
+        </div>
         {adding && (
           <div role="status" style={{ position: 'absolute', left: 10, right: 64, top: 10, zIndex: 500, padding: '8px 12px', borderRadius: 12, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--ink)', fontSize: 14, fontWeight: 600 }}>
             {draft ? 'Drag the map and tap to move the spot' : 'Tap the map where the place is'}
@@ -315,7 +348,7 @@ export default function MapScreen() {
                 style={{ display: 'block', width: '100%', marginTop: 4, minHeight: 44, padding: '0 12px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--ink)', fontSize: 16 }} />
             </label>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button onClick={() => { if (me) { setDraft(me); mapRef.current?.setView([me.lat, me.lng], 17); } else toast('Turn on location first, or tap the map', '📍'); }} style={{ ...btn(false), flex: '1 1 auto' }}>Use my spot</button>
+              <button onClick={() => { if (me) { setDraft(me); fly(me, 17); } else toast('Turn on location first, or tap the map', '📍'); }} style={{ ...btn(false), flex: '1 1 auto' }}>Use my spot</button>
               <button onClick={closeAdd} style={{ ...btn(false), flex: '1 1 auto' }}>Cancel</button>
               <button onClick={() => void savePlace()} disabled={!draft || !pName.trim()} style={{ ...btn(true), flex: '1 1 100%', opacity: !draft || !pName.trim() ? 0.5 : 1 }}>
                 {draft ? 'Save place' : 'Tap the map to choose a spot'}
@@ -330,7 +363,7 @@ export default function MapScreen() {
               const d = me ? distanceMeters(me, p) : null;
               return (
                 <li key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <button onClick={() => mapRef.current?.setView([p.lat, p.lng], 16)} aria-label={`Show ${p.name} on the map`}
+                  <button onClick={() => fly(p, 16)} aria-label={`Show ${p.name} on the map`}
                     style={{ flex: 1, minWidth: 0, minHeight: 48, display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink)', padding: 0 }}>
                     <span style={{ fontSize: 22 }} aria-hidden="true">{p.emoji}</span>
                     <span style={{ flex: 1, minWidth: 0 }}>
@@ -372,7 +405,7 @@ export default function MapScreen() {
               const saved = places.find(p => p.id === v.placeId);
               return (
                 <li key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <button onClick={() => mapRef.current?.setView([v.lat, v.lng], 16)} aria-label={`Show ${saved?.name ?? v.label ?? 'this place'} on the map`}
+                  <button onClick={() => fly(v, 16)} aria-label={`Show ${saved?.name ?? v.label ?? 'this place'} on the map`}
                     style={{ flex: 1, minWidth: 0, minHeight: 52, display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink)', padding: 0 }}>
                     <span style={{ fontSize: 20 }} aria-hidden="true">{saved?.emoji ?? '📍'}</span>
                     <span style={{ flex: 1, minWidth: 0 }}>
