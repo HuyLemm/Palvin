@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { frequentExpenses, setQuickExpense } from '../lib/frequentExpenses';
+import { tripCountdown } from '../lib/tripCountdown';
 import DailyQuestionCard from '../components/DailyQuestionCard';
 import WeatherChip from '../components/WeatherChip';
 import { plural } from '../lib/plural';
@@ -71,6 +73,9 @@ const MOOD_SCORE: Record<string, number> = {
 };
 
 export default function Home() {
+  const { state: homeState, openCreate } = useApp();
+  const tripSoon = useMemo(() => tripCountdown(homeState.trips), [homeState.trips]);
+  const quickAdds = useMemo(() => frequentExpenses(homeState.expenses), [homeState.expenses]);
   const [upcomingFolded, toggleUpcoming] = useCollapsed('home-upcoming');
   const [chartFolded, toggleChart] = useCollapsed('home-mood-chart');
   const { state, screen, navigate, setMood, currentUser, myProfile, partnerProfile, sendHug } = useApp();
@@ -469,6 +474,36 @@ export default function Home() {
               );
             })}
           </div>}
+        </div>
+      )}
+
+      {quickAdds.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ink-2)', marginBottom: 8 }}>Quick add</p>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {quickAdds.map(q => (
+              <button key={q.title + q.amount} onClick={() => { setQuickExpense(q); openCreate('expense'); }}
+                style={{ flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderRadius: 99, border: '1px solid var(--border)', background: 'var(--white)', color: 'var(--ink)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                <Icon emoji={q.categoryEmoji} size={15} />
+                {q.title}
+                <span style={{ color: 'var(--ink-2)', fontWeight: 500 }}>{Math.round(q.amount / 1000).toLocaleString('en-US')}k</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {tripSoon && (
+        <div role="button" tabIndex={0} onClick={() => navigate('us')} className="card" style={{ padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
+          <div style={{ width: 46, height: 46, borderRadius: 14, background: 'var(--sakura-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon emoji={tripSoon.trip.emoji || '✈️'} size={22} /></div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tripSoon.trip.title}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{tripSoon.trip.destination}</p>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, color: 'var(--sakura-deep)', lineHeight: 1 }}>{tripSoon.kind === 'ongoing' ? 'Now' : tripSoon.days}</p>
+            <p style={{ fontSize: 12, color: 'var(--ink-2)' }}>{tripSoon.kind === 'ongoing' ? (tripSoon.days === 0 ? 'last day' : `${tripSoon.days} ${tripSoon.days === 1 ? 'day' : 'days'} left`) : (tripSoon.days === 1 ? 'day to go' : 'days to go')}</p>
+          </div>
         </div>
       )}
 

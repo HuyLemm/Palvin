@@ -320,6 +320,14 @@ export default function Chat({ onBack }: Props) {
   // message you sent always shows its own regardless of this.
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef(true);
+  const ignoreScrollUntil = useRef(0);
+  const pinToBottom = () => {
+    const el = scrollRef.current;
+    if (!el || !stickRef.current) return;
+    ignoreScrollUntil.current = Date.now() + 150;
+    el.scrollTop = el.scrollHeight;
+  };
   const inputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -365,21 +373,44 @@ export default function Chat({ onBack }: Props) {
   useEffect(() => {
     if (screen !== 'chat') return;
     markChatRead();
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    // Opening always lands on the newest message. Content keeps growing for a moment after
+    // opening (history arriving, images and stickers loading, the slide-in finishing), so pin
+    // again a few times instead of trusting a single scroll.
+    stickRef.current = true;
+    pinToBottom();
+    const raf = requestAnimationFrame(pinToBottom);
+    const timers = [120, 350, 900].map(ms => setTimeout(pinToBottom, ms));
+    return () => { cancelAnimationFrame(raf); timers.forEach(clearTimeout); };
   }, [screen, markChatRead]);
+
+  // While you are reading at (or near) the bottom, anything that makes the thread taller keeps
+  // the view on the bottom. Scroll up to read older messages and it stops following you.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      if (Date.now() < ignoreScrollUntil.current) return; // our own scrolling, not the reader's
+      stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    el.addEventListener('load', pinToBottom, true); // images / stickers finishing loading
+    const mo = new MutationObserver(pinToBottom);
+    mo.observe(el, { childList: true, subtree: true });
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(pinToBottom) : null;
+    ro?.observe(el);
+    return () => { el.removeEventListener('scroll', onScroll); el.removeEventListener('load', pinToBottom, true); mo.disconnect(); ro?.disconnect(); };
+  }, []);
 
   // Keyboard opening/closing (or the tab becoming visible again) snaps to
   // the bottom instantly — an animated scroll racing the keyboard's own
   // slide would look laggy. A genuinely new message, though, eases in.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [viewportHeight]);
+  useEffect(() => { pinToBottom(); }, [viewportHeight]);
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    if (!el || !stickRef.current) return;
+    ignoreScrollUntil.current = Date.now() + 700;
+    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages.length, state.partnerTyping]);
 
   const handleSend = () => {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { describeDaysLeft, goalPlan } from '../lib/goalPlan';
 import BudgetsSection from '../components/BudgetsSection';
 import { plural } from '../lib/plural';
 import EmptyState from '../components/EmptyState';
@@ -890,6 +891,14 @@ function GoalsTab({ goals, addToGoal, withdrawFromGoal }: { goals: SavingsGoal[]
               <span style={{ fontWeight: 700, color: pct >= 100 ? 'var(--green)' : 'var(--sakura-deep)' }}>{VND(g.current)}</span>
               <span>/ {VND(g.target)}</span>
             </div>
+            {(() => {
+              const plan = goalPlan(g.current, g.target, g.deadline);
+              const text = plan.state === 'done' ? 'Goal reached — well done together'
+                : plan.state === 'overdue' ? `Deadline passed · ${VND(plan.remaining)} to go`
+                : plan.state === 'plan' ? `Put aside about ${VND(plan.perMonth)} a month · ${describeDaysLeft(plan.daysLeft)}`
+                : null;
+              return text ? <p style={{ fontSize: 12.5, color: plan.state === 'overdue' ? 'var(--fill-strong)' : 'var(--ink-2)', marginTop: -6, marginBottom: 12 }}>{text}</p> : null;
+            })()}
             {activeAction?.id === g.id ? (
               <div>
                 <div style={{ display: 'flex', gap: 8 }}>

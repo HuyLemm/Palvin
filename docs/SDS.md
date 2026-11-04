@@ -704,6 +704,15 @@ Migration `0093`–`0096` và function `calendar-feed` đã được áp dụng 
 - **Chuyển màn**: màn gốc (Home/Feed/Money/Us/Settings) mờ dần vào; màn mở từ đó trượt vào từ phải (`.screen-push`); tôn trọng giảm chuyển động.
 - **Thu gọn trên Home** (`hooks/useCollapsed.ts`, `SectionHeading`): Upcoming, biểu đồ mood 7 ngày, Question of the day; trạng thái nhớ theo thiết bị.
 
+### 12.3d Phát triển thêm (11/2026)
+- **Our Questions** (`screens/DailyHistory.tsx`, `fetchDailyHistory`): xem lại mọi câu hỏi hàng ngày đã trả lời; câu trả lời của người kia chỉ hiện khi bạn đã trả lời ngày đó (RLS). Thẻ câu hỏi trên Home cập nhật tức thì qua realtime (cần migration `0097`), vẫn có polling 60 giây dự phòng.
+- **Push theo ngữ cảnh** (migration `0097_engagement_notifications.sql`): người kia vừa trả lời; 20:00 nhắc ai chưa trả lời; 08:00 "ngày này năm trước" (kỷ niệm cùng ngày-tháng); 20:00 Chủ nhật tổng kết tuần (kỷ niệm mới, tiền đã chi, số câu hỏi cùng trả lời).
+- **Quick add** (`lib/frequentExpenses.ts`): các chip trên Home cho khoản chi lặp lại (≥2 lần trong 90 ngày, cùng tên/danh mục/số tiền); bấm mở form thêm chi tiêu đã điền sẵn, bạn kiểm tra rồi lưu.
+- **Mục tiêu tiết kiệm** (`lib/goalPlan.ts`): hiện số tiền cần để dành mỗi tháng và thời gian còn lại, hoặc "quá hạn / đã đạt". Chưa có dự báo theo tốc độ thực tế vì mục tiêu không lưu lịch sử nạp.
+- **Chuyến đi**: thẻ đếm ngược trên Home (đang đi hoặc bắt đầu trong 90 ngày, `lib/tripCountdown.ts`); trong chi tiết chuyến đi hiện chi phí ước tính chia đôi.
+- **Tìm kiếm** (`lib/searchText.ts`): không phân biệt dấu ("da lat" tìm "Đà Lạt"), mọi từ phải khớp, tìm thêm chat, chi tiêu, to-do, chuyến đi, gratitude; có chip lọc theo loại.
+- Chưa làm: widget màn hình (cần app native), quét hoá đơn bằng camera (chỉ có quét QR chuyển khoản VietQR từ trước).
+
 ### 12.4 Kiểm thử & CI
 - `pnpm test` (Vitest + jsdom): logic điều hướng, plural, màu chữ, ICS/CSV, nhập chi tiêu, gợi ý danh mục, thời tiết.
 - `pnpm test:e2e` (Playwright, Chrome hệ thống): smoke test dùng tài khoản thử qua `PALVIN_E2E_USER/PASS`; **chặn mọi request ghi tới Supabase**.

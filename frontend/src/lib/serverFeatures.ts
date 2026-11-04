@@ -62,6 +62,25 @@ export async function submitDailyAnswer(questionId: number, dateISO: string, bod
   return !error;
 }
 
+export interface DailyHistoryDay { date: string; question: string; mine: string | null; theirs: string | null }
+
+/** Past days with at least one answer, newest first. Your partner's answer is only returned by the database once you answered that day too. */
+export async function fetchDailyHistory(myProfileId: string, limit = 120): Promise<{ days: DailyHistoryDay[]; missing: boolean }> {
+  const a = await supabase.from('daily_answers').select('profile_id, answer_date, body, question_id').order('answer_date', { ascending: false }).limit(limit * 2);
+  if (a.error) return { days: [], missing: isMissing(a.error) };
+  const rows = a.data ?? [];
+  const ids = [...new Set(rows.map(r => r.question_id))];
+  const q = ids.length ? await supabase.from('daily_questions').select('id, body').in('id', ids) : { data: [], error: null };
+  const text = new Map((q.data ?? []).map(r => [r.id as number, r.body as string]));
+  const byDate = new Map<string, DailyHistoryDay>();
+  for (const r of rows) {
+    const d = byDate.get(r.answer_date) ?? { date: r.answer_date, question: text.get(r.question_id) ?? '', mine: null, theirs: null };
+    if (r.profile_id === myProfileId) d.mine = r.body; else d.theirs = r.body;
+    byDate.set(r.answer_date, d);
+  }
+  return { days: [...byDate.values()].sort((x, y) => y.date.localeCompare(x.date)).slice(0, limit), missing: false };
+}
+
 // ------------------------------------------------------------ calendar feed
 export async function getCalendarFeedUrl(rotate = false): Promise<{ url: string | null; missing: boolean }> {
   const { data, error } = await supabase.rpc(rotate ? 'rotate_calendar_feed_token' : 'get_calendar_feed_token');

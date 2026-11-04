@@ -212,7 +212,7 @@ function ScreenRouter() {
   // live `screen`/`selectedId` to land on the right sub-screen and highlight
   // the specific wish a notification pointed at).
   const normalizedScreen = (screen === 'stats' || screen === 'bills' || screen === 'goals' || screen === 'debts') ? 'money'
-    : (screen === 'wishlist' || screen === 'gratitude' || screen === 'places' || screen === 'capsule' || screen === 'todos' || screen === 'favorites') ? 'us'
+    : (screen === 'wishlist' || screen === 'gratitude' || screen === 'places' || screen === 'capsule' || screen === 'todos' || screen === 'favorites' || screen === 'daily-history') ? 'us'
     : screen;
   const key = screen === 'chat' ? null : (selectedId ? `${normalizedScreen}:${selectedId}` : normalizedScreen);
 

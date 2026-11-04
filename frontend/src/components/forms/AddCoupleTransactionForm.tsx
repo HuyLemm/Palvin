@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { clearQuickExpense, peekQuickExpense } from '../../lib/frequentExpenses';
 import { suggestCategory } from '../../lib/suggestCategory';
 import { useApp } from '../../context';
 import { parseVietQR } from '../../lib/vietqr';
@@ -17,12 +18,14 @@ export default function AddCoupleTransactionForm({ onClose }: { onClose: () => v
   const partnerName = partnerProfile?.displayName;
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const CATEGORIES = type === 'income' ? state.moneyCategories.income : state.moneyCategories.expense;
-  const [title, setTitle] = useState('');
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [quick] = useState(() => peekQuickExpense());
+  useEffect(() => { clearQuickExpense(); }, []);
+  const [title, setTitle] = useState(quick?.title ?? '');
+  const [amount, setAmount] = useState(quick ? String(quick.amount) : '');
+  const [category, setCategory] = useState(() => CATEGORIES.find(c => c.label.toLowerCase() === quick?.category.toLowerCase()) ?? CATEGORIES[0]);
   // Only expenses get a suggestion; income categories are different words.
   const suggestion = type === 'expense' ? suggestCategory(title, CATEGORIES) : null;
-  const [paidBy, setPaidBy] = useState<string>(currentUser);
+  const [paidBy, setPaidBy] = useState<string>(quick?.paidBy ?? currentUser);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [note, setNote] = useState('');
   const [error, setError] = useState('');

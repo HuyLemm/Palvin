@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useApp } from '../context';
+import { supabase } from '../lib/supabaseClient';
 import SectionHeading from './SectionHeading';
 import { useCollapsed } from '../hooks/useCollapsed';
 import { fetchDaily, submitDailyAnswer, type DailyState } from '../lib/serverFeatures';
@@ -9,7 +10,7 @@ const localDate = () => { const d = new Date(); return `${d.getFullYear()}-${Str
 // "Question of the day": answer first, then see your partner's answer (enforced by the database).
 // Renders nothing until the daily-question migration is applied.
 export default function DailyQuestionCard() {
-  const { myProfile, partnerProfile, toast } = useApp();
+  const { myProfile, partnerProfile, toast, navigate } = useApp();
   const [daily, setDaily] = useState<DailyState | null>(null);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,7 +28,9 @@ export default function DailyQuestionCard() {
     const onVis = () => { if (document.visibilityState === 'visible') void load(); };
     document.addEventListener('visibilitychange', onVis);
     const t = setInterval(() => { if (document.visibilityState === 'visible') void load(); }, 60_000);
-    return () => { document.removeEventListener('visibilitychange', onVis); clearInterval(t); };
+    // Instant update when a new answer lands (needs daily_answers in the realtime publication, migration 0097)
+    const channel = supabase.channel('daily-answers').on('postgres_changes', { event: '*', schema: 'public', table: 'daily_answers' }, () => { void load(); }).subscribe();
+    return () => { document.removeEventListener('visibilitychange', onVis); clearInterval(t); void supabase.removeChannel(channel); };
   }, [load]);
 
   if (!daily || daily.missing || !daily.question) return null;
@@ -67,6 +70,9 @@ export default function DailyQuestionCard() {
               : <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>Waiting for {partner}…</p>}
           </div>
         </div>
+      )}
+      {!folded && (
+        <button onClick={() => navigate('daily-history')} style={{ background: 'none', border: 'none', padding: '10px 0 0', color: 'var(--sakura-deep)', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>See past answers</button>
       )}
     </div>
   );

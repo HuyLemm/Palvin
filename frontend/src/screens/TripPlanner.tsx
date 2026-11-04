@@ -425,6 +425,11 @@ function TripDetail({ trip: t, onBack, toggleCheck, updateTrip, onDelete }: {
             <p style={{ fontSize: 14, fontWeight: 700, color: t.budget > 0 && cost.max > t.budget ? '#E8524A' : 'var(--sakura-deep)' }}>{VNDRange(cost.min, cost.max)}</p>
           </div>
         </div>
+        {cost.max > 0 && (
+          <p style={{ fontSize: 12.5, color: 'var(--ink-2)', marginBottom: 10 }}>
+            Split between the two of you: about {VNDRange(Math.round(cost.min / 2), Math.round(cost.max / 2))} each
+          </p>
+        )}
         {t.budget > 0 && (
           <div style={{ height: 6, background: 'var(--bg)', borderRadius: 99, marginBottom: 14, overflow: 'hidden' }}>
             <div style={{ width: `${Math.min((cost.max / t.budget) * 100, 100)}%`, height: '100%', background: cost.max > t.budget ? '#E8524A' : 'linear-gradient(90deg, var(--sakura-accent), var(--sakura-deep))', borderRadius: 99 }} />

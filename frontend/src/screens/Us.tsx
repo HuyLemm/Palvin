@@ -33,6 +33,7 @@ import type { FavCategory, FavCategoryItem, FavPlace, PlaylistItem, WishItem, St
 // the same code twice instead of sharing one async chunk.
 const FutureUs = lazy(() => import('./FutureUs'));
 const OurStory = lazy(() => import('./OurStory'));
+const DailyHistory = lazy(() => import('./DailyHistory'));
 const Calendar = lazy(() => import('./Calendar'));
 const TripPlanner = lazy(() => import('./TripPlanner'));
 const TimeCapsule = lazy(() => import('./TimeCapsule'));
@@ -73,7 +74,7 @@ function SubScreenLoadingFallback() {
   );
 }
 
-type SubScreen = 'main' | 'story' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'places' | 'todos';
+type SubScreen = 'main' | 'story' | 'favorites' | 'future' | 'calendar' | 'trips' | 'capsule' | 'playlist' | 'collage' | 'wishjar' | 'dateidea' | 'gratitude' | 'permit' | 'quotes' | 'places' | 'todos' | 'questions';
 
 // Remembers which sub-screen was showing when the user drilled into a
 // separate top-level screen (e.g. a memory's detail page) from within Us —
@@ -130,6 +131,7 @@ export default function Us() {
     if (screen === 'capsule') return 'capsule';
     if (screen === 'todos') return 'todos';
     if (screen === 'favorites') return 'favorites';
+    if (screen === 'daily-history') return 'questions';
     if (screen === 'us' && lastNavWasPop) return lastUsSub;
     return 'main';
   });
@@ -156,6 +158,7 @@ export default function Us() {
     if (screen === 'capsule') setSub('capsule');
     if (screen === 'todos') setSub('todos');
     if (screen === 'favorites') setSub('favorites');
+    if (screen === 'daily-history') setSub('questions');
   }, [screen, selectedId]);
 
   // Re-tapping the Us tab while already sitting inside it doesn't remount
@@ -212,6 +215,7 @@ export default function Us() {
   else if (sub === 'quotes')   content = <StoryQuotesScreen onBack={() => setSub('main')} />;
   else if (sub === 'places')   content = <OurPlacesScreen onBack={() => setSub('main')} />;
   else if (sub === 'todos')    content = <TodoScreen onBack={() => setSub('main')} />;
+  else if (sub === 'questions') content = <DailyHistory onBack={() => setSub('main')} />;
   else if (sub === 'story')    content = <OurStory onBack={() => setSub('main')} onOpenTrips={() => setSub('trips')} />;
   else {
 
@@ -287,6 +291,7 @@ export default function Us() {
                 return left > 0 ? `${left} ${plural(left, 'task')} left` : 'All caught up';
               })() },
             { label: 'Gratitude Journal', emoji: '🌸', key: 'gratitude' as SubScreen, sub: `${state.gratitude.length} things you're grateful for` },
+            { label: 'Our Questions', emoji: '💬', key: 'questions' as SubScreen, sub: 'Daily questions you answered together' },
             { label: 'Our Calendar', emoji: '📅', key: 'calendar' as SubScreen, sub: `${state.events.length} events` },
             { label: 'Our Playlist', emoji: '🎵', key: 'playlist' as SubScreen, sub: 'Songs for the two of you' },
             { label: 'Quote of the Day', emoji: '💬', key: 'quotes' as SubScreen, sub: `${state.storyQuotes.length} quotes — changes daily on Home` },
