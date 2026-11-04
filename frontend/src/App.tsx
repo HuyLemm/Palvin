@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type JSX } from 'react';
 import { useSwipeBack } from './hooks/useSwipeBack';
+import { useLocationSharing } from './hooks/useLocationSharing';
 import { useAppLock } from './hooks/useAppLock';
 import LockScreen from './components/LockScreen';
 import { useApp } from './context';
@@ -33,6 +34,7 @@ const FutureUs = lazy(() => import('./screens/FutureUs'));
 const Search = lazy(() => import('./screens/Search'));
 const Notifications = lazy(() => import('./screens/Notifications'));
 const Settings = lazy(() => import('./screens/Settings'));
+const MapScreen = lazy(() => import('./screens/Map'));
 const PostDetail = lazy(() => import('./screens/PostDetail'));
 const SavedPosts = lazy(() => import('./screens/SavedPosts'));
 const MemoryDetail = lazy(() => import('./screens/MemoryDetail'));
@@ -125,7 +127,7 @@ const SCREEN_TITLES: Record<string, string> = {
   memories: 'Memories', 'love-notes': 'Love Notes', calendar: 'Our Calendar',
   'future-us': 'Future Us', search: 'Search', notifications: 'Notifications',
   settings: 'Settings', stats: 'Our Money', bills: 'Bills', goals: 'Savings Goals',
-  wishlist: 'Gift Wishlist',
+  wishlist: 'Gift Wishlist', map: 'Map',
   'post-detail': 'Post', 'memory-detail': 'Memory', 'saved-posts': 'Saved',
 };
 
@@ -149,7 +151,7 @@ const UNLOCKED_BEFORE_LINK = ['settings', 'notifications'];
 // image again. Bounded by construction — this is a fixed list, it can't grow.
 const KEEP_ALIVE_SCREENS = new Set([
   'home', 'feed', 'money', 'us', 'settings',
-  'memories', 'love-notes', 'calendar', 'future-us', 'search', 'notifications', 'saved-posts',
+  'memories', 'love-notes', 'calendar', 'future-us', 'search', 'notifications', 'saved-posts', 'map',
 ]);
 // post-detail/memory-detail carry a per-instance id (which post/memory), so
 // each distinct id needs its own frozen `id` prop rather than reading the
@@ -183,6 +185,7 @@ function renderScreen(screen: string, id: string | undefined): JSX.Element {
     case 'search':        return <Search />;
     case 'notifications': return <Notifications />;
     case 'settings':      return <Settings />;
+    case 'map':           return <MapScreen />;
     case 'post-detail':   return <PostDetail id={id} />;
     case 'saved-posts':   return <SavedPosts />;
     case 'memory-detail': return <MemoryDetail id={id} />;
@@ -269,7 +272,7 @@ function notifTab(target?: string): Tab | null {
 const MAIN_TABS: Tab[] = ['home', 'feed', 'stats', 'us', 'settings'];
 
 export default function App() {
-  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, partnerProfile, authed, authLoading, profileLoaded, isLinked, isLinkedSettled, dataReady, imagesReady, hydratedFromCache, passwordRecovery, pendingInvite, toast, refreshAll } = useApp();
+  const { screen, navigate, goBack, state, createModal, openCreate, currentUser, myProfile, partnerProfile, authed, authLoading, profileLoaded, isLinked, isLinkedSettled, dataReady, imagesReady, hydratedFromCache, passwordRecovery, pendingInvite, toast, refreshAll } = useApp();
   const mainRef = useRef<HTMLElement>(null);
   // Also holds the loading screen up until the couple's own data — and every
   // image that data references — has actually loaded, so navigating
@@ -501,6 +504,8 @@ export default function App() {
   };
 
   // Swipe from the left edge to go back, like Facebook.
+  // Location sharing (opt-in, started from the Map screen) keeps publishing while you browse elsewhere.
+  useLocationSharing(myProfile?.id, myProfile?.displayName ?? 'Someone', authed && !locked && isLinked);
   useSwipeBack(authed && !locked, useCallback(() => (
     screen === 'chat' ? document.querySelector<HTMLElement>('[data-swipe-target="chat"]') : mainRef.current
   ), [screen]));
@@ -689,6 +694,9 @@ export default function App() {
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button onClick={() => handleTabClick('map')} aria-label="Map" aria-current={screen === 'map' ? 'page' : undefined} style={{ background: 'var(--bg)', border: screen === 'map' ? '2px solid var(--sakura-deep)' : '1px solid var(--border)', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)' }}>
+                  <svg aria-hidden="true" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                </button>
                 <button onClick={() => handleTabClick('search')} aria-label="Search" style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-2)' }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 </button>

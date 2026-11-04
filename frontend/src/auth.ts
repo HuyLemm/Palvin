@@ -6,9 +6,10 @@ export interface NotifyPrefs {
   memories: boolean;
   expenses: boolean;
   events: boolean;
+  location: boolean;
 }
 
-const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true };
+const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true, location: true };
 
 export interface QuickActionConfig {
   label: string;

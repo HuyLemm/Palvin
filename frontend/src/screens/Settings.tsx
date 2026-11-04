@@ -14,7 +14,7 @@ import { fetchActivityLog, type ActivityLogEntry } from '../activityLog';
 import { fetchDailyCompliance, acknowledgeComplianceMiss, type DailyComplianceReport } from '../dailyCompliance';
 import { isPushSupported, isPushSubscribed, subscribeToPush, unsubscribeFromPush } from '../push';
 
-const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true };
+const DEFAULT_NOTIFY_PREFS: NotifyPrefs = { love: true, memories: true, expenses: true, events: true, location: true };
 
 const QUICK_ACTION_EMOJI_CHOICES = ['🫂', '💭', '💗', '💕', '🥰', '😘', '🤗', '💌', '✨', '🌸', '💖', '🫶'];
 const QUICK_ACTION_COLOR_CHOICES = ['#C95F7C', '#8B6FD4', '#4A8AE8', '#5AC26A', '#E8844A', '#DC2626', '#E85C97', '#C48A52'];
@@ -503,6 +503,7 @@ export default function Settings() {
         <ToggleRow emoji="🌸" label="New memories" value={notifyPrefs.memories} onToggle={() => toggleNotif('memories')} />
         <ToggleRow emoji="💰" label="Expenses" value={notifyPrefs.expenses} onToggle={() => toggleNotif('expenses')} />
         <ToggleRow emoji="📅" label="Events & reminders" value={notifyPrefs.events} onToggle={() => toggleNotif('events')} />
+        <ToggleRow emoji="📍" label="Arrivals & departures at saved places" value={notifyPrefs.location} onToggle={() => toggleNotif('location')} />
       </Section>
 
       {/* Appearance */}
