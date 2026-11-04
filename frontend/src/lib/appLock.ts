@@ -93,7 +93,14 @@ export async function enrollBiometrics(userName: string): Promise<string> {
   return b64(cred.rawId);
 }
 
+/** 'ok' = verified; 'declined' = cancelled, timed out, or the browser wanted a tap first; 'error' = other. */
+export type BioResult = 'ok' | 'declined' | 'error';
+
 export async function unlockWithBiometrics(credId: string): Promise<boolean> {
+  return (await unlockWithBiometricsResult(credId)) === 'ok';
+}
+
+export async function unlockWithBiometricsResult(credId: string): Promise<BioResult> {
   try {
     const res = await navigator.credentials.get({
       publicKey: {
@@ -104,6 +111,6 @@ export async function unlockWithBiometrics(credId: string): Promise<boolean> {
         timeout: 60_000,
       },
     });
-    return !!res;
-  } catch { return false; }
+    return res ? 'ok' : 'error';
+  } catch (e) { return (e as { name?: string })?.name === 'NotAllowedError' ? 'declined' : 'error'; }
 }
