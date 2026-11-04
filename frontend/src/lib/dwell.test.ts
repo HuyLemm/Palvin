@@ -6,24 +6,31 @@ const here = { lat: 10.77, lng: 106.7 };
 const far = { lat: 10.78, lng: 106.7 }; // ~1.1 km away
 
 describe('stepDwell', () => {
-  it('reports a visit once, after an hour in the same spot', () => {
+  const SEC = 1000;
+  it('reports a visit once, after a minute in the same spot', () => {
     let s: DwellState | null = null; let reached = 0;
-    for (let m = 0; m <= 90; m += 10) {
-      const r = stepDwell(s, { ...here, t: m * MIN }); s = r.state; if (r.reached) reached++;
+    for (let sec = 0; sec <= 300; sec += 20) {
+      const r = stepDwell(s, { ...here, t: sec * SEC }); s = r.state; if (r.reached) reached++;
     }
     expect(reached).toBe(1);
   });
-  it('does not report before the hour, and moving away restarts the stay', () => {
+  it('does not report before the minute, and moving away restarts the stay', () => {
     let r = stepDwell(null, { ...here, t: 0 });
-    r = stepDwell(r.state, { ...here, t: 50 * MIN }); expect(r.reached).toBe(false);
-    r = stepDwell(r.state, { ...far, t: 55 * MIN }); expect(r.state.since).toBe(55 * MIN);
-    r = stepDwell(r.state, { ...far, t: 55 * MIN + DWELL_MS - 1 }); expect(r.reached).toBe(false);
+    r = stepDwell(r.state, { ...here, t: 40 * SEC }); expect(r.reached).toBe(false);
+    r = stepDwell(r.state, { ...far, t: 45 * SEC }); expect(r.state.since).toBe(45 * SEC);
+    r = stepDwell(r.state, { ...far, t: 45 * SEC + DWELL_MS - 1 }); expect(r.reached).toBe(false);
+    r = stepDwell(r.state, { ...far, t: 45 * SEC + DWELL_MS }); expect(r.reached).toBe(true);
+  });
+  it('wobble inside the stay radius still counts as staying', () => {
+    let r = stepDwell(null, { ...here, t: 0 });
+    r = stepDwell(r.state, { lat: here.lat + 0.0002, lng: here.lng, t: 30 * SEC }); // ~22 m
+    r = stepDwell(r.state, { ...here, t: DWELL_MS }); expect(r.reached).toBe(true);
   });
   it('does not bridge a long silence (the app was closed)', () => {
     const r1 = stepDwell(null, { ...here, t: 0 });
-    const r2 = stepDwell(r1.state, { ...here, t: 2 * 60 * MIN });
+    const r2 = stepDwell(r1.state, { ...here, t: 30 * MIN });
     expect(r2.reached).toBe(false);
-    expect(r2.state.since).toBe(2 * 60 * MIN);
+    expect(r2.state.since).toBe(30 * MIN);
   });
 });
 

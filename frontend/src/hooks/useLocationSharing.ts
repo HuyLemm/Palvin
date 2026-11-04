@@ -1,12 +1,13 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react';
 import {
-  announcePlace, clearPosition, distanceMeters, fetchPlaces, getRemember, getShareUntil, publishPosition,
+  announcePlace, clearPosition, distanceMeters, fetchPlaces, fetchVisits, getRemember, getSendStatus, getShareUntil, publishPosition,
   recordVisit, reverseGeocode, setShareUntil, shouldPublish, subscribeShare, touchVisit, type Place,
 } from '../lib/location';
 import { initialPresence, stepDwell, stepPresence, type DwellState, type PresenceState } from '../lib/dwell';
 
 export const useShareUntil = () => useSyncExternalStore(subscribeShare, getShareUntil, () => null);
 export const useRemember = () => useSyncExternalStore(subscribeShare, getRemember, () => false);
+export const useSendStatus = () => useSyncExternalStore(subscribeShare, getSendStatus, () => null);
 
 /** Fired by the Map screen after places are added or removed so the tracker reloads them. */
 export const PLACES_CHANGED = 'palvin:places-changed';
@@ -69,13 +70,16 @@ export function useLocationSharing(myProfileId: string | undefined, myName: stri
         void (async () => {
           const here = places.current.find(p => distanceMeters(p, at) <= p.radiusM) ?? null;
           const label = here ? here.name : await reverseGeocode(at.lat, at.lng);
-          visitId = await recordVisit({ ...at, label, placeId: here?.id ?? null, arrivedAt: d.state.since });
+          // Opening the app again at the same spot soon after is the same visit, not a new one.
+          const recent = (await fetchVisits(5)).visits.find(v => distanceMeters(v, at) <= 80 && Date.now() - new Date(v.lastSeenAt).getTime() < 30 * 60_000);
+          if (recent) { visitId = recent.id; void touchVisit(recent.id); }
+          else visitId = await recordVisit({ ...at, label, placeId: here?.id ?? null, arrivedAt: d.state.since });
           visitTouched = Date.now(); recording = false;
           window.dispatchEvent(new Event(VISITS_CHANGED));
         })();
       } else if (!dwell.reported) {
         visitId = null;
-      } else if (visitId && Date.now() - visitTouched > 5 * 60_000) {
+      } else if (visitId && Date.now() - visitTouched > 2 * 60_000) {
         visitTouched = Date.now(); void touchVisit(visitId);
       }
     };

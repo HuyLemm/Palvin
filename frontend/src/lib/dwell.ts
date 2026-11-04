@@ -3,15 +3,15 @@ import { distanceMeters } from './location';
 // "Stayed about an hour" detection and arrive/leave detection, both as pure steps so they can be
 // tested without a phone. The hook feeds them position fixes.
 
-export const STAY_RADIUS_M = 100;           // moving further than this restarts the stay
-export const DWELL_MS = 60 * 60_000;        // an hour in one spot counts as a visit
-export const MAX_GAP_MS = 45 * 60_000;      // a longer silence (app closed) cannot be bridged
+export const STAY_RADIUS_M = 60;            // moving further than this restarts the stay
+export const DWELL_MS = 60_000;             // a minute in one spot counts as a visit
+export const MAX_GAP_MS = 20 * 60_000;      // a longer silence (app closed) cannot be bridged
 
 export interface DwellState { lat: number; lng: number; since: number; lastAt: number; reported: boolean }
 export interface Fix { lat: number; lng: number; t: number }
 
 /**
- * Returns the next state, and `reached: true` exactly once per stay, when the hour is first complete.
+ * Returns the next state, and `reached: true` exactly once per stay, when the minute is first complete.
  * `stayStart` is when the stay began (use it as the visit's arrival time).
  */
 export function stepDwell(prev: DwellState | null, fix: Fix): { state: DwellState; reached: boolean } {

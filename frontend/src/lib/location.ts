@@ -66,6 +66,7 @@ export async function publishPosition(myProfileId: string, lat: number, lng: num
     profile_id: myProfileId, lat, lng, accuracy_m: accuracyM,
     sharing_until: new Date(until).toISOString(), updated_at: new Date().toISOString(),
   }, { onConflict: 'profile_id' });
+  setSendStatus(error ? { ok: false, at: Date.now() } : { ok: true, at: Date.now() });
   return !error;
 }
 
@@ -84,6 +85,12 @@ export async function fetchPartnerPosition(partnerId: string): Promise<{ pos: Po
   return { pos: data ? toPosition(data) : null, missing: false };
 }
 
+// ------------------------------------- did my last position reach the server?
+export interface SendStatus { ok: boolean; at: number }
+let sendStatus: SendStatus | null = null;
+export const getSendStatus = () => sendStatus;
+export function setSendStatus(v: SendStatus | null) { sendStatus = v; listeners.forEach(l => l()); }
+
 // ------------------------------------------------ my share state (this device)
 const KEY = 'palvin:loc-share-until:v1';
 type Listener = () => void;
@@ -95,6 +102,7 @@ let until: number | null = (() => {
 export const getShareUntil = () => (until && until > Date.now() ? until : null);
 export function setShareUntil(v: number | null) {
   until = v;
+  if (!v) sendStatus = null;
   try { if (v) localStorage.setItem(KEY, String(v)); else localStorage.removeItem(KEY); } catch { /* private mode */ }
   listeners.forEach(l => l());
 }
@@ -174,6 +182,7 @@ export async function deleteVisit(id: string): Promise<boolean> {
 /** How long a visit lasted, e.g. "1 h 20 min". */
 export function formatStay(arrivedAt: string, lastSeenAt: string): string {
   const m = Math.max(0, Math.round((new Date(lastSeenAt).getTime() - new Date(arrivedAt).getTime()) / 60_000));
+  if (m < 1) return 'under a minute';
   if (m < 60) return `${m} min`;
   const h = Math.floor(m / 60), r = m % 60;
   return r ? `${h} h ${r} min` : `${h} h`;

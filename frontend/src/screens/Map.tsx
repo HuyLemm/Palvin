@@ -8,7 +8,7 @@ import {
   fetchPlaces, fetchVisits, formatAge, formatDistance, formatStay, googleMapsLink, placeAt, setRemember, setShareUntil,
   shareRemaining, type Place, type Position, type Visit,
 } from '../lib/location';
-import { PLACES_CHANGED, VISITS_CHANGED, useRemember, useShareUntil } from '../hooks/useLocationSharing';
+import { PLACES_CHANGED, VISITS_CHANGED, useRemember, useSendStatus, useShareUntil } from '../hooks/useLocationSharing';
 import EmptyState from '../components/EmptyState';
 
 // OpenFreeMap: free vector tiles, no API key. "Positron" is a clean, soft light style; at night the
@@ -35,6 +35,7 @@ const avatarPin = (name: string, photo: string | undefined, ring: string) => {
   return el(`<div style="position:relative;width:48px;height:58px"><div style="width:48px;height:48px;border-radius:50%;border:3px solid ${ring};box-shadow:0 2px 8px rgba(0,0,0,.4);box-sizing:border-box;display:flex;align-items:center;justify-content:center;${face}">${url ? '' : esc(name[0]?.toUpperCase() ?? '?')}</div><div style="position:absolute;left:18px;top:44px;width:0;height:0;border:6px solid transparent;border-top:10px solid ${ring}"></div></div>`);
 };
 const placePin = (emoji: string) => el(`<div style="width:34px;height:34px;border-radius:50%;background:#fff;border:2px solid #A83F5F;box-shadow:0 1px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1">${esc(emoji)}</div>`, false);
+const visitPin = () => el('<div style="width:30px;height:30px;border-radius:50%;background:#fff;border:2px solid #7A5CCB;box-shadow:0 1px 6px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:15px;line-height:1;cursor:pointer">👣</div>');
 const draftPin = () => el('<div style="width:34px;height:34px;border-radius:50%;background:rgba(168,63,95,.2);border:2px dashed #A83F5F"></div>', false);
 
 /** A circle of `r` metres around a point, as a polygon ring for a map layer. */
@@ -60,12 +61,14 @@ export default function MapScreen() {
   const shareUntil = useShareUntil();
   const sharing = !!shareUntil;
   const remember = useRemember();
+  const sendStatus = useSendStatus();
 
   const elRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const meMarker = useRef<{ m: maplibregl.Marker; key: string } | null>(null);
   const themMarker = useRef<{ m: maplibregl.Marker; key: string } | null>(null);
   const placeMarkers = useRef<maplibregl.Marker[]>([]);
+  const visitMarkers = useRef<maplibregl.Marker[]>([]);
   const draftMarker = useRef<maplibregl.Marker | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const fitted = useRef<'none' | 'one' | 'both'>('none');
@@ -192,6 +195,19 @@ export default function MapScreen() {
     });
   }, [places, mapReady]);
 
+  // Spots you stopped at ("visited"), as small footprint pins; tap one for its name and date.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady) return;
+    visitMarkers.current.forEach(m => m.remove());
+    visitMarkers.current = visits.filter(v => !v.placeId).map(v => {
+      const when = new Date(v.arrivedAt).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+      const popup = new maplibregl.Popup({ offset: 18, closeButton: false, maxWidth: '220px' })
+        .setHTML(`<strong style="color:#332A2D">${esc(v.label ?? 'Unnamed place')}</strong><br><span style="color:#6F5F65">Visited ${esc(when)} · ${esc(formatStay(v.arrivedAt, v.lastSeenAt))}</span>`);
+      return new maplibregl.Marker({ element: visitPin(), anchor: 'center' }).setLngLat([v.lng, v.lat]).setPopup(popup).addTo(map);
+    });
+  }, [visits, mapReady]);
+
   // The spot being chosen for a new place.
   useEffect(() => {
     const map = mapRef.current;
@@ -306,13 +322,16 @@ export default function MapScreen() {
         {sharing ? (
           <>
             <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>Sharing with {partnerName}{meAt ? ` · ${meAt.emoji} at ${meAt.name}` : ''}</p>
-            <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 12 }}>{remaining}. Keep Palvin open for your pin to keep moving.</p>
+            <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: sendStatus && !sendStatus.ok ? 4 : 12 }}>
+              {remaining}. {sendStatus?.ok ? `${partnerName} can see you · sent ${formatAge(new Date(sendStatus.at).toISOString())}.` : 'Keep Palvin open for your pin to keep moving.'}
+            </p>
+            {sendStatus && !sendStatus.ok && <p role="alert" style={{ fontSize: 14, color: 'var(--sakura-deep)', marginBottom: 12 }}>Could not send your location to {partnerName}. Check your connection.</p>}
             <button onClick={stopShare} style={{ ...btn(false), width: '100%' }}>Stop sharing</button>
           </>
         ) : (
           <>
             <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>Share my location</p>
-            <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 12 }}>Only {partnerName} can see it, and only while sharing is on.</p>
+            <p style={{ fontSize: 14, color: 'var(--ink-2)', marginBottom: 12 }}>{partnerName} can't see where you are yet — the pin above is only visible to you. Choose how long to share; only {partnerName} can see it.</p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {SHARE_OPTIONS.map((o, i) => (
                 <button key={o.key} onClick={() => startShare(o.ms)} style={{ ...btn(i === 0), flex: '1 1 30%' }}>{o.label}</button>
@@ -389,7 +408,7 @@ export default function MapScreen() {
           <div style={{ flex: 1, minWidth: 0 }}>
             <p id="remember-label" style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>Places you've been</p>
             <p style={{ fontSize: 14, color: 'var(--ink-2)' }}>
-              {remember ? 'Saving spots where you stay about an hour. Only you can see this list.' : 'Turn on to save spots where you stay about an hour. Only you can see them.'}
+              {remember ? 'Saving spots where you stop for a minute or more. Only you can see them.' : 'Turn on to remember spots where you stop for a minute or more. Only you can see them.'}
             </p>
           </div>
           <button role="switch" aria-checked={remember} aria-labelledby="remember-label" onClick={() => setRemember(!remember)}
@@ -412,7 +431,7 @@ export default function MapScreen() {
                     <span style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ display: 'block', fontSize: 15, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{saved?.name ?? v.label ?? 'Unnamed place'}</span>
                       <span style={{ display: 'block', fontSize: 13, color: 'var(--ink-2)' }}>
-                        {new Date(v.arrivedAt).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · {formatStay(v.arrivedAt, v.lastSeenAt)}
+                        Visited {new Date(v.arrivedAt).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })} · {formatStay(v.arrivedAt, v.lastSeenAt)}
                       </span>
                     </span>
                   </button>
