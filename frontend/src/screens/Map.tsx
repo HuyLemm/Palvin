@@ -258,8 +258,9 @@ export default function MapScreen() {
   return (
     <div style={{ paddingBottom: 24 }}>
       <div style={{ position: 'relative' }}>
-        <div ref={elRef} role="application" aria-label="Map showing you, your partner and your saved places"
-          style={{ height: 'min(52dvh, 440px)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--pink-glow)', cursor: adding ? 'crosshair' : undefined }} />
+        {/* Dragging inside the map moves the map only: no page scroll, no swipe-back (touch-action none). */}
+        <div ref={elRef} role="application" aria-label="Map showing you, your partner and your saved places" data-no-swipe
+          style={{ touchAction: 'none', overscrollBehavior: 'contain', height: 'min(52dvh, 440px)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--pink-glow)', cursor: adding ? 'crosshair' : undefined }} />
         <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 500, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button onClick={goToMe} aria-label="Show my location"
             style={{ width: 44, height: 44, borderRadius: 12, border: '1px solid var(--border)', background: 'var(--card)', color: me ? 'var(--sakura-deep)' : 'var(--ink-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,.2)' }}>
