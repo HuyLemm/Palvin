@@ -36,7 +36,7 @@ export function useSwipeBack(enabled: boolean, getTarget: () => HTMLElement | nu
       if (e.touches.length !== 1) return;
       const t = e.touches[0];
       if (t.clientX > EDGE || !canGoBackInApp() || dialogOpen()) return;
-      if ((e.target as Element | null)?.closest?.('[data-no-swipe]')) return; // e.g. dragging a map
+      if ((e.target as Element | null)?.closest?.('[data-own-touch]')) return; // e.g. dragging a map
       startX = t.clientX; startY = t.clientY; startT = e.timeStamp; dx = 0;
       mode = 'maybe';
     };

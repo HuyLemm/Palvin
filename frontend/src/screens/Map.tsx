@@ -259,7 +259,7 @@ export default function MapScreen() {
     <div style={{ paddingBottom: 24 }}>
       <div style={{ position: 'relative' }}>
         {/* Dragging inside the map moves the map only: no page scroll, no swipe-back (touch-action none). */}
-        <div ref={elRef} role="application" aria-label="Map showing you, your partner and your saved places" data-no-swipe
+        <div ref={elRef} role="application" aria-label="Map showing you, your partner and your saved places" data-own-touch
           style={{ touchAction: 'none', overscrollBehavior: 'contain', height: 'min(52dvh, 440px)', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--pink-glow)', cursor: adding ? 'crosshair' : undefined }} />
         <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 500, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button onClick={goToMe} aria-label="Show my location"

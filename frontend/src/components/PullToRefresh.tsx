@@ -30,7 +30,8 @@ export default function PullToRefresh({ containerRef, onRefresh, children }: {
     if (!el || !window.matchMedia('(max-width: 480px)').matches) return;
 
     const onTouchStart = (e: TouchEvent) => {
-      if (refreshingRef.current || el.scrollTop > 0) { startYRef.current = null; return; }
+      // A map (or anything else marked data-own-touch) owns its own drag: never start a pull from it.
+      if (refreshingRef.current || el.scrollTop > 0 || (e.target as Element | null)?.closest?.('[data-own-touch]')) { startYRef.current = null; return; }
       startYRef.current = e.touches[0].clientY;
       draggingRef.current = true;
     };
